@@ -1,0 +1,112 @@
+\# EduDast — loyiha qoidalari
+
+
+
+\## Mahsulot
+
+O'zbekiston o'qituvchisi uchun AI ish o'rni. Asosiy qiymat: kurikulumga bog'langan
+
+dars ishlanma, test, taqdimot + sinfda o'ynaladigan o'yin. Foydalanuvchi — maktab
+
+o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
+
+
+
+\## Stack
+
+\- Next.js 15 App Router, TypeScript strict, React Server Components
+
+\- Prisma + Neon Postgres (pgvector), Tailwind + shadcn/ui
+
+\- Auth.js — faqat Telegram Login (SMS/email YO'Q)
+
+\- Vercel (Hobby → Pro), Cloudflare R2 (fayllar), Sentry, PostHog
+
+\- Test: vitest (unit) + playwright (e2e)
+
+\- Paket menejeri: pnpm
+
+
+
+\## Buzilmas qoidalar
+
+1\. \*\*Hardcode matn yo'q.\*\* Barcha UI matni next-intl orqali: `uz`, `uz-Cyrl`, `ru`.
+
+&#x20;  Yangi matn qo'shsang — uchala faylga ham kalit qo'sh.
+
+2\. \*\*Hardcode rang yo'q.\*\* Faqat `styles/tokens.css` dagi CSS o'zgaruvchilari.
+
+&#x20;  `bg-\[#123456]` yoki `text-purple-500` — taqiqlanadi.
+
+3\. \*\*Har LLM chaqiruvida `costUsd`, `tokensIn`, `tokensOut`, `modelUsed` bazaga
+
+&#x20;  yozilishi SHART.\*\* Bu unutilgan PR merge qilinmaydi.
+
+4\. \*\*Kredit faqat generatsiya muvaffaqiyatli tugagach yechiladi.\*\*
+
+&#x20;  Oqim: hold → generatsiya → (muvaffaqiyat) charge / (xato) release.
+
+5\. \*\*Byudjet shifti:\*\* har LLM chaqiruvidan oldin oylik va kunlik xarajat
+
+&#x20;  tekshiriladi. Shift oshsa arzon modelga tushadi yoki xato qaytaradi.
+
+6\. \*\*Server action'lar `"use server"` bilan, har biri Zod bilan validatsiya
+
+&#x20;  qilinadi va `auth()` tekshiruvidan boshlanadi.\*\*
+
+7\. \*\*Migratsiya:\*\* `prisma migrate dev` faqat lokalda. Prod'ga SQL qo'lda
+
+&#x20;  Neon orqali. Har migratsiya `prisma/migrations/` da git'da bo'ladi.
+
+8\. \*\*Har yangi server action = yangi vitest testi.\*\* Istisnosiz.
+
+9\. \*\*Sirlar faqat `.env` da.\*\* `.env.example` yangilanib boradi.
+
+10\. \*\*Emoji ikonka sifatida ishlatilmaydi\*\* — faqat `lucide-react`, 1.5px stroke.
+
+
+
+\## Kod uslubi
+
+\- Fayl nomi: `kebab-case.ts`, komponent: `PascalCase.tsx`
+
+\- `app/` — sahifalar, `components/` — UI, `lib/` — mantiq, `server/` — actions
+
+\- Server component default; `"use client"` faqat kerak bo'lganda
+
+\- Har funksiya 40 qatordan oshsa — bo'lish haqida o'ylash
+
+\- Commit: conventional commits (`feat:`, `fix:`, `chore:`)
+
+
+
+\## Ish tartibi
+
+\- Bitta sessiya = bitta feature. Branch och, kod yoz, test yoz, PR qil.
+
+\- PR tavsifida: nima o'zgardi, qanday test qilindi, qo'lda tekshirish kerak bo'lgan joy.
+
+\- `main` ga to'g'ridan-to'g'ri push YO'Q.
+
+
+
+\## Ma'lumotlar bazasi qoidalari
+
+\- Pul bilan bog'liq har amal `CreditTx` yoki `PaymentIntent` da iz qoldiradi
+
+\- Hech qachon `delete` — `deletedAt` ishlating (soft delete)
+
+\- Har `@@index` ni sabab bilan qo'sh, ortiqcha indeks Neon 0.5GB ni yeydi
+
+
+
+\## Qilma
+
+\- Yangi npm paketni sababsiz qo'shma (bundle va xarajat)
+
+\- `any` turini ishlatma
+
+\- Bir sessiyada bir nechta featureni aralashtirma
+
+\- Hujjat generatsiyasini markdown sifatida saqlama — `contentJson` blok-struktura
+
