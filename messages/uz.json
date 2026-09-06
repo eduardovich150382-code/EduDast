@@ -1,0 +1,36 @@
+{
+  "Metadata": {
+    "title": "EduDast — o'qituvchi uchun AI ish o'rni",
+    "description": "Kurikulumga bog'langan dars ishlanma, test va taqdimot generatori."
+  },
+  "HomePage": {
+    "badge": "Tez orada",
+    "title": "EduDast",
+    "tagline": "O'qituvchi uchun AI ish o'rni",
+    "description": "Kurikulum daraxtiga bog'langan dars ishlanma, test, taqdimot va sinfda o'ynaladigan o'yinlarni bir joyda tayyorlang.",
+    "features": {
+      "lessonPlan": {
+        "title": "Dars ishlanma",
+        "description": "Mavzu bo'yicha to'liq dars rejasi bir necha soniyada."
+      },
+      "test": {
+        "title": "Test va topshiriqlar",
+        "description": "Sinf darajasiga mos savollar, javob kaliti bilan."
+      },
+      "game": {
+        "title": "Sinf o'yinlari",
+        "description": "Mavzuni mustahkamlash uchun interaktiv o'yinlar."
+      }
+    }
+  },
+  "LocaleSwitcher": {
+    "label": "Til",
+    "uz": "O'zbekcha",
+    "uz-Cyrl": "Ўзбекча",
+    "ru": "Русский"
+  },
+  "NotFound": {
+    "title": "Sahifa topilmadi",
+    "description": "Siz izlagan sahifa mavjud emas yoki ko'chirilgan."
+  }
+}

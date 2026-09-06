@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * shadcn/ui strukturaviy o'zgaruvchilari — barchasi styles/tokens.css dagi
+ * brand tokenlaridan hosil qilinadi (rule 2: hardcode rang yo'q).
+ *
+ * --primary, --accent va --destructive ataylab bittagina brand tokeniga —
+ * --accent (styles/tokens.css) ga tenglanadi va u yerda QAYTA e'lon
+ * QILINMAYDI. Sabab: bir xil --nom CSS o'zgaruvchisi bitta scope'da ikki
+ * marta e'lon qilinsa, oxirgisi g'olib chiqadi — shuning uchun --accent'ni
+ * shu yerda "neytral hover rangi" sifatida qayta yozish --primary kabi undan
+ * oldin foydalangan qatorlarni ham buzib qo'yardi. CLAUDE.md "accent — faqat
+ * CTA" deydi; shadcn'da asosiy tugma, halokatli amal tugmasi va tanlangan
+ * band (select) — barchasi harakatga chorlovchi/interaktiv holatlar, shuning
+ * uchun bittagina qizil tonni ularning barchasida ishlatish qoidaga zid emas.
+ */
+:root {
+  --background: var(--paper);
+  --foreground: var(--ink);
+
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+
+  --secondary: var(--surface);
+  --secondary-foreground: var(--ink);
+
+  --muted: color-mix(in oklch, var(--ink) 6%, var(--paper));
+  --muted-foreground: var(--ink-2);
+
+  --accent-foreground: var(--on-accent);
+
+  --destructive: var(--accent);
+  --destructive-foreground: var(--on-accent);
+
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
+
+  --radius: var(--radius-btn);
+}
+
+/* Card radius (10px) va tugma radius (8px) — CLAUDE.md talab qilgan
+   aniq piksel qiymatlari, formula ko'paytiruvchisi o'rniga to'g'ridan-to'g'ri. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* EduDast semantik nomlari (styles/tokens.css) */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-accent-2: var(--accent-2);
+  --color-warn: var(--warn);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius-btn);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  [data-slot="card"] {
+    box-shadow: var(--shadow-card);
+  }
+}

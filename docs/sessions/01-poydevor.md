@@ -9,7 +9,7 @@ poydevor. Skoupdan chiqma.
 ## Bajariladigan ish
 
 ### 1. Loyiha skeleti
-- Next.js 15 (App Router), TypeScript strict rejimda, pnpm
+- Next.js 16 (App Router), TypeScript strict rejimda, pnpm
 - Tailwind CSS + shadcn/ui (init, lekin faqat button, card, input, select,
   dialog, toast komponentlarini qo'sh)
 - ESLint + Prettier, `pnpm lint` va `pnpm typecheck` skriptlari

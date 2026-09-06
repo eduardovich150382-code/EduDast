@@ -1,0 +1,64 @@
+/**
+ * EduDast dizayn tokenlari.
+ *
+ * Bu yagona joy — rangni, radiusni yoki soyani hardcode qilish o'rniga
+ * shu yerdagi CSS o'zgaruvchilaridan foydalaning (CLAUDE.md, 2-qoida).
+ * Tailwind bilan bog'lanishi: app/globals.css dagi `@theme inline` bloki
+ * shu o'zgaruvchilarni bg-paper, text-ink, border-line, bg-accent kabi
+ * utilita klasslariga o'giradi.
+ *
+ * Oʻzbek lotin alifbosi haqida izoh:
+ *   "oʻ" va "gʻ" harflaridagi belgi U+02BB (MODIFIER LETTER TURNED COMMA),
+ *   tutuq belgisi (masalan "sanʼat") esa U+02BC (MODIFIER LETTER APOSTROPHE).
+ *   Bular oddiy apostrof (') emas — ko'plab shriftlarda mavjud emas.
+ *   Tekshiruv natijasi (2026-09, Google Fonts ma'lumotlariga ko'ra):
+ *     - Inter (matn shrifti) — U+02BB/U+02BC ni to'liq qoplaydi.
+ *     - Manrope (sarlavha shrifti) — lotin-kengaytirilgan va kirill tilini
+ *       qoplaydi, lekin shu tor "modifier letter" diapazoni kafolatlanmagan.
+ *   Shuning uchun sarlavha shrift stekida Manrope'dan keyin Inter turadi
+ *   (app/[locale]/layout.tsx): brauzer har bir harfni alohida tekshirib,
+ *   Manrope'da yo'q belgini Inter'dan oladi (per-glyph fallback) — butun
+ *   so'z boshqa shriftga tushib qolmaydi.
+ */
+
+:root {
+  /* Yorug' rejim */
+  --paper: #fbf9f4; /* asosiy fon */
+  --surface: #ffffff; /* kartalar */
+  --line: #e8e2d6; /* chegara */
+  --ink: #1c1917; /* matn */
+  --ink-2: #6b645a; /* ikkilamchi matn */
+  --accent: #c4453a; /* CTA — faqat shu */
+  --accent-2: #0e7c6b; /* muvaffaqiyat, progress */
+  --warn: #e8a33d; /* ogohlantirish, kredit */
+
+  /* --accent/--accent-2/--warn barchasi to'q fon ustida ishlatiladi (tugma,
+     badge), shuning uchun ularning ustidagi matn doim och rangda bo'lishi
+     kerak — yorug' yoki tungi rejimdan qat'i nazar. Berilgan 8 ta rangning
+     hech biri bu vazifaga mos kelmagani uchun (--surface tungi rejimda
+     to'q bo'lib qoladi), alohida "on-accent" tokeni qo'shildi. */
+  --on-accent: #ffffff;
+
+  /* Shakl */
+  --radius-btn: 8px;
+  --radius-card: 10px;
+
+  /* Soya — rangi --ink dan hosil qilinadi, qayta hardcode qilinmaydi */
+  --shadow-card: 0 1px 3px rgb(from var(--ink) r g b / 6%);
+}
+
+/* Tungi rejim: tizim sozlamasiga qarab (bu sessiyada alohida almashtirgich
+   komponenti yo'q — keyingi sessiyada next-themes bilan .dark klassi
+   qo'shilsa, quyidagi qiymatlar o'sha klass ostida ham takrorlanadi). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14120f;
+    --surface: #1c1a16;
+    --line: #322e27;
+    --ink: #f5f1e8;
+    --ink-2: #a39a8c;
+    --accent: #e05d51;
+    --accent-2: #2fa693;
+    --warn: #f0b458;
+  }
+}

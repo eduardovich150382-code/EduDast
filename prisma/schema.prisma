@@ -1,0 +1,346 @@
+// EduDast — to'liq v1 ma'lumotlar modeli (docs/sessions/01-poydevor.md, 4-band).
+// Bu sxema keyingi 12 haftalik rejaga mo'ljallangan: hozir bo'sh jadvallar ham
+// yozilgan — keyingi sessiyalarda migratsiya kam bo'lishi uchun.
+//
+// Izohlar:
+// - Barcha `id` maydonlari cuid() — vaqt bo'yicha saralanadigan ID.
+// - `embedding vector(768)` ustunlari Prisma Client tomonidan o'qib/yozib
+//   bo'lmaydi (Unsupported turi) — ular $queryRaw/$executeRaw orqali
+//   ishlatiladi (Prisma docs: postgres-extensions#limitations).
+// - SubscriptionPlan, SubscriptionStatus, LessonPlanStatus, GameType va
+//   GameSession.state qiymatlari vazifa faylida aniq berilmagan — shu sabab
+//   quyida vaqtinchalik (provisional) enum qiymatlari qo'yildi. Bu
+//   modellarni haqiqatda ishlatadigan sessiya ularni kerak bo'lsa qayta
+//   ko'rib chiqadi.
+// - Topic(subjectId, grade) uchun alohida @@index QO'SHILMADI: pastdagi
+//   @@unique([subjectId, grade, slug]) allaqachon shu ikki ustunni
+//   qamrovchi (leftmost-prefix) B-tree indeks yaratadi — takroriy indeks
+//   Neon'ning 0.5GB limitini bekorga yeydi (CLAUDE.md, ma'lumotlar bazasi
+//   qoidalari).
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  // Ulanish URL'lari endi shu yerda emas, prisma.config.ts da (Prisma 7).
+  extensions = [vector]
+}
+
+// ---------- Enumlar ----------
+
+enum Role {
+  TEACHER
+  ADMIN
+}
+
+enum DocumentType {
+  LESSON_PLAN
+  TEST
+  CROSSWORD
+  SLIDES
+  GUIDE
+}
+
+enum DocumentStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum CreditReason {
+  PURCHASE
+  GENERATION
+  REFUND
+  REFERRAL
+  GRANT
+}
+
+enum PaymentMethod {
+  MANUAL_CARD
+  PAYME
+  CLICK
+}
+
+enum PaymentStatus {
+  PENDING
+  PROOF_SUBMITTED
+  CONFIRMED
+  REJECTED
+  EXPIRED
+}
+
+/// Provisional — to'lov/obuna sessiyasida aniqlashtiriladi.
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
+
+/// Provisional — to'lov/obuna sessiyasida aniqlashtiriladi.
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+/// Provisional — dars rejasi sessiyasida aniqlashtiriladi.
+enum LessonPlanStatus {
+  PLANNED
+  DONE
+  CANCELED
+}
+
+/// Provisional — o'yin sessiyasida aniqlashtiriladi.
+enum GameType {
+  QUIZ
+  CROSSWORD_RACE
+}
+
+/// Provisional — o'yin sessiyasida aniqlashtiriladi.
+enum GameSessionState {
+  LOBBY
+  ACTIVE
+  FINISHED
+}
+
+// ---------- Modellar ----------
+
+model User {
+  id            String    @id @default(cuid())
+  telegramId    BigInt    @unique
+  username      String?
+  fullName      String
+  role          Role      @default(TEACHER)
+  region        String?
+  subjects      String[]
+  grades        Int[]
+  locale        String    @default("uz")
+  creditBalance Int       @default(0)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  documents         Document[]
+  llmCalls          LlmCall[]
+  creditTxs         CreditTx[]
+  paymentIntents    PaymentIntent[] @relation("PaymentIntentUser")
+  confirmedPayments PaymentIntent[] @relation("PaymentIntentConfirmedBy")
+  subscription      Subscription?
+  lessonPlans       LessonPlan[]
+  hostedGames       GameSession[]
+  gamePlayers       GamePlayer[]
+}
+
+model Subject {
+  id         String @id @default(cuid())
+  slug       String @unique
+  nameUz     String
+  nameUzCyrl String
+  nameRu     String
+
+  topics Topic[]
+}
+
+model Topic {
+  id          String                      @id @default(cuid())
+  subjectId   String
+  parentId    String?
+  grade       Int
+  slug        String
+  titleUz     String
+  titleUzCyrl String
+  titleRu     String
+  order       Int
+  objectives  String[]
+  keywords    String[]
+  hoursPlan   Int?
+  /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
+  embedding   Unsupported("vector(768)")?
+
+  subject  Subject @relation(fields: [subjectId], references: [id])
+  parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
+  children Topic[] @relation("TopicHierarchy")
+
+  sourceChunks SourceChunk[]
+  documents    Document[]
+  lessonPlans  LessonPlan[]
+  gameSessions GameSession[]
+
+  @@unique([subjectId, grade, slug])
+  @@index([parentId])
+}
+
+model SourceChunk {
+  id        String                      @id @default(cuid())
+  topicId   String
+  sourceRef String
+  content   String                      @db.Text
+  /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
+  embedding Unsupported("vector(768)")?
+
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@index([topicId])
+}
+
+model Document {
+  id           String         @id @default(cuid())
+  userId       String
+  topicId      String
+  type         DocumentType
+  title        String
+  status       DocumentStatus @default(QUEUED)
+  inputParams  Json
+  contentJson  Json
+  qualityScore Float?
+  qualityNotes Json?
+  creditsUsed  Int            @default(0)
+  createdAt    DateTime       @default(now())
+  deletedAt    DateTime?
+
+  user  User  @relation(fields: [userId], references: [id])
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  exports  Export[]
+  llmCalls LlmCall[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([topicId])
+}
+
+model Export {
+  id         String   @id @default(cuid())
+  documentId String
+  format     String
+  url        String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+}
+
+/// Har LLM chaqiruvi shu yerga yoziladi — marjani ko'rish uchun,
+/// hech qachon o'chirilmaydi (CLAUDE.md, 3-qoida).
+model LlmCall {
+  id         String   @id @default(cuid())
+  documentId String?
+  userId     String
+  model      String
+  tokensIn   Int
+  tokensOut  Int
+  costUsd    Decimal  @db.Decimal(10, 6)
+  purpose    String
+  createdAt  DateTime @default(now())
+
+  document Document? @relation(fields: [documentId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([documentId])
+}
+
+model CreditTx {
+  id           String       @id @default(cuid())
+  userId       String
+  delta        Int
+  reason       CreditReason
+  refId        String?
+  balanceAfter Int
+  createdAt    DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model PaymentIntent {
+  id            String        @id @default(cuid())
+  userId        String
+  code          String        @unique @db.VarChar(8)
+  sku           String
+  amountSum     Int
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  proofUrl      String?
+  // @unique: bir xil to'lov isboti (chek/screenshot hash'i) ikkinchi marta
+  // boshqa PaymentIntent'ga bog'lanmasin — aks holda bitta chek bilan
+  // ikki marta kredit sotib olish mumkin bo'lib qoladi (pul yo'qoladi).
+  // Nullable maydonda bir nechta NULL ruxsat etiladi (Postgres unique
+  // index qoidasi) — proof hali yuklanmagan PENDING intentlar to'qnashmaydi.
+  proofHash     String?       @unique
+  confirmedById String?
+  confirmedAt   DateTime?
+  expiresAt     DateTime
+  rawPayload    Json?
+  createdAt     DateTime      @default(now())
+
+  user        User  @relation("PaymentIntentUser", fields: [userId], references: [id])
+  confirmedBy User? @relation("PaymentIntentConfirmedBy", fields: [confirmedById], references: [id])
+
+  @@index([status])
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  plan      SubscriptionPlan
+  status    SubscriptionStatus
+  periodEnd DateTime
+  source    String?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LessonPlan {
+  id          String           @id @default(cuid())
+  userId      String
+  topicId     String
+  classLabel  String
+  scheduledAt DateTime?
+  documentIds String[]
+  status      LessonPlanStatus @default(PLANNED)
+
+  user  User  @relation(fields: [userId], references: [id])
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@index([userId])
+  @@index([topicId])
+}
+
+model GameSession {
+  id        String           @id @default(cuid())
+  hostId    String
+  topicId   String
+  gameType  GameType
+  joinCode  String           @unique
+  questions Json
+  state     GameSessionState @default(LOBBY)
+  startedAt DateTime?
+
+  host  User  @relation(fields: [hostId], references: [id])
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  players GamePlayer[]
+
+  @@index([topicId])
+}
+
+model GamePlayer {
+  id        String  @id @default(cuid())
+  sessionId String
+  nickname  String
+  userId    String?
+  score     Int     @default(0)
+  answers   Json
+
+  session GameSession @relation(fields: [sessionId], references: [id])
+  user    User?       @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+}
