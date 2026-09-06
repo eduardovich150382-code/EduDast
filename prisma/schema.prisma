@@ -268,7 +268,12 @@ model PaymentIntent {
   method        PaymentMethod
   status        PaymentStatus @default(PENDING)
   proofUrl      String?
-  proofHash     String?
+  // @unique: bir xil to'lov isboti (chek/screenshot hash'i) ikkinchi marta
+  // boshqa PaymentIntent'ga bog'lanmasin — aks holda bitta chek bilan
+  // ikki marta kredit sotib olish mumkin bo'lib qoladi (pul yo'qoladi).
+  // Nullable maydonda bir nechta NULL ruxsat etiladi (Postgres unique
+  // index qoidasi) — proof hali yuklanmagan PENDING intentlar to'qnashmaydi.
+  proofHash     String?       @unique
   confirmedById String?
   confirmedAt   DateTime?
   expiresAt     DateTime
