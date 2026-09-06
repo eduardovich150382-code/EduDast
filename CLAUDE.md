@@ -54,7 +54,13 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 &#x20;  qilinadi va `auth()` tekshiruvidan boshlanadi.\*\*
 
-7\. \*\*Migratsiya:\*\* `prisma migrate dev` faqat lokalda. Prod'ga SQL qo'lda
+7\. \*\*Migratsiya:\*\* 
+- Lokalda: `pnpm db:migrate` (prisma migrate dev). Migratsiya fayli git'ga tushadi.
+- Hozircha bitta Neon bazasi ishlatiladi (lokal = prod). Alohida deploy qadami yo'q.
+- Beta boshlanganda (real foydalanuvchi paydo bo'lganda) Neon branch'ga bo'linadi
+  va prod'ga faqat `prisma migrate deploy` ishlatiladi. `migrate dev` NI
+  real ma'lumot turgan bazaga hech qachon ishlatma — u reset so'rashi mumkin.
+- Neon SQL Editor'ga qo'lda kirish kerak emas.
 
 &#x20;  Neon orqali. Har migratsiya `prisma/migrations/` da git'da bo'ladi.
 
