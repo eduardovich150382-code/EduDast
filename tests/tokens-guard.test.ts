@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  */
 
 const ROOT = join(__dirname, "..");
-const SCAN_DIRS = ["app", "components", "lib", "styles"];
+const SCAN_DIRS = ["app", "components", "lib", "server", "styles"];
 const ALLOWED_HEX_FILES = new Set(["styles/tokens.css"]);
 const SCAN_EXTENSIONS = new Set([".ts", ".tsx", ".css"]);
 const SKIP_DIR_NAMES = new Set(["generated", "node_modules"]);
