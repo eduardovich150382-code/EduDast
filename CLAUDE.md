@@ -18,7 +18,7 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 \- Prisma + Neon Postgres (pgvector), Tailwind + shadcn/ui
 
-\- Auth.js — faqat Telegram Login (SMS/email YO'Q)
+\- Telegram Login + jose sessiya cookie (Auth.js ishlatilmaydi; SMS/email YO'Q)
 
 \- Vercel (Hobby → Pro), Cloudflare R2 (fayllar), Sentry, PostHog
 

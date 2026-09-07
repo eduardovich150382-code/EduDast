@@ -83,6 +83,7 @@
   --color-ink-2: var(--ink-2);
   --color-accent-2: var(--accent-2);
   --color-warn: var(--warn);
+  --color-on-accent: var(--on-accent);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
