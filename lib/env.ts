@@ -17,6 +17,15 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   TELEGRAM_ADMIN_CHAT_ID: z.string().optional(),
 
+  // Sessiya JWT'sini imzolash kaliti. Kamida 32 bayt — qat'iy tekshiruv
+  // instrumentation.ts (ishga tushish) va lib/auth/session.ts (chaqirilganda)
+  // da, bu yerda emas: bu sxema build'ni yiqitmasligi kerak.
+  SESSION_SECRET: z.string().optional(),
+  DEV_LOGIN_ENABLED: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

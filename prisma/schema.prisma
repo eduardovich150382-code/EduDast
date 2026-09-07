@@ -123,6 +123,13 @@ model User {
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
 
+  /// Sessiyani bekor qilish uchun. Sessiya JWT'i stateless — serverda
+  /// saqlanmaydi, shuning uchun uni "o'chirish"ning yagona yo'li shu:
+  /// token ichidagi versiya bu ustundan farq qilsa, sessiya yaroqsiz
+  /// (lib/auth/index.ts, auth()). Bu raqamni oshirish — o'sha
+  /// foydalanuvchining barcha qurilmalaridagi sessiyani darhol uzadi.
+  sessionVersion Int @default(0)
+
   documents         Document[]
   llmCalls          LlmCall[]
   creditTxs         CreditTx[]
@@ -140,6 +147,13 @@ model Subject {
   nameUz     String
   nameUzCyrl String
   nameRu     String
+
+  /// false — fan onboarding'da "tez orada" belgisi bilan ko'rinadi, lekin
+  /// tanlash mumkin va tanlov User.subjects da saqlanadi. Shu orqali qaysi
+  /// fan ko'p so'ralayotgani bilinadi (talab bo'lmagan fanga kurikulum
+  /// yuklashdan oldin). Default false — yangi fan qo'shilganda u avtomatik
+  /// "tez orada" bo'ladi, tayyor bo'lgani ataylab true qilinadi.
+  isActive Boolean @default(false)
 
   topics Topic[]
 }
