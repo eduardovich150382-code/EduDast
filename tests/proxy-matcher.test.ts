@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PROXY_MATCHER } from "@/lib/proxy-matcher";
 
@@ -26,6 +28,18 @@ const config = { matcher: PROXY_MATCHER };
 function matches(pathname: string): boolean {
   return patterns.some((pattern) => new RegExp(`^${pattern}$`).test(pathname));
 }
+
+describe("proxy.ts bilan sinxronlik", () => {
+  // Next.js `config.matcher`ni build vaqtida STATIK o'qiydi (Turbopack
+  // manba tahlili) va import qilingan identifikatorga ruxsat bermaydi —
+  // shuning uchun qiymat proxy.ts da ham LITERAL holda takrorlangan.
+  // Bu test ikkalasi orasidagi farqni ushlaydi.
+  it("proxy.ts dagi matcher aynan shu qiymat bilan bir xil", () => {
+    const proxySource = readFileSync(join(__dirname, "..", "proxy.ts"), "utf-8");
+
+    expect(proxySource).toContain(JSON.stringify(PROXY_MATCHER[0]));
+  });
+});
 
 describe("matcher satrining o'zi", () => {
   it("aynan bitta shablon bor", () => {

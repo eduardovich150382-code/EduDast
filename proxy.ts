@@ -4,7 +4,6 @@ import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { decideRouteAccess } from "@/lib/auth/route-guards";
 import { localePath, splitLocale } from "@/lib/i18n/locale-path";
 import { routing } from "@/lib/i18n/routing";
-import { PROXY_MATCHER } from "@/lib/proxy-matcher";
 
 /**
  * Next.js 16'da `middleware.ts` deprecated va `proxy.ts` ga qayta
@@ -70,9 +69,14 @@ export default async function proxy(request: NextRequest) {
   return redirect;
 }
 
+// Next.js `matcher`ni BUILD VAQTIDA statik o'qiydi (Turbopack manba
+// tahlili) — import qilingan identifikatorga ruxsat bermaydi, faqat
+// literal massiv. Shuning uchun qiymat shu yerda ham, lib/proxy-matcher.ts
+// da ham (test uchun) alohida-alohida turadi; ikkalasi bir xilligini
+// tests/proxy-matcher.test.ts o'zi proxy.ts manbasini o'qib tekshiradi.
+//
+// "/api", "/_next", "/_vercel" va nuqtali (fayl) yo'llarni chetlab o'tadi.
+// `\\.` aynan shunday yozilishi SHART — sabab lib/proxy-matcher.ts da.
 export const config = {
-  // "/api", "/_next", "/_vercel" va nuqtali (fayl) yo'llarni chetlab o'tadi.
-  // Shablonning o'zi lib/proxy-matcher.ts da — u yerda nega alohida turgani
-  // va qanday xatodan saqlanayotgani izohlangan.
-  matcher: PROXY_MATCHER,
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
 };

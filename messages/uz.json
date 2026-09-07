@@ -32,5 +32,73 @@
   "NotFound": {
     "title": "Sahifa topilmadi",
     "description": "Siz izlagan sahifa mavjud emas yoki ko'chirilgan."
+  },
+  "Auth": {
+    "title": "Xush kelibsiz",
+    "tagline": "EduDast — o'qituvchi uchun AI ish o'rni",
+    "description": "Davom etish uchun Telegram orqali kiring.",
+    "loginWith": "Telegram orqali kirish",
+    "widgetUnavailable": "Telegram bilan kirish hozircha sozlanmagan.",
+    "devLogin": "Dev sifatida kirish",
+    "errors": {
+      "missing_hash": "Telegram javobi to'liq emas. Qaytadan urinib ko'ring.",
+      "invalid_payload": "Telegram javobi noto'g'ri formatda. Qaytadan urinib ko'ring.",
+      "bad_hash": "Kirish tasdiqlanmadi. Qaytadan urinib ko'ring.",
+      "expired": "Kirish so'rovining muddati o'tgan. Qaytadan urinib ko'ring.",
+      "sozlanmagan": "Telegram bilan kirish hozircha sozlanmagan."
+    }
+  },
+  "Onboarding": {
+    "step": "{current}/{total}-qadam",
+    "genericError": "Nimadir xato ketdi. Qaytadan urinib ko'ring.",
+    "subjects": {
+      "title": "Qaysi fan(lar)ni o'qitasiz?",
+      "description": "Bir nechtasini tanlashingiz mumkin.",
+      "comingSoon": "Tez orada",
+      "continue": "Davom etish",
+      "empty": "Fanlar yuklanmadi."
+    },
+    "grades": {
+      "title": "Qaysi sinf(lar)da dars berasiz?",
+      "description": "Bir nechtasini tanlashingiz mumkin.",
+      "gradeLabel": "{grade}-sinf",
+      "continue": "Davom etish",
+      "back": "Orqaga"
+    },
+    "region": {
+      "title": "Qaysi viloyatdasiz?",
+      "description": "Bu ma'lumot kurikulumni sizga moslashtirishga yordam beradi.",
+      "finish": "Yakunlash",
+      "back": "Orqaga",
+      "regions": {
+        "qoraqalpogiston": "Qoraqalpog'iston Respublikasi",
+        "andijon": "Andijon viloyati",
+        "buxoro": "Buxoro viloyati",
+        "fargona": "Farg'ona viloyati",
+        "jizzax": "Jizzax viloyati",
+        "xorazm": "Xorazm viloyati",
+        "namangan": "Namangan viloyati",
+        "navoiy": "Navoiy viloyati",
+        "qashqadaryo": "Qashqadaryo viloyati",
+        "samarqand": "Samarqand viloyati",
+        "sirdaryo": "Sirdaryo viloyati",
+        "surxondaryo": "Surxondaryo viloyati",
+        "toshkent-viloyati": "Toshkent viloyati",
+        "toshkent-shahri": "Toshkent shahri"
+      }
+    }
+  },
+  "Ish": {
+    "greeting": "Salom, {name}!",
+    "creditBalance": "Kredit balansi",
+    "comingSoon": {
+      "title": "Tez orada",
+      "lessonPlan": "Dars ishlanma",
+      "test": "Test va topshiriqlar",
+      "presentation": "Taqdimot",
+      "game": "Sinf o'yini"
+    },
+    "inactiveSubjectsNotice": "Siz tanlagan fan(lar) hali tayyorlanmoqda. Hozircha {activeSubjects} bo'yicha ishlashingiz mumkin.",
+    "logout": "Chiqish"
   }
 }
