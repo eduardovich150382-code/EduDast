@@ -13,7 +13,7 @@ import { routing, type AppLocale } from "./routing";
  * qolishi kerak (React'siz, har so'rovda proxy'da ishlaydi).
  */
 
-function isAppLocale(value: string): value is AppLocale {
+export function isAppLocale(value: string): value is AppLocale {
   return (routing.locales as readonly string[]).includes(value);
 }
 
