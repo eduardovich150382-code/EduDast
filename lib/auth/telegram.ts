@@ -53,6 +53,32 @@ export type TelegramVerifyResult =
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 
 /**
+ * `.env`/Vercel dashboard'idan kelgan bot tokenini tozalaydi.
+ *
+ * SABAB: qo'lda kiritilgan sirlarda ortiqcha bo'shliq yoki qator ko'chirish
+ * qolib ketishi — juda keng tarqalgan xato (masalan `.env` faylidan butun
+ * qatorni "TELEGRAM_BOT_TOKEN=xxx\n" ko'rinishida nusxalab, Vercel
+ * dashboard'idagi qiymat maydoniga joylashtirish). Bittagina ortiqcha
+ * belgi `SHA256(bot_token)` ni butunlay boshqa kalitga aylantiradi —
+ * natijada har bir login urinishi "bad_hash" bilan yiqiladi, token esa
+ * sozlangandek (bo'sh emasdek) ko'rinadi, ya'ni muammoni topish qiyin.
+ */
+export function normalizeBotToken(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * Widget uchun bot username'ini tozalaydi: bo'shliq va boshidagi "@"
+ * olib tashlanadi (BotFather ko'pincha "@nom_bot" shaklida ko'rsatadi,
+ * lekin widget "@"siz username kutadi).
+ */
+export function normalizeBotUsername(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim().replace(/^@/, "");
+  return trimmed ? trimmed : undefined;
+}
+
+/**
  * `hash` bu yerda ATAYLAB yo'q — u alohida, o'z xato sababi bilan
  * tekshiriladi. Noma'lum maydonlar (masalan `photo_url`) zod tomonidan
  * olib tashlanadi, lekin data-check-string xom `params` dan quriladi,

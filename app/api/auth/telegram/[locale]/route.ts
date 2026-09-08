@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { sessionCookieOptions } from "@/lib/auth/cookies";
 import { isOnboarded } from "@/lib/auth/onboarding";
 import { SESSION_COOKIE, encodeSession } from "@/lib/auth/session";
-import { verifyTelegramAuth } from "@/lib/auth/telegram";
+import { normalizeBotToken, verifyTelegramAuth } from "@/lib/auth/telegram";
 import { prisma } from "@/lib/db";
 import { isAppLocale, localePath } from "@/lib/i18n/locale-path";
 import { routing } from "@/lib/i18n/routing";
@@ -40,7 +40,7 @@ export async function GET(
     return NextResponse.redirect(url, 303);
   };
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = normalizeBotToken(process.env.TELEGRAM_BOT_TOKEN);
   if (!botToken) {
     // Token yo'qligi — sozlash xatosi. Xabarda token haqida hech narsa yo'q.
     console.error("[auth/telegram] TELEGRAM_BOT_TOKEN sozlanmagan.");
