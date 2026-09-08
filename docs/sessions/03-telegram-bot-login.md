@@ -76,6 +76,32 @@ bir xil bo'lishi uchun).
 Sir Vercel'da yo'q bo'lsa webhook **ataylab** 503 qaytaradi — "sirsiz
 ishlayveradi" rejimi yo'q.
 
+## Yo'l-yo'lakay tuzatilgan: Vercel build'i keshda yiqilardi
+
+Preview deploy `Module not found: Can't resolve './generated/prisma/client'`
+bilan yiqildi. Sabab bu sessiyaning kodida emas:
+
+```
+Installing dependencies...
+Already up to date
+Done in 47ms
+```
+
+Vercel oldingi deploydan build keshini tiklaganda pnpm o'rnatishni butunlay
+o'tkazib yuboradi — ya'ni `postinstall: prisma generate` ISHGA TUSHMAYDI.
+`lib/generated/` esa `.gitignore` da, demak repoda ham yo'q. Natijada
+`lib/db.ts` import qiladigan client umuman mavjud bo'lmaydi.
+
+Yechim: generatsiya `postinstall` ga emas, `build` ga bog'landi —
+
+```json
+"build": "prisma generate && next build"
+```
+
+`postinstall` joyida qoldi (lokalda `pnpm install` dan keyin client darhol
+kerak). Bu ikkalasi bir-birini takrorlaydi, lekin `prisma generate`
+idempotent va ~250 ms — keshdan kelib chiqadigan jimgina sinishdan ancha arzon.
+
 ## Ochiq qolgan ish
 
 - Muddati o'tgan `LoginToken` qatorlarini davriy tozalash (hozircha
