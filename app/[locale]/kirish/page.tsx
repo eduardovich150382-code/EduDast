@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import { DevLoginForm } from "@/components/auth/dev-login-form";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
+import { normalizeBotUsername } from "@/lib/auth/telegram";
 import {
   Card,
   CardContent,
@@ -44,7 +45,7 @@ export default async function KirishPage({
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const authUrl = `${proto}://${host}/api/auth/telegram/${locale}`;
 
-  const botUsername = process.env.TELEGRAM_BOT_USERNAME;
+  const botUsername = normalizeBotUsername(process.env.TELEGRAM_BOT_USERNAME);
   const errorMessage =
     xato && (KNOWN_ERRORS as readonly string[]).includes(xato)
       ? t(`errors.${xato as (typeof KNOWN_ERRORS)[number]}`)
