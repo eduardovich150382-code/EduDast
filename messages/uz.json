@@ -40,6 +40,13 @@
     "loginWith": "Telegram orqali kirish",
     "widgetUnavailable": "Telegram bilan kirish hozircha sozlanmagan.",
     "devLogin": "Dev sifatida kirish",
+    "botLogin": {
+      "start": "Telegram bot orqali kirish",
+      "waiting": "Telegramda “Start” tugmasini bosing…",
+      "openAgain": "Telegram ochilmadimi? Qaytadan ochish",
+      "error": "Kirish yakunlanmadi. Qaytadan urinib ko'ring.",
+      "orWidget": "yoki"
+    },
     "errors": {
       "missing_hash": "Telegram javobi to'liq emas. Qaytadan urinib ko'ring.",
       "invalid_payload": "Telegram javobi noto'g'ri formatda. Qaytadan urinib ko'ring.",
@@ -100,5 +107,11 @@
     },
     "inactiveSubjectsNotice": "Siz tanlagan fan(lar) hali tayyorlanmoqda. Hozircha {activeSubjects} bo'yicha ishlashingiz mumkin.",
     "logout": "Chiqish"
+  },
+  "Bot": {
+    "welcome": "Assalomu alaykum! EduDast — o'qituvchi uchun AI ish o'rni.\n\nKirish uchun saytdagi “Telegram bot orqali kirish” tugmasini bosing: {url}",
+    "loginApproved": "Kirish tasdiqlandi. Endi brauzerga qayting — sahifa o'zi ochiladi.",
+    "loginAlreadyUsed": "Bu kirish so'rovi allaqachon tasdiqlangan.",
+    "loginExpired": "Kirish so'rovining muddati o'tgan. Saytga qaytib, tugmani qaytadan bosing."
   }
 }

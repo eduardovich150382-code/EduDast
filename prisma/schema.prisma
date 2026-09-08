@@ -139,6 +139,44 @@ model User {
   lessonPlans       LessonPlan[]
   hostedGames       GameSession[]
   gamePlayers       GamePlayer[]
+  loginTokens       LoginToken[]
+}
+
+/// Telegram bot deep-link login uchun bir martalik token.
+///
+/// NEGA KERAK: Telegram Login Widget brauzerda telefon raqami so'raydi va
+/// tasdiqni Telegram xizmat chatiga yuboradi — o'qituvchi telefonida bu
+/// oqim tez-tez uzilib qoladi (xabar topilmaydi, kutish oynasi yopiladi).
+/// Deep-link oqimida esa brauzer botga havola ochadi, foydalanuvchi
+/// "Start" bosadi, bot tokenni tasdiqlaydi, brauzer esa holatni
+/// so'rab turib sessiya cookie'sini oladi.
+///
+/// IKKI SIR (ataylab):
+/// - `code` — deep-link ichida Telegram orqali o'tadi, ya'ni YARIM ochiq.
+/// - `verifierHash` — brauzerdagi httpOnly cookie'ning SHA-256'si.
+///   Holatni so'rash uchun IKKALASI ham kerak, shuning uchun `code` ni
+///   ko'rib qolgan uchinchi shaxs sessiyani o'g'irlay olmaydi.
+///
+/// Qator O'CHIRILMAYDI (CLAUDE.md soft delete qoidasi) — ishlatilgani
+/// `consumedAt` bilan belgilanadi va shu bilan qayta ishlatib bo'lmaydi.
+model LoginToken {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  verifierHash String
+  locale       String
+  /// Bot "Start" ni qabul qilgach to'ldiriladi.
+  userId       String?
+  approvedAt   DateTime?
+  /// Brauzer sessiya cookie'sini olgan payt — token shundan keyin o'lik.
+  consumedAt   DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  /// Muddati o'tganlarni davriy tozalash uchun (`code` allaqachon unique,
+  /// shuning uchun qidiruv indeksi qo'shilmaydi).
+  @@index([expiresAt])
 }
 
 model Subject {

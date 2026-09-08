@@ -16,6 +16,9 @@ const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   TELEGRAM_ADMIN_CHAT_ID: z.string().optional(),
+  // Bot webhook'ini himoya qiluvchi sir (`setWebhook` dagi `secret_token`).
+  // Sozlanmagan bo'lsa /api/telegram/webhook butunlay yopiq turadi.
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
   // Sessiya JWT'sini imzolash kaliti. Kamida 32 bayt — qat'iy tekshiruv
   // instrumentation.ts (ishga tushish) va lib/auth/session.ts (chaqirilganda)

@@ -3,7 +3,7 @@ import { sessionCookieOptions } from "@/lib/auth/cookies";
 import { isOnboarded } from "@/lib/auth/onboarding";
 import { SESSION_COOKIE, encodeSession } from "@/lib/auth/session";
 import { normalizeBotToken, verifyTelegramAuth } from "@/lib/auth/telegram";
-import { prisma } from "@/lib/db";
+import { upsertTelegramUser } from "@/lib/auth/upsert-telegram-user";
 import { isAppLocale, localePath } from "@/lib/i18n/locale-path";
 import { routing } from "@/lib/i18n/routing";
 
@@ -58,22 +58,7 @@ export async function GET(
   }
 
   const { telegramId, fullName, username } = result.data;
-
-  const user = await prisma.user.upsert({
-    where: { telegramId },
-    // `locale` faqat yaratishda qo'yiladi — keyinchalik foydalanuvchi
-    // tilni almashtirsa, qayta kirish uni bekor qilib yubormasligi kerak.
-    create: { telegramId, fullName, username, locale },
-    // Rasm (photo_url) SAQLANMAYDI — R2 hali sozlanmagan va kerak ham emas.
-    update: { fullName, username },
-    select: {
-      id: true,
-      subjects: true,
-      grades: true,
-      region: true,
-      sessionVersion: true,
-    },
-  });
+  const user = await upsertTelegramUser({ telegramId, fullName, username }, locale);
 
   const onboarded = isOnboarded(user);
   const target = localePath(locale, onboarded ? "/ish" : "/onboarding");
