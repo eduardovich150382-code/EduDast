@@ -12,7 +12,8 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "tg:webhook": "node scripts/telegram-webhook.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -2,6 +2,7 @@ import { GraduationCap } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import { DevLoginForm } from "@/components/auth/dev-login-form";
+import { TelegramDeepLinkLogin } from "@/components/auth/telegram-deep-link-login";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 import { normalizeBotUsername } from "@/lib/auth/telegram";
 import {
@@ -72,11 +73,35 @@ export default async function KirishPage({
           )}
 
           {botUsername ? (
-            <TelegramLoginButton
-              botUsername={botUsername}
-              authUrl={authUrl}
-              lang={widgetLang(locale)}
-            />
+            <>
+              {/*
+                ASOSIY yo'l — bot deep-link'i. Widget'dan farqli o'laroq
+                telefon raqami ham, Telegram xizmat chatidagi tasdiq xabari
+                ham kerak emas: foydalanuvchi botga o'tib "Start" bosadi.
+              */}
+              <TelegramDeepLinkLogin
+                locale={locale}
+                labels={{
+                  start: t("botLogin.start"),
+                  waiting: t("botLogin.waiting"),
+                  openAgain: t("botLogin.openAgain"),
+                  error: t("botLogin.error"),
+                }}
+              />
+
+              {/*
+                Widget ZAXIRA yo'l sifatida qoladi: kompyuterda Telegram
+                ilovasi o'rnatilmagan bo'lsa, deep-link ochilmaydi.
+              */}
+              <div className="flex flex-col items-center gap-2 border-t border-line pt-4">
+                <p className="text-xs text-ink-2">{t("botLogin.orWidget")}</p>
+                <TelegramLoginButton
+                  botUsername={botUsername}
+                  authUrl={authUrl}
+                  lang={widgetLang(locale)}
+                />
+              </div>
+            </>
           ) : (
             <p className="text-sm text-ink-2">{t("widgetUnavailable")}</p>
           )}
