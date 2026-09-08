@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { redirect } from "@/lib/i18n/navigation";
@@ -61,6 +62,28 @@ export const auth = cache(async (): Promise<SessionUser | null> => {
 export async function requireAuth(): Promise<SessionUser> {
   const user = await auth();
   if (!user) return redirect({ href: "/kirish", locale: await getLocale() });
+  return user;
+}
+
+/**
+ * Admin chegarasi.
+ *
+ * NEGA `notFound()` (404), `redirect` yoki 403 emas: /admin borligini
+ * bilish ham ortiqcha ma'lumot. Kirmagan foydalanuvchi ham, oddiy
+ * o'qituvchi ham AYNAN bir xil 404 ko'radi.
+ *
+ * NEGA HAR ACTION'DA ALOHIDA: `app/[locale]/admin/layout.tsx` faqat RSC
+ * daraxti render bo'lishini to'sadi. Server action POST'i layout'dan
+ * O'TMAYDI — uni to'g'ridan-to'g'ri chaqirish mumkin. Shuning uchun /admin
+ * ostidagi har bir action va route handler birinchi qatorda o'zi shuni
+ * chaqiradi (server/admin-actions.ts).
+ *
+ * Rol sessiya JWT'ida EMAS, bazadan o'qiladi (auth()) — ya'ni rolni olib
+ * qo'yish darhol kuchga kiradi, foydalanuvchi qayta kirishini kutmaydi.
+ */
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await auth();
+  if (!user || user.role !== "ADMIN") notFound();
   return user;
 }
 

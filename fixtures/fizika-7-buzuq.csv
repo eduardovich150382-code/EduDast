@@ -1,0 +1,5 @@
+grade,parent_slug,slug,title_uz,title_uz_cyrl,title_ru,order,objectives,keywords,hours_plan
+7,,harakat-va-kuch,Harakat va kuch,Ҳаракат ва куч,Движение и сила,1,,,
+0,harakat-va-kuch,mexanik-harakat,Mexanik harakat,Механик ҳаракат,Механическое движение,1,,,
+7,harakat-va-kuch,Tezlik_Katta,Tezlik,Тезлик,Скорость,x,,,
+7,,bosim,Bosim,,Давление,3,,,

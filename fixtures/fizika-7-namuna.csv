@@ -1,0 +1,6 @@
+grade,parent_slug,slug,title_uz,title_uz_cyrl,title_ru,order,objectives,keywords,hours_plan
+7,,harakat-va-kuch,Harakat va kuch,Ҳаракат ва куч,Движение и сила,1,,,
+7,harakat-va-kuch,mexanik-harakat,Mexanik harakat,Механик ҳаракат,Механическое движение,1,Mexanik harakatni ta'riflaydi|Sanoq sistemasini tanlaydi,harakat|traektoriya|sanoq sistemasi,2
+7,harakat-va-kuch,tezlik,Tezlik,Тезлик,Скорость,2,Tezlikni hisoblaydi|Birliklarni almashtiradi,tezlik|masofa|vaqt,2
+7,,issiqlik,Issiqlik hodisalari,Иссиқлик ҳодисалари,Тепловые явления,2,,,
+7,issiqlik,harorat,"Harorat, termometr","Ҳарорат, термометр","Температура, термометр",1,Termometrdan foydalanadi,harorat|termometr|shkala,1
