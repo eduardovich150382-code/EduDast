@@ -34,6 +34,10 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 &#x20;  Yangi matn qo'shsang — uchala faylga ham kalit qo'sh.
 
+&#x20;  \*\*Istisno:\*\* `app/[locale]/admin/**` va `components/admin/**` — admin paneli
+&#x20;  faqat o'zbek tilida (lotin), i18n qoidasidan ozod. Dizayn tokenlari qoidasi
+&#x20;  (2-qoida) unga ham to'liq amal qiladi.
+
 2\. \*\*Hardcode rang yo'q.\*\* Faqat `styles/tokens.css` dagi CSS o'zgaruvchilari.
 
 &#x20;  `bg-\[#123456]` yoki `text-purple-500` — taqiqlanadi.

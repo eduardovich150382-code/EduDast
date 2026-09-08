@@ -123,6 +123,9 @@ async function main() {
     },
   ];
 
+  // `update: {}` ATAYLAB bo'sh: admin panelidan o'chirilgan (deletedAt) seed
+  // mavzusi qayta seed'da TIRILMAYDI. Tiriltirish — CSV importning ishi
+  // (lib/curriculum/import.ts), u buni ataylab qiladi.
   for (const topic of topics) {
     await prisma.topic.upsert({
       where: {

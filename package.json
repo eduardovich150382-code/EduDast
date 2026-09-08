@@ -13,6 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "curriculum:import": "tsx scripts/curriculum-import.ts",
+    "make-admin": "tsx scripts/make-admin.ts",
     "tg:webhook": "node scripts/telegram-webhook.mjs"
   },
   "dependencies": {
@@ -41,6 +43,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "csv-parse": "^7.0.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "posthog-js": "^1.427.2",

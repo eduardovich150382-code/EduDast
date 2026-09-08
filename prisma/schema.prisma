@@ -212,6 +212,14 @@ model Topic {
   /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
   embedding   Unsupported("vector(768)")?
 
+  /// Soft delete (CLAUDE.md). Mavzu o'chirilsa ham unga bog'langan
+  /// Document/LessonPlan/GameSession yozuvlari yetim qolmaydi.
+  /// DIQQAT: @@unique([subjectId, grade, slug]) o'chirilgan qatorni ham
+  /// qamraydi — CSV import o'sha slug'ni qayta uchratsa yangi qator
+  /// YARATMAYDI, mavjudini tiriltiradi (deletedAt: null).
+  /// $queryRaw qidiruvda bu filtr QO'LDA yoziladi (lib/curriculum/search.ts).
+  deletedAt   DateTime?
+
   subject  Subject @relation(fields: [subjectId], references: [id])
   parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
   children Topic[] @relation("TopicHierarchy")
