@@ -2,6 +2,8 @@ import { createHash, createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   buildDataCheckString,
+  normalizeBotToken,
+  normalizeBotUsername,
   verifyTelegramAuth,
 } from "@/lib/auth/telegram";
 
@@ -252,5 +254,68 @@ describe("verifyTelegramAuth — bot tokeni sizib chiqmaydi", () => {
       const result = verifyTelegramAuth(params, { botToken: BOT_TOKEN, nowSeconds: NOW });
       if (!result.ok) expect(allowed).toContain(result.reason);
     }
+  });
+});
+
+/**
+ * REGRESSIYA: production'da haqiqiy login doim "bad_hash" bilan
+ * yiqilgan holat topildi — sababi Vercel dashboard'iga qo'lda kiritilgan
+ * TELEGRAM_BOT_TOKEN atrofida yashirin bo'shliq/qator ko'chirish qolib
+ * ketishi (yoki username "@" bilan). Bittagina ortiqcha belgi
+ * SHA256(bot_token) ni butunlay boshqa kalitga aylantiradi.
+ */
+describe("normalizeBotToken", () => {
+  it("boshi/oxiridagi bo'shliqni olib tashlaydi", () => {
+    expect(normalizeBotToken(`  ${BOT_TOKEN}  `)).toBe(BOT_TOKEN);
+  });
+
+  it("oxiridagi qator ko'chirishni olib tashlaydi (.env dan copy-paste)", () => {
+    expect(normalizeBotToken(`${BOT_TOKEN}\n`)).toBe(BOT_TOKEN);
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["bo'sh satr", ""],
+    ["faqat bo'shliq", "   "],
+  ])("%s → undefined", (_nom, raw) => {
+    expect(normalizeBotToken(raw)).toBeUndefined();
+  });
+
+  it("tozalangan token bilan tozalanmagan hash mos kelmaydi (bo'shliqli token bilan imzolangan payload)", () => {
+    // Bo'shliqli "token" bilan imzolansa (route buni hech qachon qilmaydi,
+    // lekin normalize qilinmasa xuddi shu holat yuz beradi), tozalangan
+    // token bilan tekshiruv bad_hash beradi — bu aynan production'da
+    // kuzatilgan nosozlik.
+    const dirtyToken = `${BOT_TOKEN}\n`;
+    const signed = sign(basePayload(), dirtyToken);
+
+    const result = verifyTelegramAuth(signed, {
+      botToken: normalizeBotToken(dirtyToken)!,
+      nowSeconds: NOW,
+    });
+
+    expect(result).toEqual({ ok: false, reason: "bad_hash" });
+  });
+});
+
+describe("normalizeBotUsername", () => {
+  it("boshidagi @ ni olib tashlaydi", () => {
+    expect(normalizeBotUsername("@edudast_bot")).toBe("edudast_bot");
+  });
+
+  it("bo'shliqni olib tashlaydi", () => {
+    expect(normalizeBotUsername("  edudast_bot  ")).toBe("edudast_bot");
+  });
+
+  it("@ va bo'shliq birga bo'lsa ham to'g'ri", () => {
+    expect(normalizeBotUsername("  @edudast_bot\n")).toBe("edudast_bot");
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["bo'sh satr", ""],
+    ["faqat @", "@"],
+  ])("%s → undefined", (_nom, raw) => {
+    expect(normalizeBotUsername(raw)).toBeUndefined();
   });
 });
