@@ -1,4 +1,4 @@
-import { BookOpen, LayoutDashboard, ListTree } from "lucide-react";
+import { BookOpen, Gauge, LayoutDashboard, ListTree } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 
@@ -22,6 +22,7 @@ const NAV = [
   { href: "/admin", label: "Statistika", icon: LayoutDashboard },
   { href: "/admin/fanlar", label: "Fanlar", icon: BookOpen },
   { href: "/admin/mavzular", label: "Mavzular", icon: ListTree },
+  { href: "/admin/sifat", label: "Sifat", icon: Gauge },
 ] as const;
 
 export default async function AdminLayout({

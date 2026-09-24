@@ -15,10 +15,14 @@
     "db:seed": "prisma db seed",
     "curriculum:import": "tsx scripts/curriculum-import.ts",
     "make-admin": "tsx scripts/make-admin.ts",
-    "tg:webhook": "node scripts/telegram-webhook.mjs"
+    "tg:webhook": "node scripts/telegram-webhook.mjs",
+    "llm:smoke": "tsx scripts/llm-smoke.ts",
+    "llm:models": "tsx scripts/llm-models.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@base-ui/react": "^1.8.0",
+    "@google/genai": "^2.24.0",
     "@prisma/adapter-neon": "^7.10.0",
     "@prisma/client": "7.10.0",
     "class-variance-authority": "^0.7.1",
