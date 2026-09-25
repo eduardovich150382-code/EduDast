@@ -18,7 +18,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | 01 | `01-poydevor.md` | ✅ bajarilgan | Next.js, tokenlar, i18n, Prisma sxemasi |
 | 02 | `02-auth.md` | ✅ bajarilgan | Telegram login, onboarding |
 | 03 | `03-telegram-bot-login.md` | ✅ bajarilgan | Deep-link login, webhook |
-| 04 | `04-llm-qatlami.md` | AI qatlami: Claude + Gemini, narx, byudjet, A/B | Sinov chaqiruvi ishlaydi, xarajat yoziladi |
+| 04 | `04-llm-qatlami.md` | ✅ bajarilgan (PR #8) | AI qatlami: Claude + Gemini, narx, byudjet, A/B |
 | 05 | `05-embedding.md` | Mavzularni indekslash | Ma'no bo'yicha qidiruv ishlaydi |
 | 06 | `06-kreditlar.md` | Band qilish / yechish / qaytarish | Admin kredit bera oladi |
 | 07 | `07-kalendar-va-tmr.md` | O'quv yili, choraklar, hafta hisobi | "Rejam" sahifasi |
@@ -33,6 +33,10 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | 16 | `16-oyinlar-toliq.md` | Qolgan 7 o'yin | To'liq to'plam |
 | 17 | `17-eksport.md` | PPTX, DOCX, ulashish | Yuklab olish |
 | 18 | `18-tolov.md` | Qo'lda karta to'lovi | Daromad |
+
+04-bosqichda kod tugallangan; kalit va bazaga ulanish talab qiladigan
+tekshiruvlar (`pnpm llm:models`, `pnpm llm:smoke`, migratsiya) PR #8
+tavsifidagi ro'yxatda — ularni kalit egasi bajaradi.
 
 To'liq tahlil va sabablar: [`docs/reja.md`](../reja.md)
 
