@@ -3,9 +3,16 @@ import type { ProviderId, Tier } from "./types";
 /**
  * Model reyestri va narxlar.
  *
+ * IKKI XIL TASDIQ — chalkashtirmang:
+ *   `idVerifiedOn` — model ID provayderning O'Z API'sida bor (`pnpm llm:models`).
+ *   `verified`     — NARX rasmiy narx sahifasidan olingan.
+ * Birinchisi ikkinchisini bermaydi: API ro'yxati narx haqida hech narsa
+ * aytmaydi, shuning uchun ID tasdiqlangan model ham `verified: false` bo'lishi
+ * mumkin.
+ *
  * NARX QAYERDAN: Anthropic — rasmiy narx sahifasi, 2026-06-24 holatiga.
- * Gemini — 2026-09 holatiga (rasmiy sahifa shu muhitda ochilmadi, ikkilamchi
- * manbalardan olindi, shuning uchun `verified: false` bilan belgilangan).
+ * Gemini — 2026-09 holatiga, ikkilamchi manbalardan (rasmiy sahifa hali
+ * ochilmadi), shuning uchun `verified: false`.
  *
  * BU JADVAL 3 OYDAN ESKI BO'LSA — marja hisobiga ishonishdan oldin jonli
  * narx sahifasini tekshiring. Model ID'lari to'g'riligini `pnpm llm:models`
@@ -33,8 +40,13 @@ export type ModelEntry = {
   thinkingStyle: "adaptive" | "budget" | "none";
   /** Kuniga bepul so'rovlar soni. `null` — bepul kvota yo'q. */
   freeTierRpd: number | null;
-  /** Narx rasmiy manbadan tasdiqlanganmi. */
+  /** NARX rasmiy manbadan tasdiqlanganmi. ID ni tasdiqlamaydi. */
   verified: boolean;
+  /**
+   * Model ID provayder API'sida borligi tasdiqlangan sana (`pnpm llm:models`).
+   * Yo'q bo'lsa — hali tekshirilmagan (masalan kalit sozlanmagan).
+   */
+  idVerifiedOn?: string;
   /** Narx shu sanadan keyin o'zgarishi ma'lum bo'lsa. */
   priceChangesOn?: string;
   note?: string;
@@ -97,6 +109,7 @@ export const MODELS = {
     thinkingStyle: "none",
     freeTierRpd: null,
     verified: false,
+    idVerifiedOn: "2026-09-25",
     note: "200K tokendan oshsa qayta narxlanadi ($4/$18) — uzun promptda hisob past chiqadi.",
   },
   "gemini-3.8-flash": {
@@ -111,6 +124,7 @@ export const MODELS = {
     thinkingStyle: "none",
     freeTierRpd: 200,
     verified: false,
+    idVerifiedOn: "2026-09-25",
     priceChangesOn: "2027-01-01",
     note: "Aksiya narxi. 2027-01-01 dan $1.50/$7.50 ga oshadi.",
   },
@@ -126,6 +140,10 @@ export const MODELS = {
     thinkingStyle: "none",
     freeTierRpd: 1000,
     verified: false,
+    idVerifiedOn: "2026-09-25",
+    // Reyestrda eng eski avlod: API ro'yxatida 3.1 va 3.5 flash-lite ham bor.
+    // Almashtirishdan oldin narxi kerak — arzon uya qimmatlashib qolmasin.
+    note: "Arzon uya 2.5 avlodida, mid esa 3.8 da — narx tasdiqlangach qayta ko'rilsin.",
   },
 } as const satisfies Record<string, ModelEntry>;
 
@@ -138,6 +156,7 @@ export const EMBEDDING_MODEL = {
   dim: 768,
   inputPerMTok: 0.15,
   verified: false,
+  idVerifiedOn: "2026-09-25",
 };
 
 /** Har provayder uchun daraja → model xaritasi. */
