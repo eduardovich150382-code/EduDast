@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { LlmError } from "../errors";
+import { errorDetail, LlmError } from "../errors";
 import { getModel } from "../models";
 import type { LlmProvider, ProviderRequest, ProviderResult } from "../types";
 
@@ -107,14 +107,21 @@ function translate(e: unknown, model: string): LlmError {
   if (e instanceof LlmError) return e;
   const ctx = { provider: "anthropic", model, cause: e };
 
+  const detail = errorDetail(e);
+  const suffix = detail === "" ? "" : ` — ${detail}`;
+
   if (e instanceof Anthropic.RateLimitError) {
-    return new LlmError("rate_limit", "So'rov chegarasi", ctx);
+    return new LlmError("rate_limit", `So'rov chegarasi${suffix}`, ctx);
   }
   if (e instanceof Anthropic.APIError) {
     if (e.status !== undefined && e.status >= 500) {
-      return new LlmError("overloaded", `Provayder xatosi ${e.status}`, ctx);
+      return new LlmError("overloaded", `Provayder xatosi ${e.status}${suffix}`, ctx);
     }
-    return new LlmError("unknown", `API xatosi ${e.status ?? "?"}`, ctx);
+    return new LlmError(
+      "unknown",
+      `API xatosi ${e.status ?? "?"} (${model})${suffix}`,
+      ctx,
+    );
   }
-  return new LlmError("unknown", "Noma'lum xato", ctx);
+  return new LlmError("unknown", `Noma'lum xato (${model})${suffix}`, ctx);
 }

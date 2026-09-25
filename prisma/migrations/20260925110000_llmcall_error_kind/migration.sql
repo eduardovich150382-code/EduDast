@@ -1,0 +1,12 @@
+-- Yiqilgan urinishni muvaffaqiyatli bepul chaqiruvdan ajratish uchun.
+--
+-- Ilgari yiqilgan urinish umuman yozilmasdi (token soni noma'lum bo'lsa
+-- qator yaratilmasdi), ya'ni "apiga yetib borgan har urinish jurnalga
+-- tushadi" qoidasi amalda ishlamasdi. Endi qator yoziladi, lekin
+-- `costUsd = 0` qatorni bepul kvotadagi muvaffaqiyatli chaqiruvdan
+-- farqlash kerak — shu ustun aynan shuning uchun.
+--
+-- `null` = muvaffaqiyat. Indeks ataylab QO'YILMAGAN: bu ustun byudjet
+-- so'rovida ishtirok etmaydi, faqat tahlil uchun o'qiladi va Neon'da
+-- ortiqcha indeks joy yeydi.
+ALTER TABLE "LlmCall" ADD COLUMN "errorKind" TEXT;
