@@ -1,4 +1,5 @@
 allowBuilds:
+  '@google/genai': false
   '@parcel/watcher': true
   '@prisma/engines': true
   '@sentry/cli': true
@@ -6,4 +7,5 @@ allowBuilds:
   core-js: true
   esbuild: true
   prisma: true
+  protobufjs: false
   unrs-resolver: true

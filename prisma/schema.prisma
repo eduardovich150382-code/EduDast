@@ -290,8 +290,14 @@ model Export {
 model LlmCall {
   id         String   @id @default(cuid())
   documentId String?
-  userId     String
+  /// `null` — tizim chaqiruvi (embedding backfill, cron). Soxta
+  /// foydalanuvchi yaratmaslik uchun ixtiyoriy.
+  userId     String?
+  /// "anthropic" | "gemini". A/B solishtiruvi shu ustun bo'yicha.
+  provider   String
   model      String
+  /// JAMI kirish: keshsiz + keshdan o'qilgan + keshga yozilgan.
+  /// Taqsimot `costUsd` ichida allaqachon hisobga olingan.
   tokensIn   Int
   tokensOut  Int
   costUsd    Decimal  @db.Decimal(10, 6)
@@ -299,10 +305,14 @@ model LlmCall {
   createdAt  DateTime @default(now())
 
   document Document? @relation(fields: [documentId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([documentId])
+  /// Byudjet shifti har LLM chaqiruvidan oldin oylik va kunlik
+  /// SUM(costUsd) ni o'qiydi. Bu indekssiz so'rov jadval o'sgani sari
+  /// to'liq skanga aylanadi — Neon'da ham sekin, ham pullik.
+  @@index([createdAt])
 }
 
 model CreditTx {

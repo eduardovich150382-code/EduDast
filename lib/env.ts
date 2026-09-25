@@ -44,7 +44,19 @@ const envSchema = z.object({
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().optional(),
 
+  // --- LLM provayderlari ---
+  ANTHROPIC_API_KEY: z.string().optional(),
+  GOOGLE_API_KEY: z.string().optional(),
+  // "true" bo'lsa hujjatlar Claude va Gemini orasida deterministik
+  // 50/50 taqsimlanadi (sifatni solishtirish uchun).
+  LLM_AB_ENABLED: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+
   LLM_MONTHLY_BUDGET_USD: z.coerce.number().optional(),
+  LLM_DAILY_BUDGET_USD: z.coerce.number().optional(),
+  LLM_USER_DAILY_BUDGET_USD: z.coerce.number().optional(),
   GENERATION_ENABLED: z
     .enum(["true", "false"])
     .optional()
