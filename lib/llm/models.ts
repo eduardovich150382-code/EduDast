@@ -11,8 +11,11 @@ import type { ProviderId, Tier } from "./types";
  * mumkin.
  *
  * NARX QAYERDAN: Anthropic — rasmiy narx sahifasi, 2026-06-24 holatiga.
- * Gemini — 2026-09 holatiga, ikkilamchi manbalardan (rasmiy sahifa hali
- * ochilmadi), shuning uchun `verified: false`.
+ * Gemini — rasmiy narx sahifasi (ai.google.dev/gemini-api/docs/pricing),
+ * 2026-09-25 holatiga.
+ *
+ * `freeTierRpd` BUNDAN MUSTASNO: kunlik bepul so'rov soni narx sahifasida
+ * emas, alohida "rate limits" sahifasida turadi va u tasdiqlanmagan.
  *
  * BU JADVAL 3 OYDAN ESKI BO'LSA — marja hisobiga ishonishdan oldin jonli
  * narx sahifasini tekshiring. Model ID'lari to'g'riligini `pnpm llm:models`
@@ -47,6 +50,8 @@ export type ModelEntry = {
    * Yo'q bo'lsa — hali tekshirilmagan (masalan kalit sozlanmagan).
    */
   idVerifiedOn?: string;
+  /** Narx rasmiy sahifadan tekshirilgan sana. */
+  priceVerifiedOn?: string;
   /** Narx shu sanadan keyin o'zgarishi ma'lum bo'lsa. */
   priceChangesOn?: string;
   note?: string;
@@ -66,6 +71,7 @@ export const MODELS = {
     thinkingStyle: "adaptive",
     freeTierRpd: null,
     verified: true,
+    priceVerifiedOn: "2026-06-24",
   },
   "claude-sonnet-5": {
     id: "claude-sonnet-5",
@@ -79,6 +85,7 @@ export const MODELS = {
     thinkingStyle: "adaptive",
     freeTierRpd: null,
     verified: true,
+    priceVerifiedOn: "2026-06-24",
   },
   "claude-haiku-4-5": {
     id: "claude-haiku-4-5",
@@ -92,9 +99,10 @@ export const MODELS = {
     thinkingStyle: "budget",
     freeTierRpd: null,
     verified: true,
+    priceVerifiedOn: "2026-06-24",
   },
 
-  // --- Gemini (ikkilamchi manbalardan, tasdiqlash kerak) ---
+  // --- Gemini (narxlar rasmiy sahifadan, 2026-09-25) ---
   "gemini-3.1-pro-preview": {
     id: "gemini-3.1-pro-preview",
     provider: "gemini",
@@ -103,12 +111,15 @@ export const MODELS = {
     outputPerMTok: 12.0,
     // Gemini kontekst keshi alohida API — v1 da ishlatilmaydi, shuning
     // uchun koeffitsientlar 1 (kesh yutug'i yo'q deb hisoblanadi).
+    // Ishlatilsa: kesh o'qish $0.20/Mtok = kirishning 0.10 ulushi, saqlash
+    // esa alohida $4.50/Mtok soatiga — ya'ni koeffitsient yolg'iz yetmaydi.
     cacheWriteMultiplier: 1,
     cacheReadMultiplier: 1,
     maxOutputTokens: 64_000,
     thinkingStyle: "none",
     freeTierRpd: null,
-    verified: false,
+    verified: true,
+    priceVerifiedOn: "2026-09-25",
     idVerifiedOn: "2026-09-25",
     note: "200K tokendan oshsa qayta narxlanadi ($4/$18) — uzun promptda hisob past chiqadi.",
   },
@@ -123,10 +134,11 @@ export const MODELS = {
     maxOutputTokens: 32_000,
     thinkingStyle: "none",
     freeTierRpd: 200,
-    verified: false,
+    verified: true,
+    priceVerifiedOn: "2026-09-25",
     idVerifiedOn: "2026-09-25",
     priceChangesOn: "2027-01-01",
-    note: "Aksiya narxi. 2027-01-01 dan $1.50/$7.50 ga oshadi.",
+    note: "Aksiya narxi 2026-12-31 gacha. 2027-01-01 dan $1.50/$7.50 — ikki barobar.",
   },
   "gemini-2.5-flash-lite": {
     id: "gemini-2.5-flash-lite",
@@ -139,11 +151,13 @@ export const MODELS = {
     maxOutputTokens: 16_000,
     thinkingStyle: "none",
     freeTierRpd: 1000,
-    verified: false,
+    verified: true,
+    priceVerifiedOn: "2026-09-25",
     idVerifiedOn: "2026-09-25",
-    // Reyestrda eng eski avlod: API ro'yxatida 3.1 va 3.5 flash-lite ham bor.
-    // Almashtirishdan oldin narxi kerak — arzon uya qimmatlashib qolmasin.
-    note: "Arzon uya 2.5 avlodida, mid esa 3.8 da — narx tasdiqlangach qayta ko'rilsin.",
+    // Eski avlod, lekin ataylab: yangi flash-lite'lar qimmatroq —
+    // 3.1-flash-lite $0.25/$1.50, 3.5-flash-lite $0.30/$2.50. Chiqish
+    // bo'yicha farq 3.75–6.25 barobar, arzon uyada esa aynan chiqish hal qiladi.
+    note: "Arzon uyaning eng arzoni: yangi 3.1/3.5 flash-lite chiqishi 3.75–6.25x qimmat.",
   },
 } as const satisfies Record<string, ModelEntry>;
 
@@ -155,6 +169,10 @@ export const EMBEDDING_MODEL = {
   /** Matryoshka kesish: 768/1536/3072 qo'llab-quvvatlanadi, narx bir xil. */
   dim: 768,
   inputPerMTok: 0.15,
+  // Narx sahifasida `gemini-embedding-001` uchun alohida qator yo'q; $0.15
+  // "File Search" bo'limidagi embedding stavkasidan olingan, shuning uchun
+  // hali tasdiqlanmagan. Yangi `gemini-embedding-2` matn uchun $0.20 —
+  // 05-bosqichda (embedding) qaysi biri olinishi shu farq bilan hal bo'ladi.
   verified: false,
   idVerifiedOn: "2026-09-25",
 };
