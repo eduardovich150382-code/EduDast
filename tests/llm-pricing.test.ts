@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { MODELS, TIER_MODELS, lowerTier, getModel } from "@/lib/llm/models";
-import { costFor, costMicros, estimateMicros, microsToUsd } from "@/lib/llm/pricing";
+import {
+  MODELS,
+  TIER_MODELS,
+  EMBEDDING_MODEL,
+  lowerTier,
+  getModel,
+} from "@/lib/llm/models";
+import {
+  costFor,
+  costMicros,
+  estimateMicros,
+  microsToUsd,
+} from "@/lib/llm/pricing";
 import type { Tier, Usage } from "@/lib/llm/types";
 
 const usage = (u: Partial<Usage>): Usage => ({
@@ -33,8 +44,12 @@ describe("microsToUsd", () => {
 
 describe("costMicros", () => {
   it("opus-5: 1M kirish = $5, 1M chiqish = $25", () => {
-    expect(costMicros("claude-opus-5", usage({ tokensIn: 1_000_000 }))).toBe(5_000_000);
-    expect(costMicros("claude-opus-5", usage({ tokensOut: 1_000_000 }))).toBe(25_000_000);
+    expect(costMicros("claude-opus-5", usage({ tokensIn: 1_000_000 }))).toBe(
+      5_000_000,
+    );
+    expect(costMicros("claude-opus-5", usage({ tokensOut: 1_000_000 }))).toBe(
+      25_000_000,
+    );
   });
 
   it("nol sarf — nol xarajat", () => {
@@ -50,32 +65,48 @@ describe("costMicros", () => {
 
   it("keshga yozish kirishdan 1.25 barobar qimmat", () => {
     const full = costMicros("claude-opus-5", usage({ tokensIn: 1_000_000 }));
-    const written = costMicros("claude-opus-5", usage({ cacheWrite: 1_000_000 }));
+    const written = costMicros(
+      "claude-opus-5",
+      usage({ cacheWrite: 1_000_000 }),
+    );
     expect(written).toBe(full * 1.25);
   });
 
   it("Gemini'da kesh yutug'i va'da qilinmaydi (koeffitsient 1)", () => {
     const full = costMicros("gemini-3.8-flash", usage({ tokensIn: 1_000_000 }));
-    const cached = costMicros("gemini-3.8-flash", usage({ cacheRead: 1_000_000 }));
+    const cached = costMicros(
+      "gemini-3.8-flash",
+      usage({ cacheRead: 1_000_000 }),
+    );
     expect(cached).toBe(full);
   });
 
   it("hamma tarkibiy qism qo'shiladi", () => {
     const c = costMicros(
       "claude-haiku-4-5",
-      usage({ tokensIn: 1000, tokensOut: 2000, cacheRead: 3000, cacheWrite: 4000 }),
+      usage({
+        tokensIn: 1000,
+        tokensOut: 2000,
+        cacheRead: 3000,
+        cacheWrite: 4000,
+      }),
     );
     // 1000*1 + 2000*5 + 3000*1*0.1 + 4000*1*1.25 = 1000 + 10000 + 300 + 5000
     expect(c).toBe(16_300);
   });
 
   it("butun son qaytaradi — float qoldig'i yo'q", () => {
-    const c = costMicros("claude-sonnet-5", usage({ tokensIn: 333, cacheRead: 777 }));
+    const c = costMicros(
+      "claude-sonnet-5",
+      usage({ tokensIn: 333, cacheRead: 777 }),
+    );
     expect(Number.isInteger(c)).toBe(true);
   });
 
   it("reyestrda yo'q model — xato, jim 0 emas", () => {
-    expect(() => costMicros("gpt-yoq", usage({ tokensIn: 1 }))).toThrow(/Narx jadvalida yo'q/);
+    expect(() => costMicros("gpt-yoq", usage({ tokensIn: 1 }))).toThrow(
+      /Narx jadvalida yo'q/,
+    );
   });
 });
 
@@ -140,14 +171,22 @@ describe("model reyestri", () => {
     }
   });
 
-  it("tasdiqlanmagan narx ataylab belgilangan — jim qolmaydi", () => {
-    // Gemini narxlari ikkilamchi manbadan. Agar kimdir ularni tasdiqlab
-    // `verified: true` qilsa, bu test eslatadi: izohni ham yangilash kerak.
-    const unverified = Object.values(MODELS).filter((m) => !m.verified);
-    for (const m of unverified) {
-      expect(m.provider, `${m.id}: tasdiqlanmagan narx faqat Gemini'da kutilgan`).toBe(
-        "gemini",
-      );
+  it('tasdiqlangan narxning sanasi bor — "qachon tekshirilgan?" javobsiz qolmasin', () => {
+    // `verified: true` bo'lsa-yu sana bo'lmasa, jadval eskirganini hech kim
+    // bilmaydi: "3 oydan eski bo'lsa tekshiring" qoidasi sanasiz ishlamaydi.
+    for (const m of Object.values(MODELS)) {
+      if (m.verified) {
+        expect(m.priceVerifiedOn, `${m.id}: verified, lekin sana yo'q`).toMatch(
+          /^\d{4}-\d{2}-\d{2}$/,
+        );
+      }
     }
+  });
+
+  it("ID tasdig'i narx tasdig'i bilan chalkashmaydi", () => {
+    // `pnpm llm:models` faqat ID ni tekshiradi — narx haqida hech narsa
+    // aytmaydi. Ikkalasi bitta maydonga yig'ilib qolmasin.
+    const embedOnlyId = EMBEDDING_MODEL.idVerifiedOn !== undefined;
+    expect(embedOnlyId && EMBEDDING_MODEL.verified).toBe(false);
   });
 });
