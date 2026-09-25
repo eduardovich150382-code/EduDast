@@ -180,6 +180,10 @@ export const EMBEDDING_MODEL = {
   // "File Search" bo'limidagi embedding stavkasidan olingan, shuning uchun
   // hali tasdiqlanmagan. Yangi `gemini-embedding-2` matn uchun $0.20 —
   // 05-bosqichda (embedding) qaysi biri olinishi shu farq bilan hal bo'ladi.
+  //
+  // MAVJUDLIGI jonli tekshirilgan (2026-09-25, `pnpm llm:smoke`): chaqiruv
+  // ishladi, o'lcham 768. Ya'ni 2.5-flash-lite bilan bo'lgan holat —
+  // ro'yxatda turib yopilgan bo'lishi — bunda takrorlanmadi.
   verified: false,
   idVerifiedOn: "2026-09-25",
 };
