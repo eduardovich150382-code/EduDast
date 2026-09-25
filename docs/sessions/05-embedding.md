@@ -5,6 +5,43 @@ pgvector qidiruvi allaqachon yozilgan va HNSW indekslari bor, lekin
 `Topic.embedding` va `SourceChunk.embedding` ustunlari **bo'sh** — hech kim
 yozmaydi. Shu sessiyada yozuvchini quramiz.
 
+## Bugungi holat (2026-09-25, 04-sessiya yakunlangach)
+
+Bu bo'lim topshiriq yozilgandan KEYIN ma'lum bo'lgan narsalar. Ishni
+boshlashdan oldin o'qing — pastdagi ba'zi bandlar shu sababli o'zgaradi.
+
+- **Embedding qatlami qisman bor.** `lib/llm/embeddings.ts` (`embedTexts`,
+  `embedQuery`, L2 normallashtirish, `assertDim`) va
+  `lib/llm/providers/gemini.ts` dagi `geminiEmbeddings` allaqachon yozilgan.
+  Ya'ni pastdagi `lib/llm/embeddings/` papka tuzilishi — noldan qurish emas,
+  mavjudini kengaytirish. Fayllarni ko'chirishdan oldin `llm-guard` testini
+  hisobga oling: provayder SDK importi faqat `lib/llm/providers/` da bo'lishi
+  mumkin.
+- **`gemini-embedding-001` jonli tekshirilgan** (`pnpm llm:smoke`,
+  2026-09-25): ishlaydi, o'lcham 768, ~450 ms. Ya'ni pgvector ustunlari va
+  HNSW indekslari o'zgarmaydi.
+- **Yangi `gemini-embedding-2` bor:** matn uchun $0.20/Mtok, multimodal.
+  `embedding-001` narxi tasdiqlanmagan ($0.15 "File Search" stavkasidan,
+  sahifada alohida qator yo'q). Almashtirish shu sessiyada hal qilinadi;
+  o'lcham 768 qolishi shart.
+- **Eng muhim saboq:** model `models.list` ro'yxatida turishi uni ishlatib
+  bo'ladi degani EMAS. `gemini-2.5-flash-lite` ro'yxatda turib, chaqiruvda
+  "no longer available to new users" bilan 404 qaytardi — shuning uchun
+  arzon uya `gemini-3.5-flash-lite` ga o'tdi. Model almashtirsangiz
+  `pnpm llm:models` yetarli emas, `pnpm llm:smoke` SHART.
+- **`pnpm llm:smoke`** endi embedding chaqiruvini ham bajaradi va o'zidan
+  oldin `prisma generate` ishlatadi (eskirgan client jim xato beradi).
+- **`LlmCall.errorKind`** ustuni qo'shildi: yiqilgan urinish ham yoziladi,
+  token noma'lum bo'lsa nol bilan. Backfill xatolari shu yerda ko'rinadi —
+  alohida jurnal qurmang.
+- **OpenAI zaxirasi hal qilinmagan.** Pastda `text-embedding-3-small`
+  zaxira sifatida aytilgan, lekin bu uchinchi provayder va yangi paket
+  degani (CLAUDE.md: sababsiz paket qo'shilmaydi). Boshlashdan oldin
+  qaror kerak: zaxira kerakmi yoki v1 da faqat Gemini?
+- **Migratsiyalar Neon'da:** `llmcall_system_calls`, `llmcall_error_kind`.
+  Provayderlararo zaxira (Claude ↔ Gemini) hali sinalmagan — Anthropic
+  kaliti yo'q.
+
 ## Bajariladigan ish
 
 ### 1. Embedding provayderi
