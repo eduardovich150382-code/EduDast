@@ -119,6 +119,31 @@ async function main() {
     }
   }
 
+  // Embedding modeli 05-bosqichda kerak bo'ladi. Uni HOZIR tekshiramiz:
+  // "model ro'yxatda bor" degani ishlaydi degani emas — `gemini-2.5-flash-lite`
+  // ro'yxatda turib, chaqiruvda 404 qaytardi. Xuddi shu holat embedding
+  // modelida ham bo'lsa, 05-bosqich boshida emas, hozir bilgan yaxshi.
+  if (providers.some(([id]) => id === "gemini")) {
+    console.log("\n--- embedding ---");
+    try {
+      const { embedQuery } = await import("../lib/llm/embeddings");
+      const { EMBEDDING_MODEL } = await import("../lib/llm/models");
+      const started = Date.now();
+      const v = await embedQuery("Fizikada tezlik nima?");
+      console.log(`  model:    ${EMBEDDING_MODEL.id}`);
+      console.log(`  o'lcham:  ${v.length}`);
+      console.log(`  vaqt:     ${Date.now() - started} ms`);
+    } catch (e) {
+      if (isLlmError(e)) {
+        console.error(`  XATO [${e.kind}] ${e.message}`);
+        dumpCause(e.cause);
+      } else {
+        console.error("  XATO", e);
+      }
+      process.exitCode = 1;
+    }
+  }
+
   console.log("\n--- Bazadagi oxirgi 5 ta LlmCall ---");
   const rows = await prisma.llmCall.findMany({
     orderBy: { createdAt: "desc" },

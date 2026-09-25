@@ -17,7 +17,7 @@
     "curriculum:import": "tsx scripts/curriculum-import.ts",
     "make-admin": "tsx scripts/make-admin.ts",
     "tg:webhook": "node scripts/telegram-webhook.mjs",
-    "llm:smoke": "tsx scripts/llm-smoke.ts",
+    "llm:smoke": "prisma generate && tsx scripts/llm-smoke.ts",
     "llm:models": "tsx scripts/llm-models.ts"
   },
   "dependencies": {
