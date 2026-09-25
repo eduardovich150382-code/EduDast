@@ -106,6 +106,12 @@ async function main() {
     } catch (e) {
       if (isLlmError(e)) {
         console.error(`  XATO [${e.kind}] ${e.message}`);
+        if (e.model !== undefined) console.error(`  model:    ${e.model}`);
+        // Provayder xatosining O'ZI ham chiqariladi: LlmError xabari
+        // qisqartirilgan, sabab esa ko'pincha SDK xatosining ichida
+        // (status, javob tanasi) turadi. Bu SINOV skripti — bu yerda
+        // to'liq matn kerak, ishlab chiqarish jurnalida emas.
+        dumpCause(e.cause);
       } else {
         console.error("  XATO", e);
       }
@@ -139,6 +145,23 @@ async function main() {
         (r.userId === null ? "  (tizim)" : ""),
     );
   }
+}
+
+/** Xato sababini (SDK obyektini) o'qiladigan ko'rinishda chiqaradi. */
+function dumpCause(cause: unknown, depth = 0): void {
+  if (cause === undefined || cause === null || depth > 2) return;
+
+  if (cause instanceof Error) {
+    console.error(`  sabab:    ${cause.name}: ${cause.message}`);
+    const rec = cause as unknown as Record<string, unknown>;
+    for (const key of ["status", "code", "statusText"]) {
+      if (rec[key] !== undefined) console.error(`  ${key}:   ${String(rec[key])}`);
+    }
+    dumpCause(cause.cause, depth + 1);
+    return;
+  }
+
+  console.error("  sabab:   ", cause);
 }
 
 void main();
