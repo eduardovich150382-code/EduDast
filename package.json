@@ -12,6 +12,7 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "curriculum:import": "tsx scripts/curriculum-import.ts",
     "make-admin": "tsx scripts/make-admin.ts",

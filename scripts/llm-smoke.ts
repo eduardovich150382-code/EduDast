@@ -41,6 +41,33 @@ async function main() {
     return;
   }
 
+  // Byudjet qorovuli GENERATION_ENABLED != "true" bo'lsa har chaqiruvni
+  // `disabled` bilan rad etadi — bu ataylab (avariya tugmasi). Lekin sinovda
+  // bu "[disabled]" degan tushunarsiz xatoga aylanadi, shuning uchun sababni
+  // oldindan aytamiz.
+  if (process.env.GENERATION_ENABLED !== "true") {
+    console.error(
+      'GENERATION_ENABLED "true" emas — byudjet qorovuli hamma chaqiruvni rad etadi.\n' +
+        "Sinash uchun: GENERATION_ENABLED=true pnpm llm:smoke",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.error(
+      "DATABASE_URL sozlanmagan — chaqiruv ishlaydi, lekin LlmCall yozilmaydi.\n" +
+        "Bu sinovning asosiy maqsadi jurnalni tekshirish, shuning uchun to'xtatamiz.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(
+    `Provayderlar: ${providers.map(([id]) => id).join(", ")}` +
+      (providers.length === 1 ? "  (ikkinchisi sozlanmagan)" : ""),
+  );
+
   for (const [id] of providers) {
     console.log(`\n--- ${id} ---`);
 
