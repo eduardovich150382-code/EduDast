@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { LlmError } from "../errors";
+import { errorDetail, LlmError } from "../errors";
 import { EMBEDDING_MODEL } from "../models";
 import type {
   EmbeddingProvider,
@@ -126,17 +126,29 @@ function translate(e: unknown, model: string): LlmError {
   const ctx = { provider: "gemini", model, cause: e };
 
   const status = readStatus(e);
-  if (status === 429) return new LlmError("rate_limit", "So'rov chegarasi", ctx);
-  if (status !== null && status >= 500) {
-    return new LlmError("overloaded", `Provayder xatosi ${status}`, ctx);
+  // Provayderning o'z matni ham xabarga qo'shiladi: "API xatosi 404" bilan
+  // hech narsa qilib bo'lmaydi, "model ... v1beta da topilmadi" bilan esa
+  // darhol ma'lum.
+  const detail = errorDetail(e);
+  const suffix = detail === "" ? "" : ` — ${detail}`;
+
+  if (status === 429) {
+    return new LlmError("rate_limit", `So'rov chegarasi${suffix}`, ctx);
   }
-  if (status === 400 && /safety|blocked/i.test(String((e as Error)?.message))) {
-    return new LlmError("refusal", "Model so'rovni rad etdi", ctx);
+  if (status !== null && status >= 500) {
+    return new LlmError("overloaded", `Provayder xatosi ${status}${suffix}`, ctx);
+  }
+  if (status === 400 && /safety|blocked/i.test(detail)) {
+    return new LlmError("refusal", `Model so'rovni rad etdi${suffix}`, ctx);
   }
   if (status !== null) {
-    return new LlmError("unknown", `API xatosi ${status}`, ctx);
+    return new LlmError(
+      "unknown",
+      `API xatosi ${status} (${model})${suffix}`,
+      ctx,
+    );
   }
-  return new LlmError("unknown", "Noma'lum xato", ctx);
+  return new LlmError("unknown", `Noma'lum xato (${model})${suffix}`, ctx);
 }
 
 function readStatus(e: unknown): number | null {

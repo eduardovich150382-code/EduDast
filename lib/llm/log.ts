@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { costFor } from "./pricing";
+import type { LlmErrorKind } from "./errors";
 import type { ProviderId, Usage } from "./types";
 
 /**
@@ -18,6 +19,8 @@ export type LlmCallRecord = {
   model: string;
   usage: Usage;
   purpose: string;
+  /** Urinish yiqilgan bo'lsa — xato turi. Muvaffaqiyatda berilmaydi. */
+  errorKind?: LlmErrorKind;
 };
 
 /**
@@ -42,6 +45,7 @@ export async function writeLlmCall(rec: LlmCallRecord): Promise<string | null> {
         tokensOut: rec.usage.tokensOut,
         costUsd: costFor(rec.model, rec.usage),
         purpose: rec.purpose,
+        errorKind: rec.errorKind ?? null,
       },
       select: { id: true },
     });

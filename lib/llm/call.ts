@@ -1,12 +1,11 @@
 import { checkBudget } from "@/lib/budget/guard";
-import { LlmError } from "./errors";
+import { LlmError, usageFromError, ZERO_USAGE } from "./errors";
 import { isAbEnabled, pickProvider } from "./experiment";
 import { writeLlmCall } from "./log";
 import { getModel } from "./models";
 import { costFor, estimateMicros } from "./pricing";
 import { buildChain, shouldAdvance, tierForVerdict } from "./router";
 import { availableProviders, getProvider } from "./providers/registry";
-import { usageFromError } from "./providers/fake";
 import { parseStructured, toJsonSchema } from "./structured";
 import type { LlmRequest, LlmResult, ProviderId, Usage } from "./types";
 
@@ -35,7 +34,11 @@ export async function runLlm<T>(req: LlmRequest<T>): Promise<LlmResult<T>> {
 
   // Byudjet tekshiruvi zanjirning BIRINCHI modeli narxiga qarab qilinadi.
   // Zanjir pastga tushsa narx faqat kamayadi, ya'ni baho ehtiyotkor.
-  const firstChain = buildChain({ primary: provider, available, tier: req.tier });
+  const firstChain = buildChain({
+    primary: provider,
+    available,
+    tier: req.tier,
+  });
   const promptChars = measurePrompt(req);
   const maxOut = req.maxOutputTokens ?? defaultMaxOut(firstChain[0]!.model);
 
@@ -43,7 +46,8 @@ export async function runLlm<T>(req: LlmRequest<T>): Promise<LlmResult<T>> {
     userId: req.userId,
     provider: firstChain[0]!.provider,
     modelId: firstChain[0]!.model,
-    estimateUsd: estimateMicros(firstChain[0]!.model, promptChars, maxOut) / 1e6,
+    estimateUsd:
+      estimateMicros(firstChain[0]!.model, promptChars, maxOut) / 1e6,
   });
 
   if (verdict.kind === "deny") {
@@ -108,15 +112,22 @@ export async function runLlm<T>(req: LlmRequest<T>): Promise<LlmResult<T>> {
       // Apiga yetib borgan har urinish jurnalga tushadi — yonib ketgan,
       // lekin yozilmagan chaqiruv aynan 3-qoida oldini olmoqchi bo'lgan
       // marja oqishi.
-      const usage = usageFromError(e);
-      if (usage) {
+      //
+      // MUHIM: token sonini provayder xatoga ilova qilishi SHART emas —
+      // haqiqiy SDK'lar buni qilmaydi. Ilgari qator faqat `usage` bo'lganda
+      // yozilardi, ya'ni amalda faqat testdagi soxta provayder uchun.
+      // Endi urinish baribir yoziladi, token noma'lum bo'lsa nol bilan:
+      // "necha token ketdi" noma'lum bo'lishi mumkin, "urinish bo'ldimi"
+      // esa yo'q.
+      if (err.kind !== "not_configured") {
         await writeLlmCall({
           userId: req.userId,
           documentId: req.documentId,
           provider: attempt.provider,
           model: attempt.model,
-          usage,
+          usage: usageFromError(e) ?? ZERO_USAGE,
           purpose: req.purpose,
+          errorKind: err.kind,
         });
       }
 

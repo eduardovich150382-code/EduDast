@@ -10,8 +10,12 @@ import type { LlmProvider, ProviderRequest, ProviderResult, Usage } from "../typ
 
 export type FakeStep =
   | { kind: "ok"; rawJson: string; usage?: Partial<Usage> }
-  /** Xato, LEKIN usage qaytgan — jurnal baribir yozilishi kerak. */
-  | { kind: "error"; error: LlmErrorKind; usage?: Partial<Usage> };
+  /**
+   * Xato. Sukut bo'yicha usage xatoga ilova qilinadi (ba'zi provayderlar
+   * shunday qiladi). `noUsage: true` — haqiqiy SDK'larning odatiy holati:
+   * token soni umuman noma'lum.
+   */
+  | { kind: "error"; error: LlmErrorKind; usage?: Partial<Usage>; noUsage?: boolean };
 
 const fullUsage = (u?: Partial<Usage>): Usage => ({
   tokensIn: u?.tokensIn ?? 100,
@@ -49,24 +53,11 @@ export class FakeProvider implements LlmProvider {
         model: req.model,
       });
       // Usage'ni xatoga ilova qilamiz: `call.ts` uni jurnalga yozishi kerak.
-      (err as LlmError & { usage?: Usage }).usage = fullUsage(step.usage);
+      if (step.noUsage !== true) {
+        (err as LlmError & { usage?: Usage }).usage = fullUsage(step.usage);
+      }
       throw err;
     }
     return { rawJson: step.rawJson, usage: fullUsage(step.usage) };
   }
-}
-
-/** Xatoga ilova qilingan usage'ni o'qiydi (fake va haqiqiy provayderlar uchun). */
-export function usageFromError(e: unknown): Usage | null {
-  if (typeof e !== "object" || e === null) return null;
-  const u = (e as { usage?: unknown }).usage;
-  if (typeof u !== "object" || u === null) return null;
-  const rec = u as Record<string, unknown>;
-  if (typeof rec.tokensIn !== "number") return null;
-  return {
-    tokensIn: rec.tokensIn,
-    tokensOut: typeof rec.tokensOut === "number" ? rec.tokensOut : 0,
-    cacheRead: typeof rec.cacheRead === "number" ? rec.cacheRead : 0,
-    cacheWrite: typeof rec.cacheWrite === "number" ? rec.cacheWrite : 0,
-  };
 }

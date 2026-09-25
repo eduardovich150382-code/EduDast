@@ -14,12 +14,17 @@ type LoggedCall = {
   model: string;
   usage: { tokensIn: number; tokensOut: number };
   purpose: string;
+  errorKind?: string;
 };
 type Verdict = { kind: "full" | "downgrade" | "deny"; reason?: string };
 
 const { logMock, budgetMock } = vi.hoisted(() => ({
-  logMock: vi.fn<(rec: LoggedCall) => Promise<string | null>>(async () => "llmcall-1"),
-  budgetMock: vi.fn<(opts: unknown) => Promise<Verdict>>(async () => ({ kind: "full" })),
+  logMock: vi.fn<(rec: LoggedCall) => Promise<string | null>>(
+    async () => "llmcall-1",
+  ),
+  budgetMock: vi.fn<(opts: unknown) => Promise<Verdict>>(async () => ({
+    kind: "full",
+  })),
 }));
 
 vi.mock("@/lib/llm/log", () => ({ writeLlmCall: logMock }));
@@ -76,7 +81,11 @@ describe("muvaffaqiyatli chaqiruv", () => {
   });
 
   it("LlmCall yoziladi: model, tokenlar, maqsad", async () => {
-    fake.queue({ kind: "ok", rawJson: OK, usage: { tokensIn: 120, tokensOut: 30 } });
+    fake.queue({
+      kind: "ok",
+      rawJson: OK,
+      usage: { tokensIn: 120, tokensOut: 30 },
+    });
     await runLlm(request());
 
     expect(logMock).toHaveBeenCalledTimes(1);
@@ -91,7 +100,11 @@ describe("muvaffaqiyatli chaqiruv", () => {
   });
 
   it("xarajat 6 xonali satr sifatida qaytadi", async () => {
-    fake.queue({ kind: "ok", rawJson: OK, usage: { tokensIn: 1_000_000, tokensOut: 0 } });
+    fake.queue({
+      kind: "ok",
+      rawJson: OK,
+      usage: { tokensIn: 1_000_000, tokensOut: 0 },
+    });
     const res = await runLlm(request());
     expect(res.costUsd).toBe("1.000000");
   });
@@ -120,18 +133,48 @@ describe("muvaffaqiyatli chaqiruv", () => {
 });
 
 describe("xato bo'lganda ham jurnal yoziladi", () => {
+  it("provayder token sonini bermasa ham qator yoziladi — urinish bo'lgani aniq", async () => {
+    // Haqiqiy SDK xatolarida token soni bo'lmaydi. Ilgari bunday urinish
+    // umuman yozilmasdi: yonib ketgan chaqiruv izsiz qolardi.
+    fake.queue({ kind: "error", error: "unknown", noUsage: true });
+    await expect(runLlm(request())).rejects.toThrow(LlmError);
+
+    const rows = logMock.mock.calls.map(([r]) => r);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows[0]!.errorKind).toBe("unknown");
+    expect(rows[0]!.usage.tokensIn).toBe(0);
+  });
+
+  it("muvaffaqiyatli qatorda errorKind bo'lmaydi", async () => {
+    fake.queue({ kind: "ok", rawJson: OK });
+    await runLlm(request());
+    expect(logMock.mock.calls[0]![0].errorKind).toBeUndefined();
+  });
+
+  it("kalit yo'qligi jurnalga tushmaydi — chaqiruv apiga yetmagan", async () => {
+    fake.queue({ kind: "error", error: "not_configured", noUsage: true });
+    await expect(runLlm(request())).rejects.toThrow(LlmError);
+    expect(logMock).not.toHaveBeenCalled();
+  });
+
   it("provayder xato bersa, lekin usage qaytgan bo'lsa — qator yoziladi", async () => {
     // Bu 3-qoidaning eng nozik joyi: pul ketgan, javob kelmagan.
     // `hard` daraja: zanjirda ikkinchi urinish bor. (`cheap` da pastga
     // tushadigan joy yo'q, shuning uchun u yerda xato darhol chiqadi.)
     fake.queue(
-      { kind: "error", error: "overloaded", usage: { tokensIn: 90, tokensOut: 0 } },
+      {
+        kind: "error",
+        error: "overloaded",
+        usage: { tokensIn: 90, tokensOut: 0 },
+      },
       { kind: "ok", rawJson: OK },
     );
     await runLlm(request({ tier: "hard" }));
 
     expect(logMock).toHaveBeenCalledTimes(2);
-    expect(logMock.mock.calls[0]![0]).toMatchObject({ usage: { tokensIn: 90 } });
+    expect(logMock.mock.calls[0]![0]).toMatchObject({
+      usage: { tokensIn: 90 },
+    });
   });
 
   it("sxemaga mos kelmagan javob ham yoziladi — pul baribir ketgan", async () => {
@@ -152,7 +195,10 @@ describe("xato bo'lganda ham jurnal yoziladi", () => {
 
 describe("zanjir va qayta urinish", () => {
   it("overloaded — pastroq modelga tushadi", async () => {
-    fake.queue({ kind: "error", error: "overloaded" }, { kind: "ok", rawJson: OK });
+    fake.queue(
+      { kind: "error", error: "overloaded" },
+      { kind: "ok", rawJson: OK },
+    );
     const res = await runLlm(request({ tier: "hard" }));
     expect(fake.calls[0]!.model).toBe("claude-opus-5");
     expect(fake.calls[1]!.model).toBe("claude-sonnet-5");
@@ -160,7 +206,10 @@ describe("zanjir va qayta urinish", () => {
   });
 
   it("rate_limit — avval o'sha modelda bir marta qayta urinadi", async () => {
-    fake.queue({ kind: "error", error: "rate_limit" }, { kind: "ok", rawJson: OK });
+    fake.queue(
+      { kind: "error", error: "rate_limit" },
+      { kind: "ok", rawJson: OK },
+    );
     const res = await runLlm(request({ tier: "hard" }));
     expect(fake.calls[0]!.model).toBe("claude-opus-5");
     expect(fake.calls[1]!.model).toBe("claude-opus-5");
@@ -169,7 +218,9 @@ describe("zanjir va qayta urinish", () => {
 
   it("refusal — qayta urinmaydi, darhol xato", async () => {
     fake.queue({ kind: "error", error: "refusal" });
-    await expect(runLlm(request({ tier: "hard" }))).rejects.toMatchObject({ kind: "refusal" });
+    await expect(runLlm(request({ tier: "hard" }))).rejects.toMatchObject({
+      kind: "refusal",
+    });
     expect(fake.calls).toHaveLength(1);
   });
 

@@ -140,12 +140,12 @@ export const MODELS = {
     priceChangesOn: "2027-01-01",
     note: "Aksiya narxi 2026-12-31 gacha. 2027-01-01 dan $1.50/$7.50 — ikki barobar.",
   },
-  "gemini-2.5-flash-lite": {
-    id: "gemini-2.5-flash-lite",
+  "gemini-3.5-flash-lite": {
+    id: "gemini-3.5-flash-lite",
     provider: "gemini",
     tier: "cheap",
-    inputPerMTok: 0.1,
-    outputPerMTok: 0.4,
+    inputPerMTok: 0.3,
+    outputPerMTok: 2.5,
     cacheWriteMultiplier: 1,
     cacheReadMultiplier: 1,
     maxOutputTokens: 16_000,
@@ -154,10 +154,17 @@ export const MODELS = {
     verified: true,
     priceVerifiedOn: "2026-09-25",
     idVerifiedOn: "2026-09-25",
-    // Eski avlod, lekin ataylab: yangi flash-lite'lar qimmatroq —
-    // 3.1-flash-lite $0.25/$1.50, 3.5-flash-lite $0.30/$2.50. Chiqish
-    // bo'yicha farq 3.75–6.25 barobar, arzon uyada esa aynan chiqish hal qiladi.
-    note: "Arzon uyaning eng arzoni: yangi 3.1/3.5 flash-lite chiqishi 3.75–6.25x qimmat.",
+    // Ilgari bu yerda `gemini-2.5-flash-lite` turardi (arzonroq: $0.1/$0.4),
+    // lekin u "no longer available to new users" — jonli chaqiruv 404
+    // qaytardi. Google'ning o'z xabari aynan shu modelni tavsiya qildi.
+    //
+    // MODEL RO'YXATIDA BO'LISHI YETARLI EMAS: `models.list` 2.5-flash-lite
+    // ni ko'rsatardi, lekin `generateContent` uni rad etdi. Shuning uchun
+    // model almashtirilganda `pnpm llm:smoke` bilan JONLI tekshirish kerak.
+    //
+    // `gemini-3.1-flash-lite` arzonroq ($0.25/$1.50) — sinab ko'rishga
+    // arziydi, lekin u ham mavjudligi jonli tekshirilmagan.
+    note: "2.5-flash-lite yangi foydalanuvchilarga yopilgani uchun almashtirildi.",
   },
 } as const satisfies Record<string, ModelEntry>;
 
@@ -173,6 +180,10 @@ export const EMBEDDING_MODEL = {
   // "File Search" bo'limidagi embedding stavkasidan olingan, shuning uchun
   // hali tasdiqlanmagan. Yangi `gemini-embedding-2` matn uchun $0.20 —
   // 05-bosqichda (embedding) qaysi biri olinishi shu farq bilan hal bo'ladi.
+  //
+  // MAVJUDLIGI jonli tekshirilgan (2026-09-25, `pnpm llm:smoke`): chaqiruv
+  // ishladi, o'lcham 768. Ya'ni 2.5-flash-lite bilan bo'lgan holat —
+  // ro'yxatda turib yopilgan bo'lishi — bunda takrorlanmadi.
   verified: false,
   idVerifiedOn: "2026-09-25",
 };
@@ -187,7 +198,7 @@ export const TIER_MODELS: Record<ProviderId, Record<Tier, ModelId | null>> = {
   gemini: {
     hard: "gemini-3.1-pro-preview",
     mid: "gemini-3.8-flash",
-    cheap: "gemini-2.5-flash-lite",
+    cheap: "gemini-3.5-flash-lite",
   },
   fake: { hard: null, mid: null, cheap: null },
 };

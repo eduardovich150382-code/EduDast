@@ -302,6 +302,11 @@ model LlmCall {
   tokensOut  Int
   costUsd    Decimal  @db.Decimal(10, 6)
   purpose    String
+  /// `null` — urinish muvaffaqiyatli tugagan. Aks holda `LlmErrorKind`
+  /// ("rate_limit", "overloaded", "unknown"...). Sababi: yiqilgan urinish
+  /// ham pul turishi mumkin, lekin `costUsd = 0` qator muvaffaqiyatli
+  /// bepul chaqiruvdan farq qilmay qolardi.
+  errorKind  String?
   createdAt  DateTime @default(now())
 
   document Document? @relation(fields: [documentId], references: [id])
