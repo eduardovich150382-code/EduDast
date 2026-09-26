@@ -79,7 +79,15 @@ export async function updateTopic(input: unknown): Promise<AdminResult> {
   // shartini bitta so'rovda bajaradi (avval o'qib, keyin yozish o'rniga).
   const updated = await prisma.topic.updateMany({
     where: { id, deletedAt: null },
-    data,
+    // `embeddedAt: null` — vektorni eskirgan deb belgilaydi. Bitta qator,
+    // lekin usiz eng yomon nosozlik yuz beradi: sog'lom ko'rinadigan,
+    // jimgina ESKI matnga javob beradigan qidiruv. Tahrirlangan sarlavha,
+    // maqsad va kalit so'zlar aynan vektorga kiradigan matn
+    // (`lib/curriculum/embed.ts:topicEmbeddingText`).
+    //
+    // `embeddingModel` ATAYLAB tegilmaydi: oxirgi marta qaysi model
+    // yozganini bilish diagnostikada kerak.
+    data: { ...data, embeddedAt: null },
   });
   if (updated.count === 0) return { ok: false, error: "topilmadi" };
 

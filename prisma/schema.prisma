@@ -210,7 +210,27 @@ model Topic {
   keywords    String[]
   hoursPlan   Int?
   /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
+  ///
+  /// OGOHLANTIRISH — HNSW INDEKSI: bu ustunning `Topic_embedding_hnsw_idx`
+  /// indeksi faqat migratsiya fayllarida yashaydi (`@@index` ni
+  /// `Unsupported` ustunga yozib bo'lmaydi). Prisma sxemada ko'rmagan
+  /// indeksni HAR `migrate dev` da DROP qiladi — bu 2026-09-26 da
+  /// `embedding_provenance` migratsiyasida haqiqatan yuz berdi.
+  /// Shuning uchun: yangi migratsiya yasagach, migration.sql ni O'QING va
+  /// `DROP INDEX ... hnsw ...` bo'lsa CREATE ni oxiriga qaytarib qo'ying
+  /// (namuna: `20260926102914_embedding_hnsw_restore`).
   embedding   Unsupported("vector(768)")?
+
+  /// Vektor QAYSI model bilan yozilgan. Model almashsa hamma vektor
+  /// eskiradi, va buni bilishning yagona yo'li — shu ustun.
+  embeddingModel String?
+  /// Vektor yozilgan payt. `null` — hali yozilmagan. NAVBAT SHU:
+  /// `embeddedAt IS NULL` ning o'zi ish ro'yxati (Redis/queue kerak emas).
+  embeddedAt     DateTime?
+  /// `embeddedAt < updatedAt` — eskirish shartining ikkinchi yarmi. CSV
+  /// import yoki boshqa yo'l matnni o'zgartirsa, admin panelidan
+  /// o'tmagan bo'lsa ham vektor eskirgan deb bilinadi.
+  updatedAt      DateTime  @default(now()) @updatedAt
 
   /// Soft delete (CLAUDE.md). Mavzu o'chirilsa ham unga bog'langan
   /// Document/LessonPlan/GameSession yozuvlari yetim qolmaydi.
@@ -218,7 +238,7 @@ model Topic {
   /// qamraydi — CSV import o'sha slug'ni qayta uchratsa yangi qator
   /// YARATMAYDI, mavjudini tiriltiradi (deletedAt: null).
   /// $queryRaw qidiruvda bu filtr QO'LDA yoziladi (lib/curriculum/search.ts).
-  deletedAt   DateTime?
+  deletedAt DateTime?
 
   subject  Subject @relation(fields: [subjectId], references: [id])
   parent   Topic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
@@ -240,6 +260,11 @@ model SourceChunk {
   content   String                      @db.Text
   /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
   embedding Unsupported("vector(768)")?
+
+  /// Topic dagi bilan bir xil ma'no. Bo'lakda `updatedAt` YO'Q: bo'lak
+  /// matni tahrirlanmaydi, manba qayta import qilinsa qator almashadi.
+  embeddingModel String?
+  embeddedAt     DateTime?
 
   topic Topic @relation(fields: [topicId], references: [id])
 

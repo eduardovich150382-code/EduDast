@@ -143,3 +143,80 @@ export async function findSimilarChunks(
     LIMIT ${clampLimit(opts.limit)}
   `;
 }
+
+/**
+ * Kalit so'z bo'yicha qidiruv — semantik qidiruv ishlamaganda ZAXIRA.
+ *
+ * `similarity` har doim 0: shakl `findSimilarTopics` bilan bir xil qolsin,
+ * lekin cosine o'xshashlik bilan taqqoslanadigan son emas. Chaqiruvchi
+ * `searchTopics()` qaytargan `mode` bo'yicha ajratadi.
+ */
+export async function findTopicsByKeyword(
+  query: string,
+  opts: { subjectId?: string; grade?: number; limit?: number; db?: Db } = {},
+): Promise<TopicMatch[]> {
+  const trimmed = query.trim();
+  if (trimmed === "") return [];
+
+  const db = await resolveDb(opts.db);
+  // ILIKE naqshi PARAMETR sifatida ketadi; `%` va `_` ni ekranlash kerak
+  // emas, chunki ular foydalanuvchi matnida shunchaki "har qanday belgi"
+  // ma'nosini beradi va bu zaxira yo'l uchun zarar qilmaydi.
+  const pattern = `%${trimmed}%`;
+
+  const filters: Prisma.Sql[] = [
+    Prisma.sql`"deletedAt" IS NULL`,
+    // `keywords` — massiv; `array_to_string` bilan bitta satrga aylantirib
+    // qidiramiz, aks holda har element uchun alohida shart kerak bo'lardi.
+    Prisma.sql`("titleUz" ILIKE ${pattern} OR array_to_string("keywords", ' ') ILIKE ${pattern})`,
+  ];
+  if (opts.subjectId !== undefined) filters.push(Prisma.sql`"subjectId" = ${opts.subjectId}`);
+  if (opts.grade !== undefined) filters.push(Prisma.sql`"grade" = ${opts.grade}`);
+
+  return db.$queryRaw<TopicMatch[]>`
+    SELECT "id", "slug", "grade", "titleUz", "subjectId", 0::float8 AS "similarity"
+    FROM "Topic"
+    WHERE ${Prisma.join(filters, " AND ")}
+    ORDER BY "grade", "order"
+    LIMIT ${clampLimit(opts.limit)}
+  `;
+}
+
+export type TopicSearchResult = {
+  /** `keyword` — embedding ishlamadi, sifat PASAYGAN. */
+  mode: "semantic" | "keyword";
+  matches: TopicMatch[];
+};
+
+/**
+ * Matn bo'yicha mavzu qidiruvi — chaqiruvchi shuni ishlatadi.
+ *
+ * DEGRADATSIYA: embedding provayderi ishlamasa kalit so'z qidiruviga
+ * tushadi — RAG YIQILMAYDI, sifati pasayadi. `mode` qaytarilishi SHART:
+ * usiz sifat pasayganini hech kim bilmaydi va nosozlik haftalab yashiringan
+ * holda qoladi.
+ */
+export async function searchTopics(
+  query: string,
+  opts: { subjectId?: string; grade?: number; limit?: number; db?: Db } = {},
+): Promise<TopicSearchResult> {
+  try {
+    // Import DINAMIK: `lib/llm` modul yuklanishida provayder client'ini
+    // quradi, kalit yo'q muhitda esa bu modul umuman kerak emas.
+    const { embedQuery } = await import("@/lib/llm");
+    const embedding = await embedQuery(query);
+    const matches = await findSimilarTopics(embedding, opts);
+
+    // BO'SH NATIJADA HAM kalit so'zga tushamiz — ATAYLAB qilingan v1
+    // qarori. Bo'shlik ba'zan haqiqiy javob ("bunday mavzu yo'q"), lekin
+    // `Topic.embedding` hali to'liq to'ldirilmagan paytda bo'sh natijaning
+    // sababi ko'pincha to'ldirilmagan ustun. `mode` qaytgani uchun bu
+    // yashirin qolmaydi; ustun to'lgach shu shartni olib tashlash kerak.
+    if (matches.length > 0) return { mode: "semantic", matches };
+  } catch {
+    // Xato turi muhim emas: har qanday holatda zaxira yo'l bir xil.
+    // Sababi `LlmCall.errorKind` da allaqachon yozilgan.
+  }
+
+  return { mode: "keyword", matches: await findTopicsByKeyword(query, opts) };
+}

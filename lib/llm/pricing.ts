@@ -1,4 +1,4 @@
-import { getModel } from "./models";
+import { getPricing } from "./models";
 import type { Usage } from "./types";
 
 /**
@@ -21,9 +21,37 @@ function microsPerToken(pricePerMTok: number): number {
   return pricePerMTok;
 }
 
+/**
+ * 2.75 belgi = 1 token — o'zbek lotin matni uchun JONLI O'LCHANGAN.
+ *
+ * O'LCHOV (2026-09-26, `pnpm llm:smoke`, Gemini `countTokens`): 165 belgili
+ * o'zbekcha fizika matni 60 token bergan, ya'ni belgi/token = 2.75. Ilgari
+ * bu yerda 3.2 turardi va taxmin haqiqiy sondan 13% PAST chiqardi — bu
+ * ikki joyda ham xato tomonga:
+ *   - byudjet shifti (`estimateMicros`) haqiqiydan arzon deb baholaydi;
+ *   - embedding `LlmCall.tokensIn` i (`embedContent` token qaytarmaydi,
+ *     `providers/gemini.ts` ga qarang) kam yozadi va marjani yashiradi.
+ *
+ * KIRILL VA RUS matnida token yana ko'proq chiqadi (belgi/token kichikroq),
+ * ya'ni 2.75 ular uchun HAM past baho bo'lishi mumkin. Taxminni yana
+ * pasaytirmaganimiz sababi: `estimateMicros` da boshqa ehtiyot chegaralari
+ * bor (chiqishni maksimumning 60% deb oladi, kesh chegirmasini hisobga
+ * olmaydi), embedding xarajati esa `EMBEDDING_MODEL.inputPerMTok` ning o'zi
+ * tasdiqlanmagan bo'lgani uchun baribir taxminiy.
+ *
+ * QAYTA O'LCHASH: `pnpm llm:smoke` embedding bo'limi haqiqiy va taxminiy
+ * sonni yonma-yon chiqaradi.
+ */
+const CHARS_PER_TOKEN = 2.75;
+
+/** Belgi sonidan taxminiy token soni. Yuqoriga yaxlitlaydi. */
+export function estimateTokens(chars: number): number {
+  return Math.ceil(chars / CHARS_PER_TOKEN);
+}
+
 /** Xarajatni mikrodollarda qaytaradi (butun son). */
 export function costMicros(modelId: string, usage: Usage): number {
-  const model = getModel(modelId);
+  const model = getPricing(modelId);
   if (!model) {
     // Noma'lum model — narxni nolga aylantirish marjani yashiradi, shuning
     // uchun ataylab xato tashlaymiz. Reyestrga qo'shilmagan model bilan
@@ -74,13 +102,10 @@ export function estimateMicros(
   promptChars: number,
   maxOutputTokens: number,
 ): number {
-  const model = getModel(modelId);
+  const model = getPricing(modelId);
   if (!model) throw new Error(`Narx jadvalida yo'q model: ${modelId}`);
 
-  // ~3.2 belgi = 1 token. O'zbek lotin matni uchun taxminiy; kirill va rus
-  // matnida token ko'proq chiqadi, shuning uchun bu baho past tomonga
-  // og'maydi.
-  const estIn = Math.ceil(promptChars / 3.2);
+  const estIn = estimateTokens(promptChars);
   // Model odatda maksimumni to'liq ishlatmaydi — 60 % realistik.
   const estOut = Math.ceil(maxOutputTokens * 0.6);
 

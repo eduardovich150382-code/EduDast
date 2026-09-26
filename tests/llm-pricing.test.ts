@@ -5,11 +5,13 @@ import {
   EMBEDDING_MODEL,
   lowerTier,
   getModel,
+  getPricing,
 } from "@/lib/llm/models";
 import {
   costFor,
   costMicros,
   estimateMicros,
+  estimateTokens,
   microsToUsd,
 } from "@/lib/llm/pricing";
 import type { Tier, Usage } from "@/lib/llm/types";
@@ -188,5 +190,72 @@ describe("model reyestri", () => {
     // aytmaydi. Ikkalasi bitta maydonga yig'ilib qolmasin.
     const embedOnlyId = EMBEDDING_MODEL.idVerifiedOn !== undefined;
     expect(embedOnlyId && EMBEDDING_MODEL.verified).toBe(false);
+  });
+});
+
+/**
+ * Embedding narxi — `getPricing` orqali.
+ *
+ * NEGA ALOHIDA: `EMBEDDING_MODEL` `MODELS` ichida EMAS, ya'ni `getModel()`
+ * uni topmaydi. Ilgari shu sababli `costFor("gemini-embedding-001", ...)`
+ * throw qilardi, `writeLlmCall` esa xatoni yutib `null` qaytarardi —
+ * natijada embedding jurnali JIMGINA bo'sh qolardi (CLAUDE.md 3-qoida
+ * buzilgan bo'lib, buzilgani ko'rinmaydi).
+ */
+describe("embedding narxi", () => {
+  it("costFor throw QILMAYDI va nol bermaydi", () => {
+    const usage = { tokensIn: 1_000_000, tokensOut: 0, cacheRead: 0, cacheWrite: 0 };
+
+    expect(() => costFor(EMBEDDING_MODEL.id, usage)).not.toThrow();
+    expect(costFor(EMBEDDING_MODEL.id, usage)).toBe("0.150000");
+  });
+
+  it("chiqish tokenini hisoblamaydi — vektor qaytaradi, matn emas", () => {
+    const usage = { tokensIn: 0, tokensOut: 1_000_000, cacheRead: 0, cacheWrite: 0 };
+
+    expect(costMicros(EMBEDDING_MODEL.id, usage)).toBe(0);
+  });
+
+  it("getPricing embedding modelini biladi, getModel esa BILMAYDI", () => {
+    // `getModel` tier/maxOutputTokens beradi — embedding modeli router va
+    // byudjet shiftining model zanjiriga TUSHMASLIGI kerak.
+    expect(getPricing(EMBEDDING_MODEL.id)).toBeDefined();
+    expect(getModel(EMBEDDING_MODEL.id)).toBeUndefined();
+  });
+
+  it("noma'lum model baribir throw qiladi (nol marjani yashiradi)", () => {
+    expect(() => getPricing("yoq-model")).not.toThrow();
+    expect(getPricing("yoq-model")).toBeUndefined();
+    expect(() =>
+      costFor("yoq-model", { tokensIn: 1, tokensOut: 1, cacheRead: 0, cacheWrite: 0 }),
+    ).toThrow(/Narx jadvalida yo'q model/);
+  });
+
+  it("narxi TASDIQLANMAGAN — bu holat jadvalda ko'rinib turishi kerak", () => {
+    // $0.15 "File Search" stavkasidan olingan, rasmiy narx sahifasida
+    // `gemini-embedding-001` uchun alohida qator yo'q. Bu flag `true` ga
+    // o'zgarsa — kim tasdiqlaganini va sanani yozish kerak.
+    expect(EMBEDDING_MODEL.verified).toBe(false);
+  });
+});
+
+describe("estimateTokens", () => {
+  it("yuqoriga yaxlitlaydi (past baho shiftdan oshib ketishga olib keladi)", () => {
+    expect(estimateTokens(0)).toBe(0);
+    expect(estimateTokens(1)).toBe(1);
+    // 2.75 belgi = 1 token: 27.5 belgi → 10 token, undan bittasi ham ko'p
+    // bo'lsa 11 ga yaxlitlanadi.
+    expect(estimateTokens(27.5)).toBe(10);
+    expect(estimateTokens(28)).toBe(11);
+  });
+
+  /**
+   * Koeffitsient 2026-09-26 da jonli o'lchangan (`pnpm llm:smoke`,
+   * `countTokens`): 165 belgili o'zbekcha matn = 60 token. Taxmin haqiqiy
+   * sondan PAST bo'lmasligi kerak — aks holda byudjet shifti oshib ketadi
+   * va embedding xarajati kam yoziladi.
+   */
+  it("o'lchangan o'zbekcha matnni past baholamaydi", () => {
+    expect(estimateTokens(165)).toBeGreaterThanOrEqual(60);
   });
 });

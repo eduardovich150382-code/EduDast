@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { errorDetail, LlmError } from "../errors";
 import { EMBEDDING_MODEL } from "../models";
+import { estimateTokens } from "../pricing";
 import type {
   EmbeddingProvider,
   LlmProvider,
@@ -105,12 +106,53 @@ export const geminiEmbeddings: EmbeddingProvider = {
           { provider: "gemini", model: EMBEDDING_MODEL.id },
         );
       }
-      return { vectors, usage: zeroUsage() };
+      // NEGA TAXMIN: `embedContent` javobida token soni UMUMAN YO'Q
+      // (`generateContent` dan farqli — `usageMetadata` maydoni mavjud
+      // emas). Bor narsa `metadata.billableCharacterCount`, u ham BELGI
+      // soni va faqat Enterprise platformada to'ladi. Nol yozish esa
+      // marjani YASHIRADI (`pricing.ts` dagi "noma'lum model nolga
+      // aylanmasin" sababining o'zi), shuning uchun belgidan taxmin
+      // qilamiz. Koeffitsientni `pnpm llm:smoke` jonli `countTokens` bilan
+      // solishtiradi.
+      const chars =
+        res.metadata?.billableCharacterCount ?? texts.reduce((n, t) => n + t.length, 0);
+      const tokensIn = estimateTokens(chars);
+
+      return {
+        vectors,
+        // Embedding chiqish tokeni yo'q — vektor qaytaradi, matn emas.
+        usage: { tokensIn, tokensOut: 0, cacheRead: 0, cacheWrite: 0 },
+      };
     } catch (e) {
       throw translate(e, EMBEDDING_MODEL.id);
     }
   },
 };
+
+/**
+ * Matnning HAQIQIY token soni — faqat diagnostika uchun.
+ *
+ * `embedContent` token sonini qaytarmaydi, shuning uchun `pricing.ts` dagi
+ * `CHARS_PER_TOKEN = 3.2` koeffitsienti taxmin bo'lib qoladi. Bu funksiya
+ * `pnpm llm:smoke` ga o'sha taxminni jonli son bilan yonma-yon qo'yish
+ * imkonini beradi — o'zbek matnida koeffitsient qanchalik xato ekanini
+ * boshqa yo'l bilan bilib bo'lmaydi.
+ *
+ * ISHLAB CHIQARISH YO'LIDA ISHLATILMAYDI: har embedding chaqiruviga
+ * qo'shimcha so'rov qo'shish qimmat va sekin (`pricing.ts` dagi o'sha
+ * sabab).
+ */
+export async function geminiCountTokens(model: string, text: string): Promise<number> {
+  try {
+    const res = await getClient().models.countTokens({
+      model,
+      contents: [{ role: "user", parts: [{ text }] }],
+    });
+    return res.totalTokens ?? 0;
+  } catch (e) {
+    throw translate(e, model);
+  }
+}
 
 function zeroUsage(): Usage {
   return { tokensIn: 0, tokensOut: 0, cacheRead: 0, cacheWrite: 0 };
