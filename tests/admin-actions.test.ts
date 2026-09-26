@@ -167,8 +167,29 @@ describe("updateTopic", () => {
         hoursPlan: 2,
         objectives: ["Birinchi maqsad"],
         keywords: ["harakat"],
+        embeddedAt: null,
       },
     });
+  });
+
+  /**
+   * Bu test buzilsa — qidiruv jimgina ESKI matnga javob bera boshlaydi:
+   * mavzu tahrirlanadi, vektor esa eski matndan qolgan bo'ladi va hech
+   * qanday xato ko'rinmaydi. Shuning uchun alohida test.
+   */
+  it("tahrirda embeddingni eskirgan deb belgilaydi (embeddedAt: null)", async () => {
+    mocks.topicUpdateMany.mockResolvedValue({ count: 1 });
+    const { updateTopic } = await import("@/server/admin-actions");
+
+    await updateTopic({ ...VALID_TOPIC, titleUz: "Yangi sarlavha" });
+
+    const call = mocks.topicUpdateMany.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    expect(call.data.embeddedAt).toBeNull();
+    // `embeddingModel` ATAYLAB tegilmaydi — oxirgi marta qaysi model
+    // yozganini bilish diagnostikada kerak.
+    expect(call.data).not.toHaveProperty("embeddingModel");
   });
 
   it("mavzu topilmasa (yoki o'chirilgan bo'lsa) 'topilmadi'", async () => {

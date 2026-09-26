@@ -128,11 +128,38 @@ async function main() {
     try {
       const { embedQuery } = await import("../lib/llm/embeddings");
       const { EMBEDDING_MODEL } = await import("../lib/llm/models");
+      const { estimateTokens } = await import("../lib/llm/pricing");
+      const { geminiCountTokens } = await import("../lib/llm/providers/gemini");
+
+      // O'zbekcha matn — koeffitsientni aynan shunday matnda o'lchash kerak.
+      const text =
+        "Mexanik harakat va tezlik. Jismning vaqt birligi ichida bosib " +
+        "o'tgan yo'li tezlik deb ataladi; o'quvchi tezlikni hisoblashni " +
+        "va birliklarni almashtirishni o'rganadi.";
+
       const started = Date.now();
-      const v = await embedQuery("Fizikada tezlik nima?");
+      const v = await embedQuery(text);
       console.log(`  model:    ${EMBEDDING_MODEL.id}`);
       console.log(`  o'lcham:  ${v.length}`);
       console.log(`  vaqt:     ${Date.now() - started} ms`);
+
+      // NEGA BU SOLISHTIRISH: `embedContent` javobida token soni UMUMAN
+      // yo'q, shuning uchun `LlmCall.tokensIn` `CHARS_PER_TOKEN = 3.2`
+      // taxminiga tayanadi. Koeffitsient o'zbek matni uchun jonli
+      // tekshirilmagan — `countTokens` uni bir marta o'lchash imkonini
+      // beradi. Farq katta bo'lsa `lib/llm/pricing.ts` ni tuzatish kerak.
+      try {
+        const real = await geminiCountTokens("gemini-3.5-flash-lite", text);
+        const est = estimateTokens(text.length);
+        const diff = real === 0 ? 0 : Math.round(((est - real) / real) * 100);
+        console.log(
+          `  token:    haqiqiy ${real} · taxmin ${est} · farq ${diff > 0 ? "+" : ""}${diff}%`,
+        );
+        console.log(`            (belgi/token: haqiqiy ${(text.length / real).toFixed(2)}, jadvalda 3.20)`);
+      } catch (e) {
+        // Bu faqat diagnostika — yiqilsa smoke testni buzmasin.
+        console.log(`  token:    o'lchanmadi (${e instanceof Error ? e.message : String(e)})`);
+      }
     } catch (e) {
       if (isLlmError(e)) {
         console.error(`  XATO [${e.kind}] ${e.message}`);

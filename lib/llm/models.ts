@@ -214,3 +214,41 @@ export function lowerTier(tier: Tier): Tier {
 export function getModel(id: string): ModelEntry | undefined {
   return (MODELS as Record<string, ModelEntry>)[id];
 }
+
+/** `costMicros` ga yetarli minimal narx ma'lumoti. */
+export type PricingEntry = Pick<
+  ModelEntry,
+  "inputPerMTok" | "outputPerMTok" | "cacheWriteMultiplier" | "cacheReadMultiplier"
+>;
+
+/**
+ * Narx jadvali: `MODELS` + `EMBEDDING_MODEL`.
+ *
+ * NEGA `getModel()` DAN AJRATILGAN: `getModel` tier, `maxOutputTokens`,
+ * `thinkingStyle` beradi — embedding modelida bularning ma'nosi yo'q va u
+ * `router.ts` / `call.ts` / byudjet shiftining model zanjiriga TUSHMASLIGI
+ * kerak. Lekin narx kerak: usiz `costFor("gemini-embedding-001", ...)` xato
+ * tashlaydi, `writeLlmCall` uni yutadi va embedding jurnali JIMGINA bo'sh
+ * qoladi (CLAUDE.md 3-qoida buzilgan bo'lib, buzilgani ko'rinmaydi).
+ *
+ * DIQQAT — embedding narxi TASDIQLANMAGAN: $0.15 "File Search" bo'limidagi
+ * stavkadan olingan, rasmiy narx sahifasida `gemini-embedding-001` uchun
+ * alohida qator yo'q (`EMBEDDING_MODEL.verified: false`). Ya'ni embedding
+ * `costUsd` i taxminiy — marja hisobida shuni yodda tuting.
+ */
+export function getPricing(id: string): PricingEntry | undefined {
+  const model = getModel(id);
+  if (model) return model;
+
+  if (id === EMBEDDING_MODEL.id) {
+    return {
+      inputPerMTok: EMBEDDING_MODEL.inputPerMTok,
+      // Embedding chiqish tokenini hisoblamaydi — vektor qaytaradi, matn emas.
+      outputPerMTok: 0,
+      cacheWriteMultiplier: 1,
+      cacheReadMultiplier: 1,
+    };
+  }
+
+  return undefined;
+}

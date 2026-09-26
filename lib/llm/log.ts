@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { PrismaClient } from "@/lib/generated/prisma/client";
 import { costFor } from "./pricing";
 import type { LlmErrorKind } from "./errors";
 import type { ProviderId, Usage } from "./types";
@@ -24,15 +25,34 @@ export type LlmCallRecord = {
 };
 
 /**
+ * `$transaction` va CLI skriptlar uchun client parametrik —
+ * `lib/curriculum/search.ts` dagi `Db` naqshi.
+ */
+export type LlmCallDb = Pick<PrismaClient, "llmCall">;
+
+/**
  * Jurnalga yozadi va qator ID'sini qaytaradi.
  *
  * HECH QACHON THROW QILMAYDI. Jurnal yozilmagani yomon, lekin uning
  * sababli tayyor bo'lgan generatsiyani yo'qotish — battar. Xato Sentry'ga
  * ketadi va `null` qaytadi.
+ *
+ * `db` berilmasa — ilovaning odatdagi client'i. Skriptlar o'zining
+ * `createScriptDb()` (`DIRECT_URL`) client'ini uzatadi: `lib/db.ts` modul
+ * yuklanishida `DATABASE_URL` bilan pul ochadi, skriptda esa bu ortiqcha
+ * ulanish (dotenv'dan oldin yuklansa `undefined` bilan quriladi).
+ *
+ * DIQQAT: bu yerga `$transaction` ning `tx` sini uzatish — yiqilishi mumkin
+ * bo'lgan ishning jurnalini o'sha ish bilan birga rollback qilish. Xato
+ * sababi (`errorKind`) aynan shunda kerak bo'ladi, shuning uchun jurnal
+ * tranzaksiyadan TASHQARIDA yozilsin.
  */
-export async function writeLlmCall(rec: LlmCallRecord): Promise<string | null> {
+export async function writeLlmCall(
+  rec: LlmCallRecord,
+  db: LlmCallDb = prisma,
+): Promise<string | null> {
   try {
-    const row = await prisma.llmCall.create({
+    const row = await db.llmCall.create({
       data: {
         userId: rec.userId,
         documentId: rec.documentId,

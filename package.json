@@ -18,6 +18,7 @@
     "make-admin": "tsx scripts/make-admin.ts",
     "tg:webhook": "node scripts/telegram-webhook.mjs",
     "llm:smoke": "prisma generate && tsx scripts/llm-smoke.ts",
+    "embed:backfill": "prisma generate && tsx scripts/embed-backfill.ts",
     "llm:models": "tsx scripts/llm-models.ts"
   },
   "dependencies": {

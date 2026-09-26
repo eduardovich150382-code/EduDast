@@ -11,12 +11,22 @@
  */
 
 export { runLlm } from "./call";
-export { embedTexts, embedQuery } from "./embeddings";
+export {
+  assertDim,
+  EMBED_BATCH,
+  embedQuery,
+  embedTexts,
+  l2Normalize,
+  setEmbeddingProvider,
+  type EmbedOpts,
+} from "./embeddings";
+export type { LlmCallDb } from "./log";
 export { LlmError, isLlmError, type LlmErrorKind } from "./errors";
 export { MODELS, EMBEDDING_MODEL, type ModelId } from "./models";
 export { costFor, microsToUsd } from "./pricing";
 export type {
   Effort,
+  EmbeddingProvider,
   LlmMessage,
   LlmRequest,
   LlmResult,
