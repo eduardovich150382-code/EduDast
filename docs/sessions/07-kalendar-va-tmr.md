@@ -23,10 +23,14 @@ Holiday        id, academicYearId, startsOn, endsOn, label, scope
 
 Indekslarni sabab bilan qo'sh (`@@index([academicYearId])`), ortiqchasini emas.
 
-### 2. CSV importiga `chorak` ustuni
-`lib/curriculum/csv-schema.ts` ga yangi ixtiyoriy ustun `chorak` (1–4).
+### 2. CSV importiga `quarter` ustuni
+`lib/curriculum/csv-schema.ts` ga yangi ixtiyoriy ustun `quarter` (1–4).
 `docs/curriculum-csv.md` ni yangila, `fixtures/fizika-7-namuna.csv` ga
 qiymatlarni qo'sh. Mavjud fayllar (chorak ustunisiz) baribir ishlashi kerak.
+
+> Ustun nomi `chorak` emas, `quarter`: `CSV_COLUMNS` dagi qolgan o'nta ustun
+> ham inglizcha snake_case va `checkColumns` xato xabari ustun ro'yxatini
+> o'sha uslubda chiqaradi.
 
 ### 3. `lib/calendar/placement.ts` — MAHSULOTNING YURAGI
 
@@ -54,8 +58,18 @@ Qoidalar:
 - `quarter` bo'sh mavzular `order` bo'yicha ketma-ket taqsimlanadi
 - `anchor` berilgan bo'lsa hisob o'sha nuqtadan boshlanadi (avvalgi hisob
   e'tiborsiz qoldiriladi)
-- Mavzular chorak chegarasidan oshib ketsa — oshgani keyingi chorakka o'tadi,
-  lekin `quarter` belgilangan mavzu o'z chorogidan oldinga siljimaydi
+- `quarter` BELGILANGAN mavzu o'z chorogida o'tib bo'linadi — keyingi chorakka
+  SURILMAYDI. Bayram/ta'til dars kunini yeb qo'ysa, o'sha kungi mavzu keyingi
+  darsga qo'shiladi va o'sha darsda ikkita mavzu o'tiladi (tig'izlashtirish,
+  `maxTopicsPerLesson`, default 2). Siljish kaskad bo'lib ketadi, lekin chorak
+  chegarasidan chiqmaydi; tig'izlash bilan ham sig'masa — `unplaced`
+- `quarter: null` mavzu `order` bo'yicha ketma-ket, chorak chegarasidan ERKIN
+  oqib o'tadi va TIG'IZLASHMAYDI
+
+> TUZATILDI: avval bu yerda "oshgani keyingi chorakka o'tadi" deb yozilgan
+> edi. Bu noto'g'ri — chorak sanalari o'quv yili buyrug'i bilan qotirilgan,
+> shuning uchun chorakka belgilangan mavzu o'sha chorakda tugashi kerak, dars
+> tig'izlashtirilsa ham.
 
 **Bu funksiyaga eng ko'p test yoziladi.** Kamida shu holatlar:
 ta'til o'rtada; chorak qisqargan; sinf 3 mavzu orqada (`anchor`);

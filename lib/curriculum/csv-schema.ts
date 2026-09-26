@@ -24,6 +24,20 @@ export const CSV_COLUMNS = [
 
 export type CsvColumn = (typeof CSV_COLUMNS)[number];
 
+/**
+ * IXTIYORIY ustunlar — `CSV_COLUMNS` ga ATAYLAB qo'shilmagan, chunki
+ * `checkColumns` har `CSV_COLUMNS` a'zosini majburiy deb biladi va bu
+ * ustunsiz yozilgan eski fayllar import bo'lmay qolardi.
+ *
+ * Nom inglizcha snake_case (07-sessiya hujjatidagi `chorak` emas): qolgan
+ * o'nta ustun ham shunday va `checkColumns` xato xabari ustun ro'yxatini
+ * o'sha uslubda chiqaradi.
+ */
+export const OPTIONAL_CSV_COLUMNS = ["quarter"] as const;
+
+export const MIN_QUARTER = 1;
+export const MAX_QUARTER = 4;
+
 /** csv-parse `columns: true` bilan aynan shunday shakl qaytaradi. */
 export type RawCsvRecord = Record<string, string | undefined>;
 
@@ -41,6 +55,8 @@ export type TopicRow = {
   objectives: string[];
   keywords: string[];
   hoursPlan: number | null;
+  /** 1–4, yoki `null` — chorak belgilanmagan (ixtiyoriy ustun). */
+  quarter: number | null;
 };
 
 export type ParseResult = { ok: true; rows: TopicRow[] } | { ok: false; errors: string[] };
@@ -117,6 +133,19 @@ const rowSchema = z.object({
     .refine((value) => value === "" || INT_RE.test(value), "butun son bo'lishi kerak")
     .transform((value) => (value === "" ? null : Number(value)))
     .refine((value) => value === null || value > 0, "0 dan katta bo'lishi kerak"),
+
+  // Ustun umuman yo'q bo'lsa `undefined` -> "" -> `null`, ya'ni chorak
+  // ustunisiz yozilgan eski fayllar baribir import bo'ladi.
+  quarter: z
+    .string()
+    .optional()
+    .transform((value) => (value ?? "").trim())
+    .refine((value) => value === "" || INT_RE.test(value), "butun son bo'lishi kerak")
+    .transform((value) => (value === "" ? null : Number(value)))
+    .refine(
+      (value) => value === null || (value >= MIN_QUARTER && value <= MAX_QUARTER),
+      `${MIN_QUARTER} dan ${MAX_QUARTER} gacha bo'lishi kerak`,
+    ),
 });
 
 /**
@@ -173,6 +202,7 @@ export function parseCurriculumRows(records: RawCsvRecord[]): ParseResult {
       objectives: data.objectives,
       keywords: data.keywords,
       hoursPlan: data.hours_plan,
+      quarter: data.quarter,
     });
   });
 

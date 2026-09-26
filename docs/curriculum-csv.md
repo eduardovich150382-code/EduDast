@@ -33,6 +33,13 @@ muhim emas, ortiqcha ustun e'tiborsiz qoldiriladi):
 | `objectives` | yo'q | O'quv maqsadlari, `\|` bilan ajratilgan |
 | `keywords` | yo'q | Kalit so'zlar, `\|` bilan ajratilgan |
 | `hours_plan` | yo'q | Rejadagi soat, 0 dan katta butun son |
+| `quarter` | yo'q | Chorak, 1–4. Bo'lim qatorida to'ldirilsa mavzular uni MEROS oladi |
+
+`quarter` nima qiladi: to'ldirilgan mavzu o'sha chorak ichida o'tib
+bo'linadi — bayram dars kunini yeb qo'ysa keyingi darsda ikki mavzu o'tiladi,
+lekin chorak chegarasidan chiqmaydi. Bo'sh qoldirilgan mavzu esa `order`
+bo'yicha ketma-ket, chorak chegarasidan erkin oqib o'tadi
+(`lib/calendar/placement.ts`).
 
 Sarlavhada vergul bo'lsa maydonni qo'shtirnoqqa oling:
 `"Harorat, termometr"`. Fayl UTF-8 bo'lishi kerak; Excel qo'shadigan BOM
@@ -43,12 +50,12 @@ avtomatik olib tashlanadi.
 `fixtures/fizika-7-namuna.csv`:
 
 ```csv
-grade,parent_slug,slug,title_uz,title_uz_cyrl,title_ru,order,objectives,keywords,hours_plan
-7,,harakat-va-kuch,Harakat va kuch,Ҳаракат ва куч,Движение и сила,1,,,
-7,harakat-va-kuch,mexanik-harakat,Mexanik harakat,Механик ҳаракат,Механическое движение,1,Mexanik harakatni ta'riflaydi|Sanoq sistemasini tanlaydi,harakat|traektoriya|sanoq sistemasi,2
-7,harakat-va-kuch,tezlik,Tezlik,Тезлик,Скорость,2,Tezlikni hisoblaydi|Birliklarni almashtiradi,tezlik|masofa|vaqt,2
-7,,issiqlik,Issiqlik hodisalari,Иссиқлик ҳодисалари,Тепловые явления,2,,,
-7,issiqlik,harorat,"Harorat, termometr","Ҳарорат, термометр","Температура, термометр",1,Termometrdan foydalanadi,harorat|termometr|shkala,1
+grade,parent_slug,slug,title_uz,title_uz_cyrl,title_ru,order,objectives,keywords,hours_plan,quarter
+7,,harakat-va-kuch,Harakat va kuch,Ҳаракат ва куч,Движение и сила,1,,,,1
+7,harakat-va-kuch,mexanik-harakat,Mexanik harakat,Механик ҳаракат,Механическое движение,1,Mexanik harakatni ta'riflaydi|Sanoq sistemasini tanlaydi,harakat|traektoriya|sanoq sistemasi,2,
+7,harakat-va-kuch,tezlik,Tezlik,Тезлик,Скорость,2,Tezlikni hisoblaydi|Birliklarni almashtiradi,tezlik|masofa|vaqt,2,
+7,,issiqlik,Issiqlik hodisalari,Иссиқлик ҳодисалари,Тепловые явления,2,,,,2
+7,issiqlik,harorat,"Harorat, termometr","Ҳарорат, термометр","Температура, термометр",1,Termometrdan foydalanadi,harorat|termometr|shkala,1,
 ```
 
 ## Xatti-harakat kafolatlari
