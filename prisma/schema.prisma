@@ -107,6 +107,13 @@ enum GameSessionState {
   FINISHED
 }
 
+/// Ta'til/bayram qamrovi. REGION — viloyat bo'yicha farq qiladigan kunlar
+/// (Holiday.region da kod turadi). GLOBAL — butun mamlakat uchun.
+enum HolidayScope {
+  GLOBAL
+  REGION
+}
+
 // ---------- Modellar ----------
 
 model User {
@@ -207,6 +214,67 @@ model Subject {
   topics Topic[]
 }
 
+/// O'quv yili — choraklar va ta'tillarning egasi (07-sessiya).
+///
+/// `isActive` bitta yilda bo'lishi kerak, lekin unique indeks bilan
+/// ifodalanmaydi (Postgres'da "faqat bitta true" sharti partial unique
+/// talab qiladi va u Prisma sxemasida yozilmaydi). Shuning uchun shartni
+/// `server/calendar-actions.ts` bitta tranzaksiyada saqlaydi, o'qiydigan
+/// tomon esa `orderBy` + `take: 1` bilan aniq bittasini oladi.
+model AcademicYear {
+  id       String   @id @default(cuid())
+  /// "2026–2027" — ko'rinadigan nom. Takrorlanmasin: bir yil ikki marta
+  /// kiritilsa qaysi biri faol ekani chalkashardi.
+  label    String   @unique
+  startsOn DateTime
+  endsOn   DateTime
+  isActive Boolean  @default(false)
+
+  quarters Quarter[]
+  holidays Holiday[]
+}
+
+model Quarter {
+  id             String   @id @default(cuid())
+  academicYearId String
+  /// 1–4.
+  number         Int
+  startsOn       DateTime
+  endsOn         DateTime
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  /// Alohida @@index([academicYearId]) QO'SHILMADI — bu @@unique allaqachon
+  /// shu ustunni qamrovchi (leftmost-prefix) indeks yaratadi.
+  @@unique([academicYearId, number])
+}
+
+/// Chorak ICHIDAGI ta'til va bayramlar (Navro'z, Mustaqillik kuni).
+///
+/// Kuz/qish ta'tili bu yerga YOZILMAYDI — u shunchaki choraklar orasidagi
+/// bo'shliq va `placement.ts` unga dars qo'ymaydi (chorak a'zoligi asosiy
+/// filtr). Aks holda admin bir narsani ikki marta kiritardi.
+model Holiday {
+  id             String       @id @default(cuid())
+  academicYearId String
+  startsOn       DateTime
+  endsOn         DateTime
+  label          String
+  scope          HolidayScope @default(GLOBAL)
+  /// scope=REGION bo'lganda lib/uz-regions.ts dagi kodlardan bittasi,
+  /// GLOBAL bo'lganda null. Ikki tomonlama shart Zod'da tekshiriladi.
+  region         String?
+
+  /// Soft delete (CLAUDE.md). O'chirilgan ta'til hisobga olinmaydi, lekin
+  /// "nega sanalar o'zgardi" savoliga javob iz sifatida qoladi.
+  deletedAt DateTime?
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  /// Sabab: "Rejam" har yuklashda faol yilning ta'tillarini o'qiydi.
+  @@index([academicYearId])
+}
+
 model Topic {
   id          String                      @id @default(cuid())
   subjectId   String
@@ -220,6 +288,11 @@ model Topic {
   objectives  String[]
   keywords    String[]
   hoursPlan   Int?
+  /// Mavzu qaysi chorakda o'tiladi (1–4). `null` — chorak belgilanmagan,
+  /// u holda mavzu `order` bo'yicha ketma-ket, chorak chegarasidan erkin
+  /// oqib o'tadi. Belgilangan bo'lsa mavzu o'sha chorak ichida tugaydi
+  /// (kerak bo'lsa tig'izlashadi) — lib/calendar/placement.ts.
+  quarter     Int?
   /// pgvector ustuni — faqat raw SQL orqali o'qiladi/yoziladi.
   ///
   /// OGOHLANTIRISH — HNSW INDEKSI: bu ustunning `Topic_embedding_hnsw_idx`
