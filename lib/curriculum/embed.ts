@@ -168,15 +168,24 @@ export async function writeTopicVectors(
       );
     }
 
-    // `NOW()` ATAYLAB bazadan: `embeddedAt < updatedAt` taqqoslashining
-    // ikki tomoni bitta soat bo'yicha bo'lishi kerak. JS'ning `new Date()`
-    // si bilan mijoz va server soati orasidagi bir necha soniyalik farq
-    // yangi yozilgan vektorni darhol "eskirgan" qilib qo'yardi.
+    // NEGA `GREATEST(NOW(), "updatedAt")` — IKKI SOAT MUAMMOSI:
+    // `updatedAt` ni Prisma KLIENT tomonda qo'yadi (`@updatedAt` — bu
+    // Prisma'ning o'zi yuboradigan qiymat, baza funksiyasi emas), `NOW()`
+    // esa Postgres soatidan keladi. Klient soati bazadan oldinda bo'lsa
+    // (odatiy hol: mahalliy mashina bir necha soniya farq qiladi) yangi
+    // yozilgan qator DARHOL `embeddedAt < updatedAt` shartiga tushib,
+    // "eskirgan" bo'lib qolardi — cron uni har kuni qayta yozib, bekorga
+    // pul sarflardi. Bu beqaror (flaky) nosozlik: farq kichik bo'lsa
+    // sezilmaydi, katta bo'lsa cheksiz qayta yozish.
+    //
+    // `GREATEST` semantikani BUZMAYDI: yozuvdan KEYINGI tahrir `updatedAt`
+    // ni yangilaydi va qator baribir eskiradi. `isTopicStale()` ga tegish
+    // kerak emas.
     written += await db.$executeRaw`
       UPDATE "Topic"
       SET "embedding" = ${JSON.stringify(vector)}::vector,
           "embeddingModel" = ${EMBEDDING_MODEL_ID},
-          "embeddedAt" = NOW()
+          "embeddedAt" = GREATEST(NOW(), "updatedAt")
       WHERE "id" = ${topic.id} AND "deletedAt" IS NULL
     `;
   }
