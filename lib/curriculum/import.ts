@@ -68,6 +68,7 @@ const TOPIC_FIELDS = {
   objectives: true,
   keywords: true,
   hoursPlan: true,
+  quarter: true,
   deletedAt: true,
 } as const;
 
@@ -83,6 +84,7 @@ type ExistingTopic = {
   objectives: string[];
   keywords: string[];
   hoursPlan: number | null;
+  quarter: number | null;
   deletedAt: Date | null;
 };
 
@@ -98,6 +100,8 @@ function fieldsMatch(existing: ExistingTopic, row: TopicRow): boolean {
     existing.titleRu === row.titleRu &&
     existing.order === row.order &&
     existing.hoursPlan === row.hoursPlan &&
+    // Usiz chorak o'zgargan qayta import "unchanged" deb o'tkazib yuborilardi.
+    existing.quarter === row.quarter &&
     sameList(existing.objectives, row.objectives) &&
     sameList(existing.keywords, row.keywords)
   );
@@ -160,6 +164,7 @@ async function runImport(
       objectives: row.objectives,
       keywords: row.keywords,
       hoursPlan: row.hoursPlan,
+      quarter: row.quarter,
     };
 
     if (!existing) {

@@ -25,6 +25,7 @@ function record(overrides: Partial<Record<string, string>> = {}): RawCsvRecord {
     objectives: "",
     keywords: "",
     hours_plan: "",
+    quarter: "",
     ...overrides,
   };
 }
@@ -90,6 +91,7 @@ describe("parseCurriculumRows — to'g'ri qatorlar", () => {
           objectives: ["Birinchi", "Ikkinchi"],
           keywords: ["harakat", "tezlik"],
           hoursPlan: 2,
+          quarter: null,
         },
       ],
     });
@@ -109,6 +111,52 @@ describe("parseCurriculumRows — to'g'ri qatorlar", () => {
 
   it("order 0 bo'lishi mumkin", () => {
     expect(parseCurriculumRows([record({ order: "0" })]).ok).toBe(true);
+  });
+});
+
+describe("quarter ustuni (ixtiyoriy)", () => {
+  it.each([["1", 1], ["4", 4], [" 2 ", 2]])("to'g'ri qiymat o'tadi: %s", (raw, expected) => {
+    const result = parseCurriculumRows([record({ quarter: raw })]);
+
+    expect(result.ok && result.rows[0]?.quarter).toBe(expected);
+  });
+
+  it.each([
+    ["0", { quarter: "0" }],
+    ["5", { quarter: "5" }],
+    ["manfiy", { quarter: "-1" }],
+    ["son emas", { quarter: "birinchi" }],
+  ])("rad etiladi: %s", (_nom, overrides) => {
+    const errors = errorsOf([record(overrides)]);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("quarter");
+  });
+
+  it("bo'sh quarter — null", () => {
+    const result = parseCurriculumRows([record({ quarter: "  " })]);
+
+    expect(result.ok && result.rows[0]?.quarter).toBe(null);
+  });
+
+  /**
+   * QABUL MEZONI: chorak ustunisiz yozilgan eski fayllar baribir import
+   * bo'lishi kerak. Shuning uchun `quarter` `CSV_COLUMNS` ga qo'shilmagan —
+   * `checkColumns` uni majburiy deb bilmaydi.
+   */
+  it("ustun umuman yo'q — xato bermaydi", () => {
+    const withoutColumn = record();
+    delete withoutColumn.quarter;
+
+    const result = parseCurriculumRows([withoutColumn]);
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.rows[0]?.quarter).toBe(null);
+  });
+
+  it("checkColumns quarter ni talab qilmaydi", () => {
+    expect(checkColumns([...CSV_COLUMNS])).toEqual([]);
+    expect(checkColumns(["grade", "slug"])[0]).not.toContain("quarter");
   });
 });
 
