@@ -116,5 +116,28 @@
     "loginApproved": "Kirish tasdiqlandi. Endi brauzerga qayting — sahifa o'zi ochiladi.",
     "loginAlreadyUsed": "Bu kirish so'rovi allaqachon tasdiqlangan.",
     "loginExpired": "Kirish so'rovining muddati o'tgan. Saytga qaytib, tugmani qaytadan bosing."
+  },
+  "Plan": {
+    "title": "Rejam",
+    "estimateNotice": "Sanalar taxminiy: dars jadvali kiritilgach aniqlashadi.",
+    "subject": "Fan",
+    "grade": "Sinf",
+    "gradeLabel": "{grade}-sinf",
+    "show": "Ko'rsatish",
+    "quarterLabel": "{number}-chorak",
+    "status": {
+      "done": "O'tilgan",
+      "current": "Hozirgi",
+      "ahead": "Oldinda"
+    },
+    "hours": "{count} soat",
+    "noDate": "Sana yo'q",
+    "compressed": "Bu darsda 2 mavzu",
+    "undatedTitle": "Sanasi aniqlanmagan mavzular",
+    "emptyQuarter": "Bu chorakda mavzu yo'q.",
+    "noCalendar": "O'quv yili kalendari hali kiritilmagan.",
+    "noTopics": "Bu fan va sinf uchun mavzular hali yuklanmagan.",
+    "noSelection": "Avval onboarding'da fan va sinf tanlang.",
+    "unplacedNotice": "{count} mavzuga sana topilmadi: rejadagi soat kalendarga sig'maydi."
   }
 }
