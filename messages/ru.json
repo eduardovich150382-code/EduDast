@@ -95,9 +95,12 @@
       }
     }
   },
+  "Credits": {
+    "available": "Доступно кредитов",
+    "held": "({count} в резерве)"
+  },
   "Ish": {
     "greeting": "Здравствуйте, {name}!",
-    "creditBalance": "Баланс кредитов",
     "comingSoon": {
       "title": "Скоро",
       "lessonPlan": "Поурочный план",

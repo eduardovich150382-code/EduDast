@@ -1,6 +1,7 @@
 import { GraduationCap } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { BalanceChip } from "@/components/credits/balance-chip";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Button } from "@/components/ui/button";
 import { requireOnboarded } from "@/lib/auth";
@@ -21,6 +22,7 @@ export default async function IshLayout({ children }: { children: ReactNode }) {
           <span className="font-heading text-base font-semibold">EduDast</span>
         </div>
         <div className="flex items-center gap-2">
+          <BalanceChip />
           <LocaleSwitcher />
           <form action={logout}>
             <Button type="submit" variant="ghost" size="sm">
