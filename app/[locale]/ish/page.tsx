@@ -1,4 +1,4 @@
-import { NotebookPen, ListChecks, Presentation, Gamepad2, Coins } from "lucide-react";
+import { NotebookPen, ListChecks, Presentation, Gamepad2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
@@ -36,17 +36,12 @@ export default async function IshPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-semibold text-ink">
-          {t("greeting", { name: user.fullName })}
-        </h1>
-        <div className="flex items-center gap-1.5 text-sm text-ink-2">
-          <Coins className="size-4 text-warn" strokeWidth={1.5} />
-          <span>
-            {t("creditBalance")}: {user.creditBalance}
-          </span>
-        </div>
-      </div>
+      {/* Balans ko'rsatkichi ATAYLAB yo'q: u header'dagi `BalanceChip` da,
+          yagona manba sifatida. Ikki joyda ko'rsatilsa ertami-kechmi biri
+          eskiradi yoki brutto/netto farq qiladi. */}
+      <h1 className="font-heading text-2xl font-semibold text-ink">
+        {t("greeting", { name: user.fullName })}
+      </h1>
 
       {hasInactiveSelection && (
         <p className="rounded-md bg-warn/10 px-3 py-2 text-sm text-ink">

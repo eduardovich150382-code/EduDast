@@ -1,4 +1,4 @@
-import { BookOpen, Gauge, LayoutDashboard, ListTree } from "lucide-react";
+import { BookOpen, Gauge, LayoutDashboard, ListTree, Users } from "lucide-react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 
@@ -20,6 +20,7 @@ import { requireAdmin } from "@/lib/auth";
 
 const NAV = [
   { href: "/admin", label: "Statistika", icon: LayoutDashboard },
+  { href: "/admin/foydalanuvchilar", label: "Foydalanuvchilar", icon: Users },
   { href: "/admin/fanlar", label: "Fanlar", icon: BookOpen },
   { href: "/admin/mavzular", label: "Mavzular", icon: ListTree },
   { href: "/admin/sifat", label: "Sifat", icon: Gauge },

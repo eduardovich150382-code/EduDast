@@ -95,9 +95,12 @@
       }
     }
   },
+  "Credits": {
+    "available": "Mavjud kredit",
+    "held": "({count} band)"
+  },
   "Ish": {
     "greeting": "Salom, {name}!",
-    "creditBalance": "Kredit balansi",
     "comingSoon": {
       "title": "Tez orada",
       "lessonPlan": "Dars ishlanma",

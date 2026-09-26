@@ -29,6 +29,11 @@ function findSessionUser(id: string) {
       grades: true,
       locale: true,
       creditBalance: true,
+      // Mavjud balans = `creditBalance - creditsHeld`. Bu ustunsiz header'dagi
+      // ko'rsatkich BRUTTO balansni ko'rsatadi: band qilingan kredit "mavjud"
+      // bo'lib turadi va foydalanuvchi balansi 5 turganda "kredit yetmadi"
+      // xatosini ko'radi (components/credits/balance-chip.tsx).
+      creditsHeld: true,
       sessionVersion: true,
     },
   });

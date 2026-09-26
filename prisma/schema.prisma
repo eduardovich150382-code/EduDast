@@ -120,6 +120,17 @@ model User {
   grades        Int[]
   locale        String    @default("uz")
   creditBalance Int       @default(0)
+
+  /// Generatsiya davomida BAND qilingan kreditlar. Mavjud balans =
+  /// `creditBalance - creditsHeld`.
+  ///
+  /// NEGA ALOHIDA JADVAL EMAS: shunda `CreditTx` ga faqat pul HAQIQATAN
+  /// qimirlaganda qator tushadi (CLAUDE.md 4-qoida) va manfiy `CreditTx`
+  /// bilan "hold" qilish kerak emas. Band qilish/bo'shatish — bitta UPDATE,
+  /// ya'ni Postgres qator qulfi parallel so'rovlarni navbatga qo'yadi va
+  /// mavjud balans manfiyga tushmaydi (lib/credits/ledger.ts).
+  creditsHeld   Int       @default(0)
+
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
 
@@ -278,6 +289,44 @@ model Document {
   type         DocumentType
   title        String
   status       DocumentStatus @default(QUEUED)
+
+  /// Generatsiya boshlangan payt — 08-SESSIYADAGI REAPER UCHUN.
+  ///
+  /// NEGA KERAK: brauzer yopilib jarayon yarim yo'lda uzilsa, hujjat abadiy
+  /// `RUNNING` bo'lib qoladi. `hold()` `CreditTx` ga HECH NARSA yozmaydi,
+  /// ya'ni band qolgan kredit daftarda iz qoldirmaydi — foydalanuvchi balansi
+  /// jimgina kamayadi va `creditsHeld` abadiy band bo'lib turadi. Reaper
+  /// (08-sessiya) aynan shu ustun orqali eskirgan `RUNNING` hujjatni topadi
+  /// va `release()` bilan kreditni qaytaradi. 06-sessiyada `hold()` ni
+  /// chaqiradigan kod yo'q, shuning uchun bu yerda faqat ustunning o'zi.
+  ///
+  /// IKKI SOAT: taqqoslashda ikkala tomon BITTA manbadan bo'lsin — `startedAt`
+  /// raw SQL `NOW()` bilan yozilsin va reaper `NOW() - interval '15 minutes'`
+  /// bilan solishtirsin. Prisma'dan kelgan `new Date()` (ishlab chiquvchi
+  /// soati) ni `NOW()` (Neon soati) bilan solishtirish beqaror test va prodda
+  /// cheksiz qayta ishlov beradi (lib/curriculum/embed.ts dagi sabab).
+  startedAt    DateTime?
+
+  /// Nega yiqildi — foydalanuvchiga ko'rinadigan qisqa sabab (`LlmErrorKind`
+  /// yoki sifat tekshiruvi izohi). `release()` 500 belgiga qisqartirib yozadi.
+  failReason   String?
+
+  /// Shu hujjat uchun BAND qilingan kredit.
+  ///
+  /// NEGA KERAK: `hold()` `CreditTx` yozmaydi, `creditsUsed` esa faqat
+  /// `charge()` da to'ldiriladi — ya'ni band qilingan miqdor boshqa hech
+  /// qayerda saqlanmaydi. Reaper (08-sessiya, `api/cron/stale-documents`)
+  /// `release(userId, AMOUNT, ...)` chaqiradi va o'sha `AMOUNT` ni oladigan
+  /// joyi bo'lmaydi. `inputParams` dan `creditCost()` bilan QAYTA HISOBLAB
+  /// BO'LMAYDI: narx jadvali 08-sessiyadan keyin o'lchangan xarajatga qarab
+  /// qayta belgilanadi, ya'ni eski hujjat uchun boshqa son chiqadi va
+  /// `creditsHeld` abadiy siljib ketadi.
+  ///
+  /// KIM YOZADI: `hold()` ning o'zi emas (u faqat `User` qatorini qulflaydi) —
+  /// 08-sessiya `hold(cost)` va `Document.create({ creditsHeldFor: cost })`
+  /// ni BITTA `$transaction` ichida bajaradi, ya'ni ikkisi hamisha mos keladi.
+  creditsHeldFor Int          @default(0)
+
   inputParams  Json
   contentJson  Json
   qualityScore Float?

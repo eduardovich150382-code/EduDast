@@ -95,9 +95,12 @@
       }
     }
   },
+  "Credits": {
+    "available": "Мавжуд кредит",
+    "held": "({count} банд)"
+  },
   "Ish": {
     "greeting": "Салом, {name}!",
-    "creditBalance": "Кредит баланси",
     "comingSoon": {
       "title": "Тез орада",
       "lessonPlan": "Дарс ишланма",
