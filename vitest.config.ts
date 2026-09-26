@@ -14,5 +14,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // `.env.local` ni o'qiydi — usiz `tests/integration/*` jimgina skip
+    // bo'ladi. Sababi setup faylining o'zida yozilgan.
+    setupFiles: ["tests/setup-env.ts"],
   },
 });
