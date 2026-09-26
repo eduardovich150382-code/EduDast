@@ -1,4 +1,4 @@
-import type { PlacementSlot } from "@/lib/calendar/placement";
+import { dayNumber, type PlacementSlot } from "@/lib/calendar/placement";
 
 /**
  * "Rejam" sahifasi uchun ko'rinish qatorlari — SOF modul.
@@ -21,14 +21,6 @@ export type PlanRow = {
   /** Bittasi bo'lsa ham boshqa mavzu bilan dars bo'lishgan. */
   compressed: boolean;
 };
-
-const MS_PER_DAY = 86_400_000;
-
-function dayNumber(date: Date): number {
-  return Math.floor(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / MS_PER_DAY,
-  );
-}
 
 type QuarterRange = { number: number; startsOn: Date; endsOn: Date };
 

@@ -89,7 +89,14 @@ const MS_PER_DAY = 86_400_000;
 /** Toshkent UTC+5, DST yo'q. */
 const UZ_OFFSET_MS = 5 * 60 * 60 * 1000;
 
-function dayNumber(date: Date): number {
+/**
+ * `Date` -> epoch kun raqami. Vaqt komponenti tashlanadi.
+ *
+ * EKSPORT QILINGAN, chunki `lib/calendar/plan-view.ts` ham aynan shu hisobga
+ * tayanadi. Ikkinchi nusxa yozilsa biri o'zgarganda ikkinchisi JIMGINA
+ * eskirardi — "ikki soat" muammosi.
+ */
+export function dayNumber(date: Date): number {
   return Math.floor(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / MS_PER_DAY,
   );
