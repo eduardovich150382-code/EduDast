@@ -24,9 +24,11 @@ export default async function OnboardingGradesPage() {
       description={t("grades.description")}
     >
       <GradesStep
-        grades={GRADES}
+        grades={GRADES.map((grade) => ({
+          value: grade,
+          label: t("grades.gradeLabel", { grade }),
+        }))}
         initialSelected={user.grades}
-        gradeLabel={(grade) => t("grades.gradeLabel", { grade })}
         continueLabel={t("grades.continue")}
         backLabel={t("grades.back")}
         errorLabel={t("genericError")}
