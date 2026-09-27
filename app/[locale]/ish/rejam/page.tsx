@@ -247,9 +247,23 @@ export default async function RejamPage({
                   }
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-medium text-ink">
+                    {/* Mavzu — ishlanma yaratishga havola. Tanlov shu yerda
+                        allaqachon qilingan, uni formada qayta qilish
+                        o'qituvchini ikki marta ishlatardi. */}
+                    <Link
+                      href={{
+                        pathname: "/ish/yarat",
+                        query: {
+                          fan: subject.slug,
+                          sinf: String(grade),
+                          chorak: String(selectedQuarter),
+                          mavzu: row.topicId,
+                        },
+                      }}
+                      className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+                    >
                       {titleById.get(row.topicId) ?? row.topicId}
-                    </span>
+                    </Link>
                     <StatusBadge status={row.status} label={t(`status.${row.status}`)} />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-2">

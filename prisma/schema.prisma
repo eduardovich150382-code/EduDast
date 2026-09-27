@@ -417,6 +417,12 @@ model Document {
   @@index([userId, createdAt])
   @@index([status])
   @@index([topicId])
+  /// Yetim generatsiyalarni tozalash (`lib/generation/reap.ts`) HAR
+  /// `GET /api/generate/[id]/holat` da ishlaydi, ya'ni bu eng tez-tez
+  /// bajariladigan so'rovlardan biri. `@@index([status])` yolg'iz yetmaydi:
+  /// u `RUNNING` bo'lgan HAMMA hujjatni skanerlaydi, bizga esa bitta
+  /// foydalanuvchining eskirgan qatorlari kerak.
+  @@index([userId, status, startedAt])
 }
 
 model Export {
