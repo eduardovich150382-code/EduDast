@@ -9,15 +9,18 @@ import { SelectableChip } from "./selectable-chip";
 export function GradesStep({
   grades,
   initialSelected,
-  gradeLabel,
   continueLabel,
   backLabel,
   errorLabel,
 }: {
-  grades: readonly number[];
+  /**
+   * Yorliq SERVERDA hisoblanadi: `Onboarding.grades.gradeLabel` har sinf uchun
+   * boshqa matn beradi, lekin funksiyani client komponentga uzatib bo'lmaydi
+   * (RSC serializatsiya qilmaydi). Shuning uchun tayyor `{ value, label }`
+   * ro'yxati keladi — oddiy ma'lumot.
+   */
+  grades: readonly { value: number; label: string }[];
   initialSelected: number[];
-  /** `(grade: number) => string` — `Onboarding.grades.gradeLabel` allaqachon interpolatsiya qilingan holda kelmaydi, chunki har raqam uchun boshqa qiymat kerak. */
-  gradeLabel: (grade: number) => string;
   continueLabel: string;
   backLabel: string;
   errorLabel: string;
@@ -46,8 +49,12 @@ export function GradesStep({
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-wrap gap-2">
         {grades.map((grade) => (
-          <SelectableChip key={grade} selected={selected.includes(grade)} onClick={() => toggle(grade)}>
-            {gradeLabel(grade)}
+          <SelectableChip
+            key={grade.value}
+            selected={selected.includes(grade.value)}
+            onClick={() => toggle(grade.value)}
+          >
+            {grade.label}
           </SelectableChip>
         ))}
       </div>
