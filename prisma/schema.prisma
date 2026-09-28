@@ -308,10 +308,23 @@ model Topic {
   /// Vektor QAYSI model bilan yozilgan. Model almashsa hamma vektor
   /// eskiradi, va buni bilishning yagona yo'li — shu ustun.
   embeddingModel String?
-  /// Vektor yozilgan payt. `null` — hali yozilmagan. NAVBAT SHU:
-  /// `embeddedAt IS NULL` ning o'zi ish ro'yxati (Redis/queue kerak emas).
+  /// BU VAQT TAMG'ASI EMAS — "qaysi versiya embedding qilingan"
+  /// KO'RSATKICHI. `writeTopicVectors()` bu yerga embedding qilingan
+  /// qatorning `updatedAt` ini ko'chiradi, `NOW()` ni EMAS. Uni "vektor
+  /// qachon yozilgan" deb o'qish MUMKIN EMAS: qiymat embedding paytini
+  /// emas, matn oxirgi marta qachon o'zgarganini bildiradi.
+  ///
+  /// NEGA SHUNDAY: `updatedAt` ni Prisma klient soatida qo'yadi, `NOW()`
+  /// esa Neon soatidan keladi. Ikkalasini solishtirish soat siljishiga
+  /// bog'liq bo'lib qolardi (Neon odatda oldinda — u holda tahrir
+  /// sezilmay, qidiruv eski matnga javob berardi). Endi taqqoslashning
+  /// ikkala tomoni ham bitta manbadan.
+  ///
+  /// `null` — hali yozilmagan. NAVBAT SHU: `embeddedAt IS NULL` ning
+  /// o'zi ish ro'yxati (Redis/queue kerak emas), va admin tahrirda aynan
+  /// shu `null` qo'yiladi.
   embeddedAt     DateTime?
-  /// `embeddedAt < updatedAt` — eskirish shartining ikkinchi yarmi. CSV
+  /// `updatedAt > embeddedAt` — eskirish shartining ikkinchi yarmi. CSV
   /// import yoki boshqa yo'l matnni o'zgartirsa, admin panelidan
   /// o'tmagan bo'lsa ham vektor eskirgan deb bilinadi.
   updatedAt      DateTime  @default(now()) @updatedAt

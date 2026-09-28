@@ -201,21 +201,58 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
 
     const row = await provenance(topic.id);
     expect(isTopicStale(row, EMBEDDING_MODEL_ID)).toBe(false);
-    expect(row.embeddedAt!.getTime()).toBeGreaterThanOrEqual(row.updatedAt.getTime());
+    // AYNAN teng: `embeddedAt` ga `updatedAt` ko'chiriladi, `NOW()` emas.
+    expect(row.embeddedAt!.getTime()).toBe(row.updatedAt.getTime());
+  });
+
+  /**
+   * CHEKSIZ QAYTA EMBEDDING QALQONI — eng qimmat nosozlikning qorovuli.
+   *
+   * Yuqoridagi test TypeScript tomonini tekshiradi; cron esa SQL so'rovi
+   * bilan ishlaydi. Agar `writeTopicVectors` qatorni yozgandan keyin
+   * `findStaleTopics` uni BARIBIR qaytarsa, cron har safar o'sha qatorni
+   * qayta embedding qiladi — Gemini chaqiruvi, ya'ni HAR AYLANISHDA PUL.
+   *
+   * Bu yerda soat bilan hech qanday o'yin YO'Q: eng oddiy, real yo'l.
+   * Aynan shu holat `GREATEST(NOW(), "updatedAt")` davrida baza soati
+   * klientdan orqada bo'lsa buzilardi.
+   */
+  it("yozilgandan keyin staleness so'rovi qatorni QAYTARMAYDI", async () => {
+    const topic = await makeTopic("no-requeue");
+    const before = await provenance(topic.id);
+
+    const vectors = await embedTopics([topic], { userId: null, db });
+    await writeTopicVectors(db, [topic], vectors);
+
+    const after = await provenance(topic.id);
+
+    // XOM SQL `@updatedAt` ni ISHGA TUSHIRMAYDI: `prisma.topic.update()`
+    // bilan yozilsa `updatedAt` surilib, qator darhol eskirardi.
+    expect(after.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+    expect(after.embeddedAt!.getTime()).toBe(after.updatedAt.getTime());
+
+    const stale = await findStaleTopics(db, { subjectSlug: runId, limit: 100 });
+    expect(stale.map((t) => t.id)).not.toContain(topic.id);
+
+    // Ikkinchi aylanish ham bo'sh bo'lishi kerak — "har cron'da qayta
+    // yozish" aynan shu yerda sezilardi.
+    await writeTopicVectors(db, [topic], vectors);
+    const again = await findStaleTopics(db, { subjectSlug: runId, limit: 100 });
+    expect(again.map((t) => t.id)).not.toContain(topic.id);
   });
 
   /**
    * IKKI SOAT MUAMMOSI — aniq holat, tasodifiy vaqtga tayanmaydi.
    *
-   * `updatedAt` ni Prisma KLIENT tomonda qo'yadi, `embeddedAt` esa
-   * Postgres `NOW()` dan keladi. Klient soati bazadan oldinda bo'lsa yangi
-   * yozilgan qator darhol "eskirgan" bo'lib qolardi va cron uni har kuni
-   * qayta yozib, bekorga pul sarflardi.
+   * `updatedAt` ni Prisma KLIENT tomonda qo'yadi. Agar `embeddedAt` baza
+   * soatidan (`NOW()`) olinsa, taqqoslash ikki xil soat o'rtasida bo'lib,
+   * siljish yo'nalishiga qarab ikki xil nosozlik berardi: yangi qator
+   * darhol eskirib cheksiz qayta yozilishi, yoki tahrir umuman sezilmay
+   * qidiruvning eski matnga javob berishi.
    *
-   * Yuqoridagi ikki test buni faqat TASODIFAN ushlaydi (soat farqi va
-   * testning tezligiga qarab), shuning uchun bu yerda `updatedAt` ni
-   * ataylab 10 soniya KELAJAKKA qo'yamiz — `GREATEST(NOW(), "updatedAt")`
-   * bo'lmasa bu test har doim yiqiladi.
+   * `updatedAt` ni ataylab 10 soniya KELAJAKKA qo'yamiz — bu baza soati
+   * klientdan ORQADA bo'lgan holatning aniq nusxasi. `embeddedAt` ga
+   * `updatedAt` ko'chirilgani uchun natija soatga umuman bog'liq emas.
    */
   it("updatedAt kelajakda bo'lsa ham yozilgandan keyin eskirmaydi", async () => {
     const topic = await makeTopic("clock-skew");
@@ -232,7 +269,7 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
 
     const row = await provenance(topic.id);
     expect(row.updatedAt.getTime()).toBe(future.getTime());
-    expect(row.embeddedAt!.getTime()).toBeGreaterThanOrEqual(future.getTime());
+    expect(row.embeddedAt!.getTime()).toBe(future.getTime());
     expect(isTopicStale(row, EMBEDDING_MODEL_ID)).toBe(false);
 
     // SQL tomoni ham shu fikrda bo'lishi kerak.
@@ -241,10 +278,11 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
   });
 
   /**
-   * `GREATEST` semantikani buzmasligi: yozuvdan KEYINGI tahrir qatorni
-   * baribir eskiradi. Bu `isTopicStale()` ga tegmaganimizning isboti.
+   * Soat siljishi qalqoni semantikani BUZMASLIGI: yozuvdan KEYINGI tahrir
+   * qatorni baribir eskiradi. Qalqon "hech qachon eskirmaydi" ga
+   * aylanib qolmaganining isboti.
    */
-  it("GREATEST dan keyin ham keyingi tahrir qatorni eskiradi", async () => {
+  it("kelajakdagi updatedAt dan keyin ham keyingi tahrir qatorni eskiradi", async () => {
     const topic = await makeTopic("clock-skew-2");
     await setUpdatedAt(topic.id, new Date(Date.now() + 10_000));
 
@@ -286,7 +324,7 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
     expect(sqlIds).not.toContain(fresh.id);
   });
 
-  it("tahrirdan keyin eskirgan bo'lib qoladi (embeddedAt < updatedAt)", async () => {
+  it("tahrirdan keyin eskirgan bo'lib qoladi (updatedAt > embeddedAt)", async () => {
     const topic = await makeTopic("d");
     const vectors = await embedTopics([topic], { userId: null, db });
     await writeTopicVectors(db, [topic], vectors);

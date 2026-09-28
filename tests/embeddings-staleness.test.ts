@@ -51,10 +51,14 @@ describe("isTopicStale", () => {
   });
 
   /**
-   * Chegara holati: bir xil payt eskirgan HISOBLANMAYDI (`<`, `<=` emas).
-   * SQL tomonida ham aynan `<` — ikkalasi mos bo'lishi kerak. `<=` bo'lsa
-   * `updatedAt` va `embeddedAt` bitta tranzaksiyada teng chiqib qolgan
-   * qator har cron'da qayta yozilib, cheksiz pul sarflardi.
+   * Chegara holati: bir xil payt eskirgan HISOBLANMAYDI (`>`, `>=` emas).
+   * SQL tomonida ham aynan `>` — ikkalasi mos bo'lishi kerak.
+   *
+   * BU ENG MUHIM HOLAT, chegara emas: `writeTopicVectors` `embeddedAt` ga
+   * aynan `updatedAt` ni ko'chiradi, ya'ni YANGI YOZILGAN HAR BIR QATORDA
+   * ikkalasi TENG. `>=` bo'lsa har embedding qilingan qator darhol
+   * "eskirgan" bo'lib, cron uni cheksiz qayta yozardi — har aylanishda
+   * Gemini chaqiruvi, ya'ni pul.
    */
   it("teng payt eskirgan emas", () => {
     const same = new Date("2026-09-21T10:00:00.000Z");
