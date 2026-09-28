@@ -73,14 +73,12 @@ const ParamsSchema = z.object({
 /**
  * Qayta urinish mumkin bo'lgan xatolar.
  *
- * `unknown` ham shu ro'yxatda: tarmoq uzilishi va timeout `lib/llm/call.ts`
- * da `LlmError("unknown")` ga o'raladi, ular esa haqiqatan vaqtinchalik.
- * Cheksiz aylanishdan `MAX_ATTEMPTS` himoya qiladi — uchinchi urinishdan
- * keyin kredit baribir qaytariladi.
+ * Ro'yxat BU YERDA TAKRORLANMAYDI — u `lib/llm/errors.ts:RETRYABLE_KINDS` da,
+ * bitta joyda. Ilgari bu funksiya o'z nusxasini tutardi va u konstruktordagi
+ * `retryable` bayrog'i bilan `unknown` bo'yicha qarama-qarshi edi.
  */
 function isRetryable(error: unknown): boolean {
-  if (!isLlmError(error)) return false;
-  return error.kind === "rate_limit" || error.kind === "overloaded" || error.kind === "unknown";
+  return isLlmError(error) && error.retryable;
 }
 
 function errorReason(error: unknown): string {
@@ -324,6 +322,9 @@ async function finishDocument(args: {
     content,
     durationMinutes: args.params.durationMinutes,
     curriculumTerms: [...args.topic.objectives, ...args.topic.keywords],
+    // Parcha topilmagan mavzuda qamrov o'lchami hujjatni emas, bazamizdagi
+    // bo'shliqni o'lchaydi — shuning uchun u vazndan chiqariladi.
+    hasContext: args.params.contextChunkIds.length > 0,
   });
 
   if (report.score < SCORE_FAIL) {

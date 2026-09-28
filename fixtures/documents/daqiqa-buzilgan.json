@@ -1,0 +1,112 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanish va uning birliklari"
+    },
+    {
+      "id": "s1-objectives-0",
+      "type": "objectives",
+      "items": [
+        "Tezlanish tushunchasini o'z so'zlari bilan ta'riflaydi",
+        "Tezlanishni formula bo'yicha hisoblaydi va birligini ko'rsatadi",
+        "Tekis va notekis harakatni taqqoslaydi"
+      ]
+    },
+    {
+      "id": "s1-materials-0",
+      "type": "materials",
+      "items": [
+        "Doska va bo'r",
+        "Fizika darsligi",
+        "Tarqatma varaqlar"
+      ]
+    },
+    {
+      "id": "s2-stages-0",
+      "type": "stages",
+      "items": [
+        {
+          "title": "Tashkiliy qism",
+          "minutes": 5,
+          "teacherActions": [
+            "Tezlanish formulasini doskada chiqaradi va bir misol yechadi",
+            "O'quvchilarga juftlikda ishlash uchun vazifa beradi"
+          ],
+          "studentActions": [
+            "Formulani daftarga yozadi va misolni mustaqil takrorlaydi",
+            "Juftlikda tezlanishni hisoblab, javobni taqqoslaydi"
+          ]
+        },
+        {
+          "title": "Yangi mavzu bayoni",
+          "minutes": 5,
+          "teacherActions": [
+            "Tezlanish formulasini doskada chiqaradi va bir misol yechadi",
+            "O'quvchilarga juftlikda ishlash uchun vazifa beradi"
+          ],
+          "studentActions": [
+            "Formulani daftarga yozadi va misolni mustaqil takrorlaydi",
+            "Juftlikda tezlanishni hisoblab, javobni taqqoslaydi"
+          ]
+        },
+        {
+          "title": "Mustahkamlash",
+          "minutes": 5,
+          "teacherActions": [
+            "Tezlanish formulasini doskada chiqaradi va bir misol yechadi",
+            "O'quvchilarga juftlikda ishlash uchun vazifa beradi"
+          ],
+          "studentActions": [
+            "Formulani daftarga yozadi va misolni mustaqil takrorlaydi",
+            "Juftlikda tezlanishni hisoblab, javobni taqqoslaydi"
+          ]
+        },
+        {
+          "title": "Yakun",
+          "minutes": 5,
+          "teacherActions": [
+            "Tezlanish formulasini doskada chiqaradi va bir misol yechadi",
+            "O'quvchilarga juftlikda ishlash uchun vazifa beradi"
+          ],
+          "studentActions": [
+            "Formulani daftarga yozadi va misolni mustaqil takrorlaydi",
+            "Juftlikda tezlanishni hisoblab, javobni taqqoslaydi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s3-homework-0",
+      "type": "homework",
+      "items": [
+        "Darslikdagi 12-mashqning 1-4 masalalarini yeching",
+        "Tezlanish birligini o'z so'zingiz bilan izohlab yozing"
+      ],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "s3-rubric-0",
+      "type": "rubric",
+      "criteria": [
+        {
+          "name": "Faollik",
+          "maxPoints": 5,
+          "descriptors": [
+            "Kamida ikki marta savolga javob berdi"
+          ]
+        },
+        {
+          "name": "Aniqlik",
+          "maxPoints": 5,
+          "descriptors": [
+            "Formulani xatosiz qo'lladi"
+          ]
+        }
+      ]
+    }
+  ]
+}

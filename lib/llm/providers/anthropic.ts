@@ -131,3 +131,6 @@ function translate(e: unknown, model: string): LlmError {
   }
   return new LlmError("unknown", `Noma'lum xato (${model})${suffix}`, ctx);
 }
+
+/** Xato tasnifi — `tests/llm-errors.test.ts` uchun ochiq (gemini.ts bilan bir xil sabab). */
+export { translate as classifyAnthropicError };
