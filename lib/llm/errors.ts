@@ -19,6 +19,32 @@ export type LlmErrorKind =
   /** Boshqa hammasi. */
   | "unknown";
 
+/**
+ * KEYINROQ QAYTA URINSA O'TISHI MUMKIN bo'lgan xatolar — YAGONA jadval.
+ *
+ * Bu "zanjirdagi keyingi modelga o'tamizmi" degan savol EMAS (u
+ * `lib/llm/router.ts:shouldAdvance`): bu "kreditni band qoldirib, ijara
+ * bo'shagach AYNI bosqichni qaytadan bajaramizmi" degan savol
+ * (`lib/generation/run-stage.ts`).
+ *
+ * NEGA BITTA JOYDA: ilgari uchta ro'yxat bor edi — shu konstruktor,
+ * `shouldAdvance` va `run-stage.ts` dagi maxsus `isRetryable`. Ular `unknown`
+ * bo'yicha BIR-BIRIGA QARAMA-QARSHI edi (bu yerda `false`, o'sha yerda
+ * `true`), ya'ni "qayta urinish mumkinmi" savoliga javob so'ragan joyga
+ * bog'liq bo'lib qolgandi.
+ *
+ * `unknown` RO'YXATDA: timeout va tarmoq uzilishi provayder adapterlarida
+ * aynan `unknown` ga o'raladi (SDK'lar ular uchun status kodi bermaydi), ular
+ * esa haqiqatan vaqtinchalik. Cheksiz aylanishdan `MAX_ATTEMPTS` himoya
+ * qiladi — uchinchi urinishdan keyin kredit baribir qaytariladi.
+ */
+export const RETRYABLE_KINDS: readonly LlmErrorKind[] = ["rate_limit", "overloaded", "unknown"];
+
+/** Xato turi vaqtinchalikmi. `LlmError` bo'lmagan hamma narsa — terminal. */
+export function isRetryableKind(kind: LlmErrorKind): boolean {
+  return RETRYABLE_KINDS.includes(kind);
+}
+
 export class LlmError extends Error {
   readonly kind: LlmErrorKind;
   readonly retryable: boolean;
@@ -33,7 +59,7 @@ export class LlmError extends Error {
     super(message, { cause: opts.cause });
     this.name = "LlmError";
     this.kind = kind;
-    this.retryable = kind === "rate_limit" || kind === "overloaded";
+    this.retryable = isRetryableKind(kind);
     this.provider = opts.provider;
     this.model = opts.model;
   }

@@ -97,14 +97,30 @@ describe("checkSkeleton", () => {
     expect(checkSkeleton(broken, 45).ok).toBe(false);
   });
 
-  it("chegara +-20 % — quality.ts dagi +-10 % dan kengroq", () => {
-    // 45 daqiqaga 50 daqiqa (11 %) — darvozadan o'tadi, ballni esa
-    // `quality.ts` pasaytiradi. Ikki chegara ataylab boshqa.
+  it("chegara +-20 % — quality.ts ning ikki bandi orasida", () => {
+    /**
+     * UCH CHEGARA, ATAYLAB BOSHQA-BOSHQA:
+     *   `quality.ts` +-10 %  — ball pasayadi (ogohlantirish);
+     *   bu darvoza  +-20 %   — 2 va 3-bosqichning puli tejaladi;
+     *   `quality.ts` +-25 %  — veto, kredit qaytariladi.
+     *
+     * Ya'ni bu darvoza VETO BANDIDAN TOR: normal yo'lda buzuq skelet shu
+     * yerda, ARZON to'xtatiladi va sifat vetosiga yetib bormaydi. Veto —
+     * zaxira qorovul (masalan bloklar boshqa yo'l bilan yig'ilib qolsa).
+     */
     const loose: Stage1Out = {
       ...skeleton(5),
+      // 5 x 10 = 50, so'ralgani 45 -> 11 %: darvozadan o'tadi, ball pasayadi.
       stages: Array.from({ length: 5 }, () => ({ title: "X", minutes: 10 })),
     };
     expect(checkSkeleton(loose, 45).ok).toBe(true);
+
+    // 21 % — darvoza yiqitadi, ya'ni 25 % lik vetogacha bormaydi.
+    const tooLoose: Stage1Out = {
+      ...skeleton(5),
+      stages: Array.from({ length: 5 }, () => ({ title: "X", minutes: 11 })),
+    };
+    expect(checkSkeleton(tooLoose, 45).ok).toBe(false);
   });
 });
 

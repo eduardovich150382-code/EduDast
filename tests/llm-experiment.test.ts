@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAbEnabled, pickProvider } from "@/lib/llm/experiment";
+import { isAbEnabled, pickProvider, primaryProvider } from "@/lib/llm/experiment";
 import type { ProviderId } from "@/lib/llm/types";
 
 const both: ProviderId[] = ["anthropic", "gemini"];
@@ -55,6 +55,42 @@ describe("A/B taqsimoti", () => {
 
   it("hech biri sozlanmagan bo'lsa asosiyni qaytaradi (xato yuqorida chiqadi)", () => {
     expect(pickProvider("x", { ...base, available: [] })).toBe("anthropic");
+  });
+});
+
+describe("primaryProvider", () => {
+  it("sozlanmagan bo'lsa anthropic", () => {
+    expect(primaryProvider({})).toBe("anthropic");
+    expect(primaryProvider({ LLM_PRIMARY_PROVIDER: "" })).toBe("anthropic");
+  });
+
+  it.each(["anthropic", "gemini"] as const)("%s qiymati qabul qilinadi", (value) => {
+    expect(primaryProvider({ LLM_PRIMARY_PROVIDER: value })).toBe(value);
+  });
+
+  it("noto'g'ri qiymat JIMGINA default'ga tushmaydi", () => {
+    // Bosh harf bilan yozgan odam 100 % Gemini kutib turib, amalda 50/50
+    // olardi va buni faqat hisobdan bilardi.
+    expect(() => primaryProvider({ LLM_PRIMARY_PROVIDER: "Gemini" })).toThrow(/LLM_PRIMARY_PROVIDER/);
+    expect(() => primaryProvider({ LLM_PRIMARY_PROVIDER: "openai" })).toThrow();
+  });
+
+  it("gemini asosiy bo'lsa A/B o'chiqda 100 % gemini", () => {
+    // 08.1 dagi vaziyat: ANTHROPIC_API_KEY yo'q, hujjatlar yiqilmasligi kerak.
+    const primary = primaryProvider({ LLM_PRIMARY_PROVIDER: "gemini" });
+    for (let i = 0; i < 20; i++) {
+      expect(pickProvider(`doc-${String(i)}`, { enabled: false, primary, available: both })).toBe(
+        "gemini",
+      );
+    }
+  });
+
+  it("anthropic zanjirda ZAXIRA bo'lib qoladi", () => {
+    // Knob A/B ni o'chiradi, provayderni ro'yxatdan O'CHIRMAYDI.
+    const primary = primaryProvider({ LLM_PRIMARY_PROVIDER: "gemini" });
+    expect(pickProvider(undefined, { enabled: false, primary, available: ["anthropic"] })).toBe(
+      "anthropic",
+    );
   });
 });
 

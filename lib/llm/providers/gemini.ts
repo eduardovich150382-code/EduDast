@@ -177,6 +177,17 @@ function translate(e: unknown, model: string): LlmError {
   if (status === 429) {
     return new LlmError("rate_limit", `So'rov chegarasi${suffix}`, ctx);
   }
+  // KVOTA — TERMINAL EMAS, VAQTINCHALIK.
+  //
+  // Gemini kvota tugashini `RESOURCE_EXHAUSTED` bilan qaytaradi va status
+  // kodi har doim 429 bo'lib o'qilmaydi (ba'zi javoblarda status maydoni
+  // umuman yo'q, faqat `status: "RESOURCE_EXHAUSTED"` satri bor). Shunda u
+  // pastdagi `unknown` ga tushib ketardi. Ikkalasi ham qayta urinuvchan, lekin
+  // `rate_limit` da `call.ts` o'sha modelda bir marta pauza bilan qaytadan
+  // uriniladi — band vaqtda aynan shu kerak.
+  if (/RESOURCE[_ ]EXHAUSTED|quota/i.test(detail)) {
+    return new LlmError("rate_limit", `Kvota tugadi${suffix}`, ctx);
+  }
   if (status !== null && status >= 500) {
     return new LlmError("overloaded", `Provayder xatosi ${status}${suffix}`, ctx);
   }
@@ -213,3 +224,12 @@ function readStatus(e: unknown): number | null {
   }
   return null;
 }
+
+/**
+ * Xato tasnifi — TESTDAN ko'rinishi uchun ochiq.
+ *
+ * `tests/llm-errors.test.ts` butun jadvalni shu funksiya orqali qotiradi:
+ * SDK'ni mock qilib `generate()` orqali o'tish o'sha jadvalni emas, mock'ning
+ * o'zini tekshirardi.
+ */
+export { translate as classifyGeminiError };
