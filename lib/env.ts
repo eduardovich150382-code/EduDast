@@ -53,6 +53,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+  // A/B o'chiq bo'lganda hamma hujjat shu provayderga tushadi. Sozlanmasa
+  // "anthropic". Noto'g'ri qiymat JIMGINA default'ga tushmaydi —
+  // `lib/llm/experiment.ts:primaryProvider` aniq xato beradi.
+  LLM_PRIMARY_PROVIDER: z.enum(["anthropic", "gemini"]).optional(),
 
   LLM_MONTHLY_BUDGET_USD: z.coerce.number().optional(),
   LLM_DAILY_BUDGET_USD: z.coerce.number().optional(),

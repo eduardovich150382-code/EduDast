@@ -63,6 +63,10 @@ beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
   vi.stubEnv("GOOGLE_API_KEY", "");
   vi.stubEnv("LLM_AB_ENABLED", "false");
+  // Asosiy provayder ATAYLAB qadalgan: aks holda bu testlar `.env.local`
+  // dagi `LLM_PRIMARY_PROVIDER` ga bog'liq bo'lib qolardi va zanjir tartibi
+  // mashinadan mashinaga o'zgarardi.
+  vi.stubEnv("LLM_PRIMARY_PROVIDER", "anthropic");
   logMock.mockClear();
   budgetMock.mockClear();
   budgetMock.mockResolvedValue({ kind: "full" });

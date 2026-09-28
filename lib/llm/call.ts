@@ -1,13 +1,13 @@
 import { checkBudget } from "@/lib/budget/guard";
 import { LlmError, usageFromError, ZERO_USAGE } from "./errors";
-import { isAbEnabled, pickProvider } from "./experiment";
+import { isAbEnabled, pickProvider, primaryProvider } from "./experiment";
 import { writeLlmCall } from "./log";
 import { getModel } from "./models";
 import { costFor, estimateMicros } from "./pricing";
 import { buildChain, shouldAdvance, tierForVerdict } from "./router";
 import { availableProviders, getProvider } from "./providers/registry";
 import { parseStructured, toJsonSchema } from "./structured";
-import type { LlmRequest, LlmResult, ProviderId, Usage } from "./types";
+import type { LlmRequest, LlmResult, Usage } from "./types";
 
 /**
  * Har LLM chaqiruvining yagona o'tish nuqtasi.
@@ -20,7 +20,6 @@ import type { LlmRequest, LlmResult, ProviderId, Usage } from "./types";
  * mumkin emas.
  */
 
-const PRIMARY_PROVIDER: ProviderId = "anthropic";
 /** Chegaralanganda `retry-after` o'rniga ishlatiladigan kutish. */
 const RATE_LIMIT_PAUSE_MS = 1_500;
 
@@ -28,7 +27,7 @@ export async function runLlm<T>(req: LlmRequest<T>): Promise<LlmResult<T>> {
   const available = availableProviders();
   const provider = pickProvider(req.documentId, {
     enabled: isAbEnabled(),
-    primary: PRIMARY_PROVIDER,
+    primary: primaryProvider(),
     available,
   });
 
