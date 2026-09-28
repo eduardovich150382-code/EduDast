@@ -1,0 +1,112 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanishni o'lchash"
+    },
+    {
+      "id": "s1-objectives-0",
+      "type": "objectives",
+      "items": [
+        "Tezlanishni formulaga qo'yib hisoblaydi",
+        "Harakatlarni bir-biridan farqlaydi",
+        "Tezliklarni taqqoslab xulosa chiqaradi"
+      ]
+    },
+    {
+      "id": "s1-materials-0",
+      "type": "materials",
+      "items": [
+        "Doska va bo'r",
+        "Fizika darsligi",
+        "Tarqatma varaqlar"
+      ]
+    },
+    {
+      "id": "s2-stages-0",
+      "type": "stages",
+      "items": [
+        {
+          "title": "Tashkiliy qism",
+          "minutes": 10,
+          "teacherActions": [
+            "Tezlanishning formulasini doskada chiqaradi va misollarni yechadi",
+            "Harakatlarning turlarini taqqoslashni so'raydi"
+          ],
+          "studentActions": [
+            "Tezlanishni daftarga yozib, birliklarini ko'rsatadi",
+            "Tezliklarni taqqoslab, harakatlarga misol keltiradi"
+          ]
+        },
+        {
+          "title": "Yangi mavzu bayoni",
+          "minutes": 15,
+          "teacherActions": [
+            "Tezlanishning formulasini doskada chiqaradi va misollarni yechadi",
+            "Harakatlarning turlarini taqqoslashni so'raydi"
+          ],
+          "studentActions": [
+            "Tezlanishni daftarga yozib, birliklarini ko'rsatadi",
+            "Tezliklarni taqqoslab, harakatlarga misol keltiradi"
+          ]
+        },
+        {
+          "title": "Mustahkamlash",
+          "minutes": 12,
+          "teacherActions": [
+            "Tezlanishning formulasini doskada chiqaradi va misollarni yechadi",
+            "Harakatlarning turlarini taqqoslashni so'raydi"
+          ],
+          "studentActions": [
+            "Tezlanishni daftarga yozib, birliklarini ko'rsatadi",
+            "Tezliklarni taqqoslab, harakatlarga misol keltiradi"
+          ]
+        },
+        {
+          "title": "Yakun",
+          "minutes": 8,
+          "teacherActions": [
+            "Tezlanishning formulasini doskada chiqaradi va misollarni yechadi",
+            "Harakatlarning turlarini taqqoslashni so'raydi"
+          ],
+          "studentActions": [
+            "Tezlanishni daftarga yozib, birliklarini ko'rsatadi",
+            "Tezliklarni taqqoslab, harakatlarga misol keltiradi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s3-homework-0",
+      "type": "homework",
+      "items": [
+        "Tezlanishni hisoblash masalalarini yeching",
+        "Harakatlarning turlariga ikkitadan misol yozing"
+      ],
+      "estimatedMinutes": 25
+    },
+    {
+      "id": "s3-rubric-0",
+      "type": "rubric",
+      "criteria": [
+        {
+          "name": "Faollik",
+          "maxPoints": 5,
+          "descriptors": [
+            "Kamida ikki marta savolga javob berdi"
+          ]
+        },
+        {
+          "name": "Aniqlik",
+          "maxPoints": 5,
+          "descriptors": [
+            "Formulani xatosiz qo'lladi"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -30,7 +30,7 @@ export type StaleTopic = {
   keywords: string[];
 };
 
-/** `embeddedAt < updatedAt` taqqoslashi uchun kerak bo'lgan provenance. */
+/** `updatedAt > embeddedAt` taqqoslashi uchun kerak bo'lgan provenance. */
 export type TopicProvenance = {
   embeddedAt: Date | null;
   embeddingModel: string | null;
@@ -60,11 +60,16 @@ export function topicEmbeddingText(
  * Bitta shart ikki tilda yozilgani — siljish xavfi, shuning uchun bu
  * funksiya spetsifikatsiya rolini o'ynaydi (`tests/embeddings-staleness`)
  * va integratsiya testi ikkalasini haqiqiy qatorlarda solishtiradi.
+ *
+ * TAQQOSLASH QAT'IY (`>`, `>=` EMAS): `writeTopicVectors` `embeddedAt` ga
+ * aynan `updatedAt` ni yozadi, ya'ni yangi yozilgan qatorda ikkalasi TENG.
+ * `>=` bo'lsa shu qator darhol "eskirgan" bo'lib, cron uni cheksiz qayta
+ * yozar va bekorga pul ketardi.
  */
 export function isTopicStale(row: TopicProvenance, model: string): boolean {
   if (row.embeddedAt === null) return true;
   if (row.embeddingModel !== model) return true;
-  return row.embeddedAt.getTime() < row.updatedAt.getTime();
+  return row.updatedAt.getTime() > row.embeddedAt.getTime();
 }
 
 /**
@@ -92,7 +97,7 @@ export async function findStaleTopics(
     filters.push(Prisma.sql`(
       "embeddedAt" IS NULL
       OR "embeddingModel" IS DISTINCT FROM ${EMBEDDING_MODEL_ID}
-      OR "embeddedAt" < "updatedAt"
+      OR "updatedAt" > "embeddedAt"
     )`);
   }
 
@@ -168,24 +173,33 @@ export async function writeTopicVectors(
       );
     }
 
-    // NEGA `GREATEST(NOW(), "updatedAt")` — IKKI SOAT MUAMMOSI:
+    // NEGA `"embeddedAt" = "updatedAt"` — IKKI SOAT MUAMMOSI:
     // `updatedAt` ni Prisma KLIENT tomonda qo'yadi (`@updatedAt` — bu
     // Prisma'ning o'zi yuboradigan qiymat, baza funksiyasi emas), `NOW()`
-    // esa Postgres soatidan keladi. Klient soati bazadan oldinda bo'lsa
-    // (odatiy hol: mahalliy mashina bir necha soniya farq qiladi) yangi
-    // yozilgan qator DARHOL `embeddedAt < updatedAt` shartiga tushib,
-    // "eskirgan" bo'lib qolardi — cron uni har kuni qayta yozib, bekorga
-    // pul sarflardi. Bu beqaror (flaky) nosozlik: farq kichik bo'lsa
-    // sezilmaydi, katta bo'lsa cheksiz qayta yozish.
+    // esa Postgres soatidan keladi. Ikkalasini solishtirish — ikki xil
+    // soatni solishtirish, ya'ni siljish qancha bo'lsa shuncha xato:
+    //   - baza soati orqada bo'lsa, yangi yozilgan qator darhol "eskirgan"
+    //     bo'lib, cron uni cheksiz qayta yozadi (bekorga pul);
+    //   - baza soati oldinda bo'lsa (Neon'da odatiy hol), embeddingdan
+    //     keyingi tahrir SEZILMAY qoladi va qidiruv jimgina ESKI matnga
+    //     javob beradi — eng yomon nosozlik turi.
     //
-    // `GREATEST` semantikani BUZMAYDI: yozuvdan KEYINGI tahrir `updatedAt`
-    // ni yangilaydi va qator baribir eskiradi. `isTopicStale()` ga tegish
-    // kerak emas.
+    // Yechim: vaqtni umuman aralashtirmaslik. `embeddedAt` ga o'sha
+    // qatorning `updatedAt` i yoziladi, shunda taqqoslash BITTA manbadan
+    // bo'ladi va soat siljishi ahamiyatsiz. `embeddedAt` shu sababli
+    // VAQT TAMG'ASI EMAS — u "qaysi versiya embedding qilingan" ko'rsatkichi
+    // (`prisma/schema.prisma` dagi izohga qarang).
+    //
+    // XOM SQL SHART: `prisma.topic.update()` bilan yozilsa `@updatedAt`
+    // tufayli Prisma `updatedAt` ni ham surib yuboradi va qator yozilgan
+    // zahoti yana eskirgan bo'lib qolardi. Xom `UPDATE` `@updatedAt` ni
+    // ishga tushirmaydi, `SET` dagi `"updatedAt"` esa qatorning ESKI
+    // (o'zgarmagan) qiymati — aynan kerakli narsa.
     written += await db.$executeRaw`
       UPDATE "Topic"
       SET "embedding" = ${JSON.stringify(vector)}::vector,
           "embeddingModel" = ${EMBEDDING_MODEL_ID},
-          "embeddedAt" = GREATEST(NOW(), "updatedAt")
+          "embeddedAt" = "updatedAt"
       WHERE "id" = ${topic.id} AND "deletedAt" IS NULL
     `;
   }

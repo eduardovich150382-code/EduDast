@@ -109,7 +109,12 @@
       "game": "Sinf o'yini"
     },
     "inactiveSubjectsNotice": "Siz tanlagan fan(lar) hali tayyorlanmoqda. Hozircha {activeSubjects} bo'yicha ishlashingiz mumkin.",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "error": {
+      "title": "Nimadir xato ketdi",
+      "description": "Sahifani qayta yuklang. Muammo takrorlansa, birozdan keyin urinib ko'ring.",
+      "retry": "Qaytadan urinish"
+    }
   },
   "Bot": {
     "welcome": "Assalomu alaykum! EduDast — o'qituvchi uchun AI ish o'rni.\n\nKirish uchun saytdagi “Telegram bot orqali kirish” tugmasini bosing: {url}",
@@ -139,5 +144,60 @@
     "noTopics": "Bu fan va sinf uchun mavzular hali yuklanmagan.",
     "noSelection": "Avval onboarding'da fan va sinf tanlang.",
     "unplacedNotice": "{count} mavzuga sana topilmadi: rejadagi soat kalendarga sig'maydi."
+  },
+  "Generator": {
+    "title": "Dars ishlanma yaratish",
+    "description": "Mavzuni tanlang — kurikulumga bog'langan ishlanma tayyorlanadi.",
+    "subject": "Fan",
+    "grade": "Sinf",
+    "gradeLabel": "{grade}-sinf",
+    "quarter": "Chorak",
+    "quarterLabel": "{number}-chorak",
+    "topic": "Mavzu",
+    "duration": "Dars davomiyligi",
+    "durationLabel": "{minutes} daqiqa",
+    "cost": "Narxi: {count} kredit",
+    "submit": "Yaratish",
+    "show": "Ko'rsatish",
+    "noSelection": "Avval onboarding'da fan va sinf tanlang.",
+    "noTopics": "Bu fan va sinf uchun mavzular hali yuklanmagan.",
+    "emptyQuarter": "Bu chorakda mavzu yo'q.",
+    "running": "Tayyorlanmoqda…",
+    "stageLabel": "{stage}/{total}-bosqich",
+    "waiting": "AI band. {seconds} soniyadan keyin qayta urinamiz.",
+    "retry": "Qaytadan yaratish",
+    "giveUp": "Generatsiya yakunlanmadi. Kredit qaytarildi.",
+    "errors": {
+      "invalid": "Ma'lumot to'liq emas. Tanlovni tekshiring.",
+      "topilmadi": "Mavzu topilmadi.",
+      "ruxsat": "Bu fan yoki sinf sizning ro'yxatingizda yo'q.",
+      "kredit": "Kredit yetarli emas.",
+      "xato": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
+    }
+  },
+  "Documents": {
+    "notFound": "Hujjat topilmadi.",
+    "status": {
+      "QUEUED": "Navbatda",
+      "RUNNING": "Tayyorlanmoqda",
+      "DONE": "Tayyor",
+      "FAILED": "Yakunlanmadi"
+    },
+    "qualityWarning": "Ishlanmani sinfga olib kirishdan oldin ko'zdan kechiring.",
+    "failReason": "Sabab: {reason}",
+    "pending": "Bu qism hali tayyorlanmoqda…",
+    "objectives": "Ta'lim maqsadlari",
+    "materials": "Materiallar",
+    "stages": "Dars bosqichlari",
+    "homework": "Uy vazifasi",
+    "rubric": "Baholash mezonlari",
+    "answerKey": "Javoblar kaliti",
+    "questions": "Savollar",
+    "teacher": "O'qituvchi",
+    "student": "O'quvchi",
+    "minutes": "{count} daqiqa",
+    "points": "{count} ball",
+    "answer": "Javob",
+    "estimatedMinutes": "Taxminiy vaqt: {count} daqiqa"
   }
 }

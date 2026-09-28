@@ -183,6 +183,17 @@ function translate(e: unknown, model: string): LlmError {
   if (status === 400 && /safety|blocked/i.test(detail)) {
     return new LlmError("refusal", `Model so'rovni rad etdi${suffix}`, ctx);
   }
+  // NOTO'G'RI KALIT — SOZLAMA xatosi, vaqtinchalik emas.
+  //
+  // Gemini buni 400 `API_KEY_INVALID` bilan qaytaradi (401 emas), ya'ni u
+  // pastdagi umumiy `unknown` tarmog'iga tushib ketardi. `unknown` esa
+  // `lib/generation/run-stage.ts` da QAYTA URINUVCHAN deb tasniflanadi —
+  // natijada buzuq kalitda o'qituvchining krediti uch ijara sikli
+  // (~4.5 daqiqa) davomida band turardi va faqat shundan keyin
+  // qaytarilardi. `not_configured` terminal: kredit DARHOL qaytadi.
+  if (status === 401 || status === 403 || /API[_ ]KEY[_ ]INVALID|API key not valid/i.test(detail)) {
+    return new LlmError("not_configured", `GOOGLE_API_KEY yaroqsiz${suffix}`, ctx);
+  }
   if (status !== null) {
     return new LlmError(
       "unknown",

@@ -117,6 +117,12 @@ function translate(e: unknown, model: string): LlmError {
     if (e.status !== undefined && e.status >= 500) {
       return new LlmError("overloaded", `Provayder xatosi ${e.status}${suffix}`, ctx);
     }
+    // Noto'g'ri kalit — SOZLAMA xatosi (gemini.ts dagi bilan bir xil sabab):
+    // `unknown` bo'lsa u qayta urinuvchan hisoblanadi va kredit uch ijara
+    // sikli davomida band qolardi. `not_configured` terminal.
+    if (e.status === 401 || e.status === 403) {
+      return new LlmError("not_configured", `ANTHROPIC_API_KEY yaroqsiz${suffix}`, ctx);
+    }
     return new LlmError(
       "unknown",
       `API xatosi ${e.status ?? "?"} (${model})${suffix}`,
