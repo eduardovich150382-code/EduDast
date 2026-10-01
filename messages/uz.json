@@ -101,13 +101,6 @@
   },
   "Ish": {
     "greeting": "Salom, {name}!",
-    "comingSoon": {
-      "title": "Tez orada",
-      "lessonPlan": "Dars ishlanma",
-      "test": "Test va topshiriqlar",
-      "presentation": "Taqdimot",
-      "game": "Sinf o'yini"
-    },
     "inactiveSubjectsNotice": "Siz tanlagan fan(lar) hali tayyorlanmoqda. Hozircha {activeSubjects} bo'yicha ishlashingiz mumkin.",
     "logout": "Chiqish",
     "error": {
@@ -199,5 +192,110 @@
     "points": "{count} ball",
     "answer": "Javob",
     "estimatedMinutes": "Taxminiy vaqt: {count} daqiqa"
+  },
+  "Classes": {
+    "title": "Sinflarim",
+    "description": "Qaysi fandan qaysi sinflarga dars berasiz?",
+    "add": "Sinf qo'shish",
+    "subject": "Fan",
+    "grade": "Sinf",
+    "gradeLabel": "{grade}-sinf",
+    "letter": "Harf",
+    "letterNone": "Harfsiz",
+    "lessonsPerWeek": "Haftada necha soat",
+    "hours": "haftada {count} soat",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "empty": "Hali sinf qo'shilmagan. Birinchi sinfingizni qo'shing.",
+    "noSubjects": "Avval fan va sinf tanlang.",
+    "scheduleLink": "Dars jadvali",
+    "errors": {
+      "invalid": "Ma'lumot to'liq emas.",
+      "topilmadi": "Sinf topilmadi.",
+      "ruxsat": "Bu fan yoki sinf sizda tanlanmagan.",
+      "band": "Bunday sinf allaqachon bor.",
+      "generic": "Saqlanmadi. Qaytadan urinib ko'ring."
+    }
+  },
+  "Schedule": {
+    "title": "Dars jadvali",
+    "description": "Katakni bosib sinfni belgilang.",
+    "save": "Saqlash",
+    "clear": "Bo'shatish",
+    "lesson": "{number}-dars",
+    "chooseClass": "Sinfni tanlang",
+    "close": "Yopish",
+    "noClasses": "Avval sinf qo'shing — jadval sinflardan tuziladi.",
+    "addClasses": "Sinflarim",
+    "mismatch": "{name}: jadvalda {actual} soat, sinfda {expected} soat belgilangan.",
+    "saved": "Jadval saqlandi.",
+    "prevDay": "Oldingi kun",
+    "nextDay": "Keyingi kun",
+    "weekday": {
+      "1": "Dushanba",
+      "2": "Seshanba",
+      "3": "Chorshanba",
+      "4": "Payshanba",
+      "5": "Juma",
+      "6": "Shanba"
+    },
+    "weekdayShort": {
+      "1": "Du",
+      "2": "Se",
+      "3": "Ch",
+      "4": "Pa",
+      "5": "Ju",
+      "6": "Sh"
+    },
+    "errors": {
+      "invalid": "Jadvalda xato bor.",
+      "topilmadi": "Sinf topilmadi.",
+      "band": "Bitta katakka ikkita sinf qo'yib bo'lmaydi.",
+      "generic": "Saqlanmadi. Qaytadan urinib ko'ring."
+    }
+  },
+  "Week": {
+    "quarterWeek": "{quarter}-chorak, {week}-hafta",
+    "noQuarter": "Ta'til",
+    "summary": "Bu hafta {lessons} ta dars, {ready} tasiga material tayyor.",
+    "summaryNone": "Bu hafta dars yo'q.",
+    "today": "Bugun",
+    "tomorrow": "Ertaga",
+    "lesson": "{number}-dars",
+    "topicNumber": "{number}-mavzu",
+    "prepare": "Tayyorlash",
+    "shiftForward": "Keyingi mavzuga surish",
+    "shiftBackward": "Oldingi mavzuga surish",
+    "weekTopic": "Bu hafta reja bo'yicha: {topic}",
+    "noSchedule": "Dars jadvali kiritilmagan, shuning uchun kun aniqlanmadi.",
+    "enterSchedule": "Dars jadvalini kiritish",
+    "noClasses": "Sinflaringizni qo'shsangiz, ertangi darsingizni shu yerda ko'rasiz.",
+    "addClasses": "Sinflaringizni qo'shing",
+    "noCalendar": "O'quv yili kalendari hali kiritilmagan.",
+    "noTopics": "Bu sinf uchun mavzular hali yuklanmagan.",
+    "classLabel": "{subject} {grade}-{letter}",
+    "classLabelNoLetter": "{subject} {grade}",
+    "materials": {
+      "LESSON_PLAN": "Dars ishlanma",
+      "TEST": "Test",
+      "SLIDES": "Taqdimot",
+      "CROSSWORD": "Krossvord",
+      "GUIDE": "Qo'llanma"
+    },
+    "weekday": {
+      "1": "Dushanba",
+      "2": "Seshanba",
+      "3": "Chorshanba",
+      "4": "Payshanba",
+      "5": "Juma",
+      "6": "Shanba",
+      "7": "Yakshanba"
+    },
+    "errors": {
+      "chegara": "Bu yo'nalishda surib bo'lmaydi.",
+      "generic": "Bajarilmadi. Qaytadan urinib ko'ring."
+    }
   }
 }

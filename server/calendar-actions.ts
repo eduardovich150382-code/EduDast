@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UZ_REGION_CODES } from "@/lib/uz-regions";
+import { isoDate } from "@/lib/zod/iso-date";
 
 /**
  * O'quv yili kalendari action'lari (docs/sessions/07 — kalendar va TMR).
@@ -35,26 +36,6 @@ const CALENDAR_PATHS = ["/[locale]/admin/kalendar", "/[locale]/ish/rejam"];
 function revalidateCalendar(): void {
   for (const path of CALENDAR_PATHS) revalidatePath(path, "page");
 }
-
-/**
- * `<input type="date">` "YYYY-MM-DD" beradi. UTC yarim kechaga aylantiramiz
- * (yuqoridagi sana shartnomasi).
- *
- * TESKARI TEKSHIRUV SHART: mavjud bo'lmagan sanani JS `Invalid Date` QILMAYDI
- * — `2027-02-31` JIMGINA `2027-03-03` ga aylanadi. Faqat oy 13 bo'lganda
- * `NaN` chiqadi. Shuning uchun aylantirilgan sana teskari yozilganda aynan
- * o'sha satr berishi tekshiriladi, aks holda admin terish xatosi boshqa
- * sanaga aylanib ketardi.
- */
-const isoDate = z
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "sana YYYY-MM-DD shaklida bo'lishi kerak")
-  .refine((value) => {
-    const date = new Date(`${value}T00:00:00.000Z`);
-    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-  }, "sana haqiqiy emas")
-  .transform((value) => new Date(`${value}T00:00:00.000Z`));
 
 const yearSchema = z.object({
   /** Bo'sh — yangi yil yaratiladi. */
