@@ -94,6 +94,16 @@ enum LessonPlanStatus {
   CANCELED
 }
 
+/// Sinfning bir mavzu bo'yicha holati (09-sessiya).
+/// `DONE` — o'tilgan, ya'ni `lib/calendar/position.ts` uchun anchor manbai.
+/// `SKIPPED` — ataylab tashlab ketilgan: hisobda `PLANNED` kabi, lekin
+/// o'qituvchi uni "qarzdor" ro'yxatida ko'rmaydi.
+enum TopicProgressStatus {
+  PLANNED
+  DONE
+  SKIPPED
+}
+
 /// Provisional — o'yin sessiyasida aniqlashtiriladi.
 enum GameType {
   QUIZ
@@ -158,6 +168,7 @@ model User {
   hostedGames       GameSession[]
   gamePlayers       GamePlayer[]
   loginTokens       LoginToken[]
+  teachingClasses   TeachingClass[]
 }
 
 /// Telegram bot deep-link login uchun bir martalik token.
@@ -211,7 +222,8 @@ model Subject {
   /// "tez orada" bo'ladi, tayyor bo'lgani ataylab true qilinadi.
   isActive Boolean @default(false)
 
-  topics Topic[]
+  topics          Topic[]
+  teachingClasses TeachingClass[]
 }
 
 /// O'quv yili — choraklar va ta'tillarning egasi (07-sessiya).
@@ -230,8 +242,9 @@ model AcademicYear {
   endsOn   DateTime
   isActive Boolean  @default(false)
 
-  quarters Quarter[]
-  holidays Holiday[]
+  quarters        Quarter[]
+  holidays        Holiday[]
+  teachingClasses TeachingClass[]
 }
 
 model Quarter {
@@ -345,6 +358,7 @@ model Topic {
   documents    Document[]
   lessonPlans  LessonPlan[]
   gameSessions GameSession[]
+  progress     TopicProgress[]
 
   @@unique([subjectId, grade, slug])
   @@index([parentId])
@@ -536,6 +550,122 @@ model Subscription {
   source    String?
 
   user User @relation(fields: [userId], references: [id])
+}
+
+/// O'qituvchining BITTA sinfi: "Fizika 7-A, haftada 2 soat" (09-sessiya).
+///
+/// `@@index([userId])` ATAYLAB QO'SHILMADI: pastdagi `@@unique` ning birinchi
+/// ustuni aynan `userId`, ya'ni leftmost-prefix indeks allaqachon bor. Takroriy
+/// indeks Neon'ning 0.5GB limitini bekorga yeydi (CLAUDE.md, baza qoidalari) —
+/// `Quarter` va `Topic` da ham shu qaror qabul qilingan.
+///
+/// `@@unique` O'CHIRILGAN qatorni ham qamraydi: "7-A" ni o'chirib qayta
+/// qo'shganda YANGI qator yaratilmaydi, eskisi tiriltiriladi
+/// (`server/class-actions.ts` `upsert`). Yon foydasi: sinfga bog'langan
+/// `TopicProgress` va `ScheduleSlot` yo'qolmaydi.
+model TeachingClass {
+  id     String @id @default(cuid())
+  userId String
+
+  /// `User.subjects` da SLUG turadi, bu yerda esa `Subject.id` — action slug'ni
+  /// id'ga aylantiradi. Sabab: fan slug'i o'zgarsa jadval buzilmasligi kerak.
+  subjectId String
+  grade     Int
+
+  /// Sinf harfi: "A", "B", "V", "G", "D" yoki BO'SH SATR.
+  ///
+  /// `null` EMAS, ataylab: Postgres'da NULL hech narsaga teng emas, ya'ni
+  /// nullable ustunli `@@unique` harfsiz "7-sinf" ni CHEKSIZ marta qo'shishga
+  /// ruxsat berardi va o'qituvchi buni faqat ro'yxat uzayganda sezardi.
+  label String @default("")
+
+  /// Haftada necha soat. `lib/calendar/placement.ts` uchun bu SHIFT (maqsad
+  /// emas) — jadvaldagi katak soni bundan farq qilishi mumkin, moslikni
+  /// tekshirish va ogohlantirish UI ishi.
+  lessonsPerWeek Int
+
+  /// Sinf o'quv yiliga bog'langan: yangi yil boshlanganda eski 7-A o'z-o'zidan
+  /// tarixga tushadi va yangisi bilan to'qnashmaydi.
+  academicYearId String
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  slots    ScheduleSlot[]
+  progress TopicProgress[]
+
+  @@unique([userId, subjectId, grade, label, academicYearId])
+}
+
+/// Dars jadvalining bitta katagi: "seshanba, 3-dars — 7-A" (09-sessiya).
+///
+/// `@@index([teachingClassId])` ATAYLAB QO'SHILMADI — pastdagi `@@unique` ning
+/// leftmost-prefix'i (CLAUDE.md, baza qoidalari).
+///
+/// "Bir katakka ikki sinf qo'yib bo'lmaydi" shartini BAZA saqlay OLMAYDI: u
+/// `(userId, weekday, lessonNo)` bo'yicha bo'lishi kerak, `userId` esa bu
+/// jadvalda yo'q. Denormalizatsiya qilinmadi — `saveScheduleSlots` butun
+/// haftani BITTA payloadda oladi, ya'ni ziddiyat xotirada, bazaga bormasdan
+/// aniqlanadi va yarim yozilgan holat umuman paydo bo'lmaydi.
+model ScheduleSlot {
+  id              String @id @default(cuid())
+  teachingClassId String
+
+  /// ISO hafta kuni: 1 = dushanba … 6 = shanba. `lib/calendar/placement.ts`
+  /// dagi `weekdays` bilan AYNAN bir xil sanoq — aks holda jadval bir kunga
+  /// siljirdi va hech qayerda xato chiqmasdi.
+  weekday Int
+
+  /// Maktab jadvalidagi dars raqami, 1..8.
+  lessonNo Int
+
+  /// Soft delete (CLAUDE.md: hech qachon `delete`). `saveScheduleSlots` butun
+  /// haftani almashtirganda eski kataklar shu ustun bilan o'chiriladi, yangisi
+  /// `upsert` bilan tiriltiriladi — shuning uchun `@@unique` buzilmaydi.
+  /// HAR o'qiydigan tomon `deletedAt: null` ni QO'LDA yozishi SHART.
+  deletedAt DateTime?
+
+  teachingClass TeachingClass @relation(fields: [teachingClassId], references: [id])
+
+  @@unique([teachingClassId, weekday, lessonNo])
+}
+
+/// Sinfning mavzu bo'yicha holati — "hozir qaysi mavzudamiz" ning YAGONA
+/// manbai (09-sessiya). `lib/calendar/position.ts` dagi `anchor` aynan shu
+/// jadvaldan keladi: `status: DONE` qatorlar ichidan eng katta `taughtOn`.
+///
+/// `@@index([topicId])` QO'SHILMADI: hisob har doim SINFDAN mavzuga qarab
+/// boradi, teskari yo'nalish (bitta mavzuni qaysi sinflar o'tgan) mahsulotda
+/// yo'q. Kerak bo'lganda alohida migratsiyada qo'shiladi.
+model TopicProgress {
+  id              String              @id @default(cuid())
+  teachingClassId String
+  topicId         String
+  status          TopicProgressStatus @default(PLANNED)
+
+  /// Mavzu O'TILGAN kun — **UTC yarim kecha** (`lib/calendar/placement.ts`
+  /// sana shartnomasi; sxemada `@db.Date` yo'q, shartnomani faqat
+  /// `server/progress-actions.ts` saqlaydi). Mahalliy yarim kecha yozilsa
+  /// butun anchor hisobi bir kunga siljiydi.
+  ///
+  /// `null` — `status` `DONE` emas. INVARIANT: `taughtOn IS NOT NULL` aynan
+  /// `status = DONE` bo'lganda.
+  taughtOn  DateTime?
+  createdAt DateTime  @default(now())
+
+  teachingClass TeachingClass @relation(fields: [teachingClassId], references: [id])
+  topic         Topic         @relation(fields: [topicId], references: [id])
+
+  @@unique([teachingClassId, topicId])
+  /// Anchor so'rovi: `where { teachingClassId, status: DONE }` +
+  /// `orderBy { taughtOn: desc } take 1`. Bu so'rov bosh sahifada HAR sinf
+  /// uchun alohida bajariladi, ya'ni eng tez-tez uchraydiganlardan biri.
+  /// `@@unique` ning ikkinchi ustuni `topicId` — u saralashga yaramaydi.
+  @@index([teachingClassId, taughtOn])
 }
 
 model LessonPlan {

@@ -102,17 +102,34 @@ export function dayNumber(date: Date): number {
   );
 }
 
-function dayToDate(day: number): Date {
+/**
+ * Epoch kun raqami -> UTC yarim kecha `Date`.
+ *
+ * EKSPORT QILINGAN: `lib/calendar/position.ts` joriy hafta kunlarini aynan shu
+ * hisob bilan `Date` ga aylantiradi (`dayNumber` bilan bir xil sabab).
+ */
+export function dayToDate(day: number): Date {
   return new Date(day * MS_PER_DAY);
 }
 
-/** Epoch kun 0 (1970-01-01) — payshanba, shuning uchun +3. */
-function isoWeekday(day: number): number {
+/**
+ * Epoch kun 0 (1970-01-01) — payshanba, shuning uchun +3.
+ *
+ * EKSPORT QILINGAN: `lib/calendar/position.ts` dagi `ScheduleSlot.weekday`
+ * sanog'i AYNAN shu funksiyaga tayanadi. Ikkinchi nusxa yozilsa jadval bir
+ * kunga siljib, hech qayerda xato chiqmasdi.
+ */
+export function isoWeekday(day: number): number {
   return ((day + 3) % 7) + 1;
 }
 
-/** Hafta dushanbadan uziladi. */
-function weekKey(day: number): number {
+/**
+ * Hafta dushanbadan uziladi.
+ *
+ * EKSPORT QILINGAN: `lib/calendar/position.ts` joriy hafta oynasini va
+ * "chorakning necha-hafta" raqamini shu hisob bilan topadi.
+ */
+export function weekKey(day: number): number {
   return Math.floor((day + 3) / 7);
 }
 
