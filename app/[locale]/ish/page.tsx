@@ -261,10 +261,21 @@ export default async function IshPage() {
           </div>
           <TopicShift
             teachingClassId={entry.row.id}
-            canBack={entry.position.previousTopicId !== null}
-            canForward={entry.position.nextTopicId !== null}
+            // Server'ning orqaga chegarasi — "`DONE` qator bormi", reja
+            // bo'yicha oldingi mavzu bormi EMAS. `anchor` aynan o'sha qatordan
+            // keladi, ya'ni shart bir xil bo'ladi va tugma bosilganda kafolatli
+            // "chegara" xatosi chiqmaydi.
+            canBack={entry.row.anchor !== undefined}
+            canForward={entry.position.forwardMoves}
             backLabel={t("shiftBackward")}
             forwardLabel={t("shiftForward")}
+            // Oxirgi mavzu — oddiy chegara, izoh kerak emas. Surish natija
+            // bermasa esa sabab aytiladi.
+            idleNote={
+              entry.position.nextTopicId !== null && !entry.position.forwardMoves
+                ? t("alreadyOnTopic")
+                : undefined
+            }
             errors={{ chegara: t("errors.chegara") }}
             genericError={t("errors.generic")}
           />
@@ -328,6 +339,11 @@ export default async function IshPage() {
             ? t("summaryNone")
             : t("summary", { lessons: lessonCount, ready: readyCount })}
         </p>
+        {/* › nega o'chirilgani — sahifada BIR MARTA. Har kartada takrorlansa
+            hafta ro'yxatini o'qib bo'lmay qolardi. */}
+        {positions.some(
+          ({ position }) => position.nextTopicId !== null && !position.forwardMoves,
+        ) && <p className="text-xs text-ink-2">{t("alreadyOnTopic")}</p>}
       </div>
 
       {quarters.length === 0 && <Empty text={t("noCalendar")} />}

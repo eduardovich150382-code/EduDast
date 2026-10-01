@@ -1,5 +1,6 @@
 // BIRINCHI import: `.env.local` ni `lib/db.ts` dan OLDIN yuklaydi.
 import "./load-env";
+import { assertNotProduction } from "./seed-guard";
 import { DEV_TELEGRAM_ID } from "../lib/auth/dev-login";
 import { schoolDay } from "../lib/calendar/placement";
 import { positionForClass } from "../lib/calendar/position";
@@ -28,8 +29,11 @@ import { prisma } from "../lib/db";
  *
  *     pnpm db:seed-demo --clean
  *
- * u demo mavzularni `deletedAt` bilan o'chiradi (hard delete YO'Q) va demo
- * sinflarni ham soft delete qiladi.
+ * u demo mavzularni `deletedAt` bilan o'chiradi (hard delete YO'Q), vektor
+ * ustunlarini tozalaydi va demo sinflarni ham soft delete qiladi.
+ *
+ * QO'RIQCHI: prod belgisi bo'lsa skript ishga tushmaydi — `assertNotProduction`
+ * ga qarang. `--force` bilan chetlab o'tiladi.
  */
 
 /** Demo mavzular prefiksi — tozalash shu bo'yicha ishlaydi. */
@@ -48,6 +52,20 @@ const GRADE = 7;
 const SUBJECT_SLUG = "fizika";
 const REGION = "samarqand-shahri";
 
+/**
+ * Prod qo'riqchisi: demo ma'lumot real bazaga tushib qolmasin.
+ *
+ * `--force` bilan chetlab o'tiladi, lekin chetlab o'tish ATAYLAB noqulay —
+ * bayroqni yozayotgan odam nima qilayotganini bilishi kerak.
+ *
+ * Nega `DIRECT_URL` emas, `DATABASE_URL`: `lib/db.ts` runtime'da aynan
+ * shuni ishlatadi, ya'ni skript qaysi bazaga YOZISHI shundan bilinadi.
+ *
+ * `PROD_DATABASE_HOST` — ixtiyoriy, `.env.example` da. Beta boshlanib Neon
+ * branch'larga bo'linganda prod host shu yerga yoziladi va qo'riqchi aniq
+ * ishlaydi. Hozircha baza bitta (CLAUDE.md 7-qoida), shuning uchun qolgan
+ * ikki signal — NODE_ENV va VERCEL_ENV — asosiy himoya.
+ */
 async function clean(): Promise<void> {
   const subject = await prisma.subject.findUnique({
     where: { slug: SUBJECT_SLUG },
@@ -57,6 +75,41 @@ async function clean(): Promise<void> {
     console.log("Fizika fani topilmadi — tozalashga narsa yo'q.");
     return;
   }
+
+  const demoIds = (
+    await prisma.topic.findMany({
+      where: { subjectId: subject.id, grade: GRADE, slug: { startsWith: DEMO_SLUG_PREFIX } },
+      select: { id: true },
+    })
+  ).map((topic) => topic.id);
+
+  // VEKTOR USTUNLARINI TOZALASH. `deletedAt` ning o'zi qidiruvni yopadi
+  // (`findSimilarTopics` va `findStaleTopics` da `"deletedAt" IS NULL` bor),
+  // lekin vektor qatorda qolib ketishining ikki zarari bor: Neon'ning 0.5GB
+  // limitidan 768 x 4 bayt yeydi, va mavzu qachondir tiriltirilsa ESKIRGAN
+  // vektor bilan qaytadi — `embeddedAt` turgani uchun uni hech kim qayta
+  // hisoblamaydi.
+  //
+  // RAW SQL SHART: `embedding` — `Unsupported("vector(768)")`, Prisma Client
+  // bu ustunga yoza olmaydi (`lib/curriculum/embed.ts` bilan bir xil sabab).
+  const clearedVectors =
+    demoIds.length > 0
+      ? await prisma.$executeRaw`
+          UPDATE "Topic"
+          SET "embedding" = NULL, "embeddedAt" = NULL, "embeddingModel" = NULL
+          WHERE "id" = ANY(${demoIds}::text[])
+        `
+      : 0;
+
+  // `SourceChunk` da `deletedAt` YO'Q (sxemaga qarang), ya'ni soft delete
+  // imkoni yo'q. Bu CLAUDE.md qoidasiga istisno emas: qoida foydalanuvchi
+  // ma'lumoti haqida, bu esa shu skript yaratgan demo qatorlari. Odatda 0 ta
+  // bo'ladi — `seed-demo` bo'lak yaratmaydi — lekin mavzu embedding quvuriga
+  // tushib ulgurgan bo'lsa ular qolib ketmasin.
+  const chunks =
+    demoIds.length > 0
+      ? await prisma.sourceChunk.deleteMany({ where: { topicId: { in: demoIds } } })
+      : { count: 0 };
 
   // Soft delete (CLAUDE.md: hech qachon `delete`).
   const topics = await prisma.topic.updateMany({
@@ -76,11 +129,15 @@ async function clean(): Promise<void> {
     : { count: 0 };
 
   console.log(
-    `Tozalandi: ${topics.count} demo mavzu, ${classes.count} sinf (soft delete).`,
+    `Tozalandi: ${topics.count} demo mavzu (soft delete), ${clearedVectors} vektor ustuni, ` +
+      `${chunks.count} manba bo'lagi, ${classes.count} sinf (soft delete).`,
   );
 }
 
 async function main(): Promise<void> {
+  // `--clean` ham qo'riqchidan o'tadi: u ham YOZISH amali (soft delete).
+  assertNotProduction(process.env, process.argv);
+
   if (process.argv.includes("--clean")) {
     await clean();
     return;

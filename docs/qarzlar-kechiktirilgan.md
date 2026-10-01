@@ -34,28 +34,42 @@ chiqilishi kerak: sinf endi `TeachingClass` orqali keladi.
 
 ---
 
-## `shiftClassPosition` rejadan OLDINDA turgan sinfda siljimaydi
+## `shiftClassPosition` "oldinga" — ko'rinadigan natija bermaydi
 
-**Qachon:** 09-sessiya.
+**Qachon:** 09-sessiya. PR'dan keyin aniqlashtirildi.
 
-**Nima:** `server/progress-actions.ts` dagi `shiftClassPosition(…, "forward")`
-rejadan oldinda ketayotgan sinfda `TopicProgress` ga `DONE` yozadi, lekin
-bosh sahifadagi joriy mavzu O'ZGARMAYDI — ya'ni tugma bosilgandek, lekin
-natija ko'rinmaydi.
+**Nima:** `shiftClassPosition(…, "forward")` — ya'ni › tugmasi —
+`TopicProgress` ga `DONE` yozadi, lekin EKRANDA hech narsa o'zgarmaydi: na
+joriy mavzu, na haftaning kunlari. Bu "sinf rejadan oldinda" degan chekka
+holat emas — **amalda har doim shunday**.
 
 **Nega shunday:** sinfning pozitsiyasi sxemada indeks ustuni emas, oxirgi
-`DONE` `TopicProgress` ning **sanasi** (`taughtOn`). `lib/calendar/placement.ts`
-dagi `anchorShift` bu sanadan `delta` hisoblaydi va uni `Math.max(0, delta)`
-bilan qisadi — ya'ni rejani faqat OLDINGA suradi, orqaga tortmaydi. Sinf
-allaqachon rejadan oldinda bo'lsa `delta` 0 ga tushadi.
+`DONE` `TopicProgress` ning **sanasi** (`taughtOn`). `PlacementAnchor` ning
+ma'nosi — "mavzuning OXIRGI soati shu kuni bo'lgan". › esa aynan JORIY
+mavzuni BUGUNGI sana bilan belgilaydi, reja esa o'sha mavzuni allaqachon
+bugunga qo'ygan. Ya'ni anchor rejani o'zi turgan joyiga "qadaydi":
+`anchorShift` dagi `delta` nolga teng va reja siljimaydi.
 
-Rejada yoki rejadan orqada turgan sinflarda (amalda ko'pchilik holat) to'g'ri
-ishlaydi, shuning uchun bu sessiyada to'siq deb hisoblanmadi.
+Boshqacha aytganda, `currentTopicIdOn(today)` uchun bu **qo'zg'almas nuqta**.
+Sana-anchor semantikasi bilan › ni ishlaydigan qilish MUMKIN EMAS — qancha
+bosilmasin, natija bir xil.
 
-**Qachon qaytiladi:** o'qituvchilardan "› bosdim, hech narsa o'zgarmadi"
-degan shikoyat kelsa. Tuzatish: `TeachingClass` ga `topicOffset Int @default(0)`
-ustuni qo'shib, surishni sana emas, INDEKS bo'yicha qilish. Bu 09-sessiya
-spetsifikatsiyasidagi sxemada yo'q edi, shuning uchun qo'shilmadi.
+Buni `lib/calendar/position.ts` dagi `forwardMoves` oldindan hisoblaydi
+(rejani faraziy anchor bilan qayta quradi va natijani solishtiradi), UI esa
+tugmani o'chirib, "Reja allaqachon shu mavzuda" izohini ko'rsatadi. Ya'ni
+o'qituvchi ishlamaydigan tugmani bosmaydi — lekin tugmaning O'ZI hozircha
+foydasiz.
+
+‹ (orqaga) ISHLAYDI: u oxirgi `DONE` qatorni `PLANNED` ga qaytaradi, anchor
+esa oldingi `DONE` nuqtaga tushadi va reja haqiqatan qayta hisoblanadi.
+Lekin › hech qachon `DONE` qator yarata olmagani uchun, qator faqat
+`markTopicTaught` yoki seed orqali paydo bo'ladi.
+
+**Qachon qaytiladi:** keyingi sessiyada, mavzu surish kerak bo'lganda.
+Tuzatish: `TeachingClass` ga `topicOffset Int @default(0)` ustuni qo'shib,
+surishni sana emas, INDEKS bo'yicha qilish — `placement.ts` ga `anchor`
+o'rniga (yoki yonida) `startOffset` berish. Bu 09-sessiya spetsifikatsiyasidagi
+sxemada yo'q edi, shuning uchun qo'shilmadi.
 
 ---
 

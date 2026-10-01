@@ -296,6 +296,7 @@
     "errors": {
       "chegara": "Bu yo'nalishda surib bo'lmaydi.",
       "generic": "Bajarilmadi. Qaytadan urinib ko'ring."
-    }
+    },
+    "alreadyOnTopic": "Reja allaqachon shu mavzuda — surish kerak emas."
   }
 }

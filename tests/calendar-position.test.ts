@@ -326,6 +326,52 @@ describe("chegaralar", () => {
   });
 });
 
+describe("forwardMoves — › natija beradimi", () => {
+  it("oxirgi mavzuda false (chegara)", () => {
+    const result = position({ topics: topics(2), today: d("2026-09-03") });
+
+    expect(result.currentTopicId).toBe("t2");
+    expect(result.nextTopicId).toBeNull();
+    expect(result.forwardMoves).toBe(false);
+  });
+
+  it("reja boshlanmagan — true (birinchi mavzu belgilanadi)", () => {
+    const result = position({ today: d("2026-08-25") });
+
+    expect(result.currentTopicId).toBeNull();
+    expect(result.forwardMoves).toBe(true);
+  });
+
+  it("reja allaqachon joriy mavzuda — false", () => {
+    // Anchor SANA bo'lgani uchun joriy mavzuni bugungi kun bilan belgilash
+    // rejani siljitmaydi: `delta` nolga teng.
+    const result = position({ today: d("2026-09-17") });
+
+    expect(result.currentTopicId).not.toBeNull();
+    expect(result.nextTopicId).not.toBeNull();
+    expect(result.forwardMoves).toBe(false);
+  });
+
+  it("orqada turgan sinfda ham false — anchor joriy mavzuni bugunga qadaydi", () => {
+    const result = position({
+      anchor: { topicId: "t1", taughtOn: d("2026-09-15") },
+      today: d("2026-09-17"),
+    });
+
+    expect(result.forwardMoves).toBe(false);
+  });
+
+  it("mavzu yo'q — false", () => {
+    expect(position({ topics: [] }).forwardMoves).toBe(false);
+  });
+
+  it("hisob natijani O'ZGARTIRMAYDI (sof funksiya)", () => {
+    const args = input();
+
+    expect(positionForClass(args)).toEqual(positionForClass(args));
+  });
+});
+
 describe("hafta oralig'i", () => {
   it("weekStart dushanba, weekEnd yakshanba", () => {
     const result = position({ today: d("2026-09-03") });
