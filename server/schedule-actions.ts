@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireOnboarded } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  MAX_LESSON_NO,
+  MAX_SLOTS,
+  MAX_WEEKDAY,
+  MIN_LESSON_NO,
+  MIN_WEEKDAY,
+} from "@/lib/teaching";
 
 /**
  * Dars jadvali action'lari (docs/sessions/09-dars-jadvali.md, 3-band).
@@ -20,15 +27,6 @@ import { prisma } from "@/lib/db";
 
 export type ScheduleError = "invalid" | "topilmadi" | "band";
 export type ScheduleResult = { ok: true } | { ok: false; error: ScheduleError };
-
-/** Dushanba–shanba. Yakshanba dars kuni emas. */
-export const MIN_WEEKDAY = 1;
-export const MAX_WEEKDAY = 6;
-/** Maktab jadvalidagi dars raqami. */
-export const MIN_LESSON_NO = 1;
-export const MAX_LESSON_NO = 8;
-/** To'r o'lchami — bundan ortiq katak faqat ziddiyat yoki hujum bo'lishi mumkin. */
-const MAX_SLOTS = MAX_WEEKDAY * MAX_LESSON_NO;
 
 const SCHEDULE_PATHS = ["/[locale]/ish", "/[locale]/ish/jadval"];
 

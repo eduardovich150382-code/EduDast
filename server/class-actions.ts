@@ -5,6 +5,11 @@ import { z } from "zod";
 import { requireOnboarded } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { MAX_GRADE, MIN_GRADE } from "@/lib/grades";
+import {
+  CLASS_LABELS,
+  MAX_LESSONS_PER_WEEK,
+  MIN_LESSONS_PER_WEEK,
+} from "@/lib/teaching";
 
 /**
  * Sinflar action'lari (docs/sessions/09-dars-jadvali.md, 2-band).
@@ -24,21 +29,6 @@ import { MAX_GRADE, MIN_GRADE } from "@/lib/grades";
 export type ClassError = "invalid" | "topilmadi" | "ruxsat" | "band";
 export type SaveClassResult = { ok: true; id: string } | { ok: false; error: ClassError };
 export type ClassResult = { ok: true } | { ok: false; error: ClassError };
-
-/**
- * Sinf harflari — YOPIQ ro'yxat.
- *
- * Erkin satr bo'lsa lotin "A" va kirill "А" ikki xil sinf bo'lib qolardi va
- * `@@unique` ularni ajrata olmasdi: o'qituvchi ro'yxatda ikkita "7-A" ko'rib,
- * nega ikkitasi borligini tushunmasdi.
- *
- * "" — harfsiz sinf (maktabda bitta 7-sinf bo'lsa).
- */
-export const CLASS_LABELS = ["", "A", "B", "V", "G", "D"] as const;
-
-/** 1 — minimal; 12 — haftada har kuni ikki soatdan ham ko'p, ya'ni xato. */
-const MIN_LESSONS_PER_WEEK = 1;
-const MAX_LESSONS_PER_WEEK = 12;
 
 const CLASS_PATHS = ["/[locale]/ish", "/[locale]/ish/sinflarim", "/[locale]/ish/jadval"];
 
