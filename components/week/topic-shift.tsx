@@ -15,14 +15,10 @@ import { shiftClassPosition } from "@/server/progress-actions";
  * o'qituvchi ishlamaydigan tugmani bosib, keyin xato o'qimaydi. Server
  * tekshiruvi SAQLANADI: u yagona haqiqat manbai.
  *
- * `canForward: false` ikki sababdan bo'lishi mumkin — oxirgi mavzu (chegara)
- * yoki surish EKRANDA hech narsani o'zgartirmasligi (`forwardMoves: false`,
- * `lib/calendar/position.ts` ga qarang). Ikkinchisida `idleNote` beriladi.
- *
- * `idleNote` KO'RINADIGAN MATN EMAS, `title`: u har kartada takrorlanardi va
- * hafta ro'yxatini o'qib bo'lmas qilardi (bir sahifada 4-5 marta). Matn
- * o'rniga sahifa tepasida BIR MARTA ko'rsatiladi — `app/[locale]/ish/page.tsx`
- * ga qarang.
+ * `canBack`/`canForward` — HAQIQIY chegara: mavzular ro'yxatining boshi va
+ * oxiri. Ular `positionForClass` ning `previousTopicId`/`nextTopicId` idan
+ * keladi, `shiftClassPosition` esa aynan shu ikki maydonni o'qiydi — ya'ni
+ * tugma holati va server qarori BIR XIL manbadan.
  */
 export function TopicShift({
   teachingClassId,
@@ -30,7 +26,6 @@ export function TopicShift({
   canForward,
   backLabel,
   forwardLabel,
-  idleNote,
   errors,
   genericError,
 }: {
@@ -39,8 +34,6 @@ export function TopicShift({
   canForward: boolean;
   backLabel: string;
   forwardLabel: string;
-  /** Surish natija bermasa ko'rsatiladigan qisqa izoh. */
-  idleNote?: string;
   errors: Record<string, string>;
   genericError: string;
 }) {
@@ -76,7 +69,6 @@ export function TopicShift({
           variant="ghost"
           size="icon-xs"
           aria-label={forwardLabel}
-          title={idleNote}
           disabled={pending || !canForward}
           onClick={() => shift("forward")}
         >

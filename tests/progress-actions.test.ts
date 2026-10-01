@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * server/progress-actions.ts (docs/sessions/09-dars-jadvali.md, 6-band +
@@ -33,6 +33,7 @@ const KLASS = {
   grade: 7,
   lessonsPerWeek: 2,
   academicYearId: "year-1",
+  topicOffset: 0,
 };
 
 const d = (value: string) => new Date(`${value}T00:00:00.000Z`);
@@ -67,6 +68,7 @@ const mocks = vi.hoisted(() => ({
   progressUpsert: vi.fn(),
   progressFindFirst: vi.fn(),
   progressUpdate: vi.fn(),
+  classUpdate: vi.fn(),
   progressDelete: vi.fn(),
   slotFindMany: vi.fn(),
   yearFindMany: vi.fn(),
@@ -76,7 +78,7 @@ vi.mock("@/lib/auth", () => ({ requireOnboarded: mocks.requireOnboarded }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/db", () => ({
   prisma: {
-    teachingClass: { findFirst: mocks.classFindFirst },
+    teachingClass: { findFirst: mocks.classFindFirst, update: mocks.classUpdate },
     topic: { findFirst: mocks.topicFindFirst, findMany: mocks.topicFindMany },
     topicProgress: {
       upsert: mocks.progressUpsert,
@@ -103,6 +105,7 @@ beforeEach(() => {
   mocks.topicFindMany.mockResolvedValue(TOPICS);
   mocks.progressUpsert.mockResolvedValue({ id: "progress-1" });
   mocks.progressUpdate.mockResolvedValue({ id: "progress-1" });
+  mocks.classUpdate.mockResolvedValue({ id: "class-a" });
   mocks.slotFindMany.mockResolvedValue([{ weekday: 2 }, { weekday: 4 }]);
   mocks.yearFindMany.mockResolvedValue([YEAR]);
   // Sukut bo'yicha hech qanday `DONE` qator yo'q (reja boshlanmagan).
@@ -258,226 +261,195 @@ describe("shiftClassPosition — egalik va Zod", () => {
   });
 });
 
-describe("shiftClassPosition — orqaga", () => {
-  const BACKWARD = { teachingClassId: "class-a", direction: "backward" };
 
-  it("oxirgi DONE qator PLANNED ga qaytariladi va taughtOn null bo'ladi", async () => {
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-3", topicId: "t3" });
+/**
+ * Surish testlari — soat MUZLATILADI.
+ *
+ * `shiftClassPosition` ichida `schoolDay(new Date())` bor va `lib/calendar/*`
+ * mock QILINMAGAN (sof va tez). Muzlatilmasa test o'quv yilidan chiqib
+ * ketganda jimgina boshqa natija berardi.
+ *
+ * 2026-09-08 — seshanba. Jadval [2, 4], haftada 2 soat, 5 ta mavzu:
+ * t1 (01-sen), t2 (03-sen), t3 (08-sen), t4 (10-sen), t5 (15-sen).
+ * Ya'ni shu kuni reja bo'yicha joriy mavzu — t3, ikki tomonda ham joy bor.
+ */
+describe("shiftClassPosition — ko'rsatkichni suradi", () => {
+  const FROZEN = d("2026-09-08");
+
+  function freeze() {
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN);
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("› topicOffset ni +1 qiladi va keyingi mavzuni qaytaradi", async () => {
+    freeze();
     const { shiftClassPosition } = await import("@/server/progress-actions");
 
-    const result = await shiftClassPosition(BACKWARD);
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
 
-    expect(result).toEqual({ ok: true, currentTopicId: "t3" });
-    expect(mocks.progressUpdate).toHaveBeenCalledWith({
-      where: { id: "progress-3" },
-      data: { status: "PLANNED", taughtOn: null },
+    expect(result).toEqual({ ok: true, currentTopicId: "t4" });
+    expect(mocks.classUpdate).toHaveBeenCalledWith({
+      where: { id: "class-a" },
+      data: { topicOffset: 1 },
     });
   });
 
-  it("qator O'CHIRILMAYDI — update, delete EMAS", async () => {
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-3", topicId: "t3" });
+  it("‹ topicOffset ni -1 qiladi va oldingi mavzuni qaytaradi", async () => {
+    freeze();
     const { shiftClassPosition } = await import("@/server/progress-actions");
 
-    await shiftClassPosition(BACKWARD);
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "backward" });
 
+    expect(result).toEqual({ ok: true, currentTopicId: "t2" });
+    expect(mocks.classUpdate).toHaveBeenCalledWith({
+      where: { id: "class-a" },
+      data: { topicOffset: -1 },
+    });
+  });
+
+  it("mavjud offsetdan hisoblanadi (0 dan emas)", async () => {
+    freeze();
+    mocks.classFindFirst.mockResolvedValue({ ...KLASS, topicOffset: 1 });
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
+
+    expect(mocks.classUpdate.mock.calls[0]?.[0].data.topicOffset).toBe(2);
+  });
+
+  it("TopicProgress ga TEGMAYDI — u tarix, bu ko'rsatkich", async () => {
+    freeze();
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
+
+    expect(mocks.progressUpsert).not.toHaveBeenCalled();
+    expect(mocks.progressUpdate).not.toHaveBeenCalled();
     expect(mocks.progressDelete).not.toHaveBeenCalled();
   });
 
-  it("CHEGARA: DONE qator yo'q (birinchi mavzu) — 'chegara', yozuv yo'q", async () => {
-    mocks.progressFindFirst.mockResolvedValue(null);
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    const result = await shiftClassPosition(BACKWARD);
-
-    expect(result).toEqual({ ok: false, error: "chegara" });
-    expect(mocks.progressUpdate).not.toHaveBeenCalled();
-    expect(mocks.progressUpsert).not.toHaveBeenCalled();
-  });
-
-  it("chegarada revalidatePath chaqirilmaydi", async () => {
-    mocks.progressFindFirst.mockResolvedValue(null);
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(BACKWARD);
-
-    expect(mocks.revalidatePath).not.toHaveBeenCalled();
-  });
-
-  it("hisob UMUMAN yuritilmaydi (mavzular ham so'ralmaydi)", async () => {
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-3", topicId: "t3" });
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(BACKWARD);
-
-    expect(mocks.topicFindMany).not.toHaveBeenCalled();
-    expect(mocks.yearFindMany).not.toHaveBeenCalled();
-  });
-
-  it("eng oxirgi DONE taughtOn bo'yicha olinadi", async () => {
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-3", topicId: "t3" });
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(BACKWARD);
-
-    const args = mocks.progressFindFirst.mock.calls[0]?.[0];
-    expect(args.where).toEqual({ teachingClassId: "class-a", status: "DONE" });
-    expect(args.orderBy).toEqual([{ taughtOn: "desc" }, { createdAt: "desc" }]);
-  });
-});
-
-describe("shiftClassPosition — oldinga", () => {
-  it("reja boshlanmagan — birinchi mavzu DONE deb belgilanadi", async () => {
-    // Hech qanday DONE yo'q va bugun o'quv yilidan oldin emas, lekin
-    // `currentTopicId` null bo'lgan holat: mavzular ro'yxati boshida.
-    mocks.progressFindFirst.mockResolvedValue(null);
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    const result = await shiftClassPosition(SHIFT);
-
-    expect(result.ok).toBe(true);
-    expect(mocks.progressUpsert).toHaveBeenCalledTimes(1);
-    const args = mocks.progressUpsert.mock.calls[0]?.[0];
-    expect(args.create.status).toBe("DONE");
-  });
-
-  it("taughtOn UTC yarim kecha", async () => {
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(SHIFT);
-
-    const taughtOn = mocks.progressUpsert.mock.calls[0]?.[0].create.taughtOn as Date;
-    expect(taughtOn.toISOString()).toMatch(/T00:00:00\.000Z$/);
-  });
-
-  it("CHEGARA: oxirgi mavzu allaqachon DONE — 'chegara', upsert yo'q", async () => {
-    // Birinchi `findFirst` — oxirgi mavzu tekshiruvi, u qator qaytaradi.
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-5" });
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    const result = await shiftClassPosition(SHIFT);
-
-    expect(result).toEqual({ ok: false, error: "chegara" });
-    expect(mocks.progressUpsert).not.toHaveBeenCalled();
-    expect(mocks.revalidatePath).not.toHaveBeenCalled();
-  });
-
-  it("chegara tekshiruvi oxirgi mavzu bo'yicha so'raladi", async () => {
-    mocks.progressFindFirst.mockResolvedValue({ id: "progress-5" });
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(SHIFT);
-
-    expect(mocks.progressFindFirst.mock.calls[0]?.[0].where).toEqual({
-      teachingClassId: "class-a",
-      topicId: "t5",
-      status: "DONE",
-    });
-  });
-
-  it("mavzusi yo'q sinf — 'topilmadi'", async () => {
-    mocks.topicFindMany.mockResolvedValue([]);
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    const result = await shiftClassPosition(SHIFT);
-
-    expect(result).toEqual({ ok: false, error: "topilmadi" });
-    expect(mocks.progressUpsert).not.toHaveBeenCalled();
-  });
-
-  it("sinf orqada bo'lsa joriy mavzu DONE deb belgilanadi", async () => {
-    // Action ichida `schoolDay(new Date())` — soat MUZLATILADI, aks holda test
-    // o'quv yilidan chiqib ketganda (yozda) jimgina boshqa natija berardi.
-    vi.useFakeTimers();
-    vi.setSystemTime(d("2026-09-24"));
-    try {
-      // 40 mavzu: 2 soat/hafta bilan yil bo'yiga yetadi, ya'ni joriy mavzu
-      // ro'yxat o'rtasida bo'ladi va surish ko'rinadi.
-      const many = Array.from({ length: 40 }, (_unused, index) => ({
-        id: `t${index + 1}`,
-        parentId: null,
-        order: index + 1,
-        slug: `t${index + 1}`,
-        quarter: null,
-        hoursPlan: 1,
-      }));
-      mocks.topicFindMany.mockResolvedValue(many);
-
-      // Oxirgi mavzu tekshiruvi — bo'sh; anchor so'rovi — t1 ni 2026-09-15 da
-      // tugatgan sinf, ya'ni rejadan ORQADA.
-      mocks.progressFindFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ topicId: "t1", taughtOn: d("2026-09-15") });
-      const { shiftClassPosition } = await import("@/server/progress-actions");
-
-      const behind = await shiftClassPosition(SHIFT);
-      const behindTopic = mocks.progressUpsert.mock.calls[0]?.[0].create.topicId as string;
-
-      // Endi anchor'siz (reja bo'yicha ketayotgan sinf).
-      mocks.progressUpsert.mockClear();
-      mocks.progressFindFirst.mockReset();
-      mocks.progressFindFirst.mockResolvedValue(null);
-      const onTime = await shiftClassPosition(SHIFT);
-      const onTimeTopic = mocks.progressUpsert.mock.calls[0]?.[0].create.topicId as string;
-
-      expect(behind.ok).toBe(true);
-      expect(onTime.ok).toBe(true);
-      // Orqada turgan sinf ro'yxatda OLDINROQ mavzuni belgilaydi.
-      const indexOf = (id: string) => many.findIndex((topic) => topic.id === id);
-      expect(indexOf(behindTopic)).toBeLessThan(indexOf(onTimeTopic));
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("anchor eng katta taughtOn bo'yicha olinadi", async () => {
-    mocks.progressFindFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ topicId: "t1", taughtOn: d("2026-09-15") });
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(SHIFT);
-
-    const anchorCall = mocks.progressFindFirst.mock.calls[1]?.[0];
-    expect(anchorCall.where).toEqual({
-      teachingClassId: "class-a",
-      status: "DONE",
-      taughtOn: { not: null },
-    });
-    expect(anchorCall.orderBy).toEqual([{ taughtOn: "desc" }, { createdAt: "desc" }]);
-  });
-
-  it("jadval ScheduleSlot'dan o'qiladi (deletedAt: null)", async () => {
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(SHIFT);
-
-    expect(mocks.slotFindMany.mock.calls[0]?.[0].where).toEqual({
-      teachingClassId: "class-a",
-      deletedAt: null,
-    });
-  });
-
-  it("viloyat ta'tillari so'rovda filtrlanadi", async () => {
-    const { shiftClassPosition } = await import("@/server/progress-actions");
-
-    await shiftClassPosition(SHIFT);
-
-    const holidayWhere = mocks.yearFindMany.mock.calls[0]?.[0].select.holidays.where;
-    expect(holidayWhere.deletedAt).toBeNull();
-    expect(holidayWhere.OR).toEqual([
-      { scope: "GLOBAL" },
-      { scope: "REGION", region: "andijon" },
-    ]);
-  });
-
   it("muvaffaqiyatda revalidate qilinadi", async () => {
+    freeze();
     const { shiftClassPosition } = await import("@/server/progress-actions");
 
-    await shiftClassPosition(SHIFT);
+    await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
 
     expect(mocks.revalidatePath.mock.calls.map((call) => call[0])).toEqual([
       "/[locale]/ish",
       "/[locale]/ish/rejam",
     ]);
+  });
+});
+
+describe("shiftClassPosition — chegaralar", () => {
+  const FROZEN = d("2026-09-08");
+
+  function freeze() {
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN);
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("CHEGARA: birinchi mavzudan orqaga surilmaydi", async () => {
+    freeze();
+    // offset -2 => joriy mavzu t1, ya'ni ro'yxat boshi.
+    mocks.classFindFirst.mockResolvedValue({ ...KLASS, topicOffset: -2 });
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "backward" });
+
+    expect(result).toEqual({ ok: false, error: "chegara" });
+    expect(mocks.classUpdate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("CHEGARA: oxirgi mavzudan oldinga surilmaydi", async () => {
+    freeze();
+    // offset +2 => joriy mavzu t5, ya'ni ro'yxat oxiri.
+    mocks.classFindFirst.mockResolvedValue({ ...KLASS, topicOffset: 2 });
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
+
+    expect(result).toEqual({ ok: false, error: "chegara" });
+    expect(mocks.classUpdate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("chegaradagi sinf TESKARI yo'nalishda SURILADI", async () => {
+    freeze();
+    mocks.classFindFirst.mockResolvedValue({ ...KLASS, topicOffset: 2 });
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "backward" });
+
+    expect(result).toEqual({ ok: true, currentTopicId: "t4" });
+    expect(mocks.classUpdate.mock.calls[0]?.[0].data.topicOffset).toBe(1);
+  });
+
+  it("juda katta offset ham ro'yxatdan chiqarmaydi", async () => {
+    freeze();
+    mocks.classFindFirst.mockResolvedValue({ ...KLASS, topicOffset: 999 });
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    expect(
+      await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" }),
+    ).toEqual({ ok: false, error: "chegara" });
+  });
+
+  it("mavzusi yo'q sinf — 'topilmadi'", async () => {
+    freeze();
+    mocks.topicFindMany.mockResolvedValue([]);
+    const { shiftClassPosition } = await import("@/server/progress-actions");
+
+    const result = await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
+
+    expect(result).toEqual({ ok: false, error: "topilmadi" });
+    expect(mocks.classUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("shiftClassPosition — sinflar bir-biriga ta'sir qilmaydi", () => {
+  it("7-A ni surish FAQAT 7-A qatorini yangilaydi", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(d("2026-09-08"));
+    try {
+      const { shiftClassPosition } = await import("@/server/progress-actions");
+
+      await shiftClassPosition({ teachingClassId: "class-a", direction: "forward" });
+
+      // `where` faqat shu sinfni ko'rsatadi — `updateMany` yoki keng filtr yo'q.
+      expect(mocks.classUpdate).toHaveBeenCalledTimes(1);
+      expect(mocks.classUpdate.mock.calls[0]?.[0].where).toEqual({ id: "class-a" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("7-B o'z offseti bilan mustaqil hisoblanadi", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(d("2026-09-08"));
+    try {
+      mocks.classFindFirst.mockResolvedValue({ ...KLASS, id: "class-b", topicOffset: -1 });
+      const { shiftClassPosition } = await import("@/server/progress-actions");
+
+      const result = await shiftClassPosition({
+        teachingClassId: "class-b",
+        direction: "forward",
+      });
+
+      // 7-B offseti -1 edi (joriy t2), surilgandan keyin 0 va joriy t3.
+      expect(result).toEqual({ ok: true, currentTopicId: "t3" });
+      expect(mocks.classUpdate.mock.calls[0]?.[0].data.topicOffset).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

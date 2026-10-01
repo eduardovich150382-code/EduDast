@@ -588,6 +588,18 @@ model TeachingClass {
   /// tarixga tushadi va yangisi bilan to'qnashmaydi.
   academicYearId String
 
+  /// KO'RSATKICH: sinf rejadan necha mavzu oldinda (+) yoki orqada (-).
+  ///
+  /// Ko'rinadigan mavzu = reja bo'yicha indeks + `topicOffset`, haqiqiy mavzu
+  /// ro'yxati chegarasiga qisilgan holda. ‹ › tugmalari AYNAN shu ustunni
+  /// o'zgartiradi (`server/progress-actions.ts`).
+  ///
+  /// `TopicProgress` BILAN ARALASHTIRILMAYDI — ular boshqa-boshqa narsa:
+  /// `TopicProgress` o'tilgan mavzuning TARIXI (audit, "qachon o'tdik"),
+  /// bu ustun esa "hozir qayerdamiz" KO'RSATKICHI. Tarixni surish
+  /// ko'rsatkichni surmaydi va aksincha. Batafsil: `lib/calendar/position.ts`.
+  topicOffset Int @default(0)
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
 

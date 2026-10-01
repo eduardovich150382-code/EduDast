@@ -24,8 +24,29 @@ import {
  * jimgina ajralib ketardi ("ikki soat" muammosi).
  *
  * BITTA SINF UCHUN, ataylab: "7-A va 7-B turli mavzuda" shundan o'z-o'zidan
- * kelib chiqadi — turli `anchor`, turli `lessonsPerWeek`, bir xil sof
- * funksiya. Sinflar bir-biriga ta'sir qila olmaydi, chunki umumiy holat yo'q.
+ * kelib chiqadi — turli `anchor`, turli `topicOffset`, turli `lessonsPerWeek`,
+ * bir xil sof funksiya. Sinflar bir-biriga ta'sir qila olmaydi, chunki umumiy
+ * holat yo'q.
+ *
+ * UCH XIL NARSA — ARALASHTIRILMAYDI:
+ *
+ * 1. **Reja** (`placeTopics`) — kurikulum + kalendar + jadval. "Qaysi mavzu
+ *    qaysi kunga tushadi."
+ * 2. **Kalibrovka** (`anchor`, `TopicProgress.taughtOn` dan) — rejaning
+ *    SANALARINI suradi: "t5 ni aslida 15-sentabrda tugatganmiz". Bu TARIX,
+ *    ya'ni audit yozuvidan kelib chiqadi.
+ * 3. **Ko'rsatkich** (`topicOffset`, `TeachingClass` ustuni) — "hozir
+ *    qayerdamiz". ‹ › tugmalari AYNAN shuni o'zgartiradi.
+ *
+ * NEGA KO'RSATKICH ALOHIDA USTUN: avval surish `TopicProgress` ga `DONE`
+ * yozish orqali qilingan edi va u ISHLAMASDI. Anchor — SANA: joriy mavzuni
+ * bugungi kun bilan belgilash rejani o'zi turgan joyiga "qadaydi"
+ * (`anchorShift` dagi `delta` nolga teng), ya'ni ekranda hech narsa
+ * o'zgarmasdi. Ko'rsatkich indeks bo'lgani uchun bu muammo yo'q.
+ *
+ * Shu sababli `shiftClassPosition` FAQAT `topicOffset` ni o'zgartiradi va
+ * `TopicProgress` ga TEGMAYDI; tarixni esa `markTopicTaught` yozadi. Ikki
+ * yo'nalish bir-biriga qo'shilib ketmasligi uchun shunday.
  *
  * IKKI REJIM (spek 4-bandi):
  * - `mode: "days"` — `weekdays` (`ScheduleSlot` dan) bor: har dars kunining
@@ -77,8 +98,18 @@ export type PositionInput = {
   lessonsPerWeek: number;
   /** `ScheduleSlot.weekday` lar. BO'SH BO'LISHI MUMKIN (jadval kiritilmagan). */
   weekdays: number[];
-  /** Oxirgi `DONE` `TopicProgress` (eng katta `taughtOn`). */
+  /**
+   * KALIBROVKA: oxirgi `DONE` `TopicProgress` (eng katta `taughtOn`).
+   * Rejaning SANALARINI suradi — "bu mavzuni aslida o'sha kuni tugatganmiz".
+   * Ko'rsatkichni surmaydi (pastdagi `topicOffset` ga qarang).
+   */
   anchor?: PlacementAnchor;
+  /**
+   * KO'RSATKICH: `TeachingClass.topicOffset`. Ko'rinadigan mavzu = reja
+   * bo'yicha indeks + shu qiymat, haqiqiy ro'yxat chegarasiga qisilgan.
+   * Berilmasa 0.
+   */
+  topicOffset?: number;
   /** `schoolDay(new Date())` — bu modul soatga QARAMAYDI. */
   today: Date;
   maxTopicsPerLesson?: number;
@@ -106,21 +137,6 @@ export type ClassPosition = {
   previousTopicId: string | null;
   /** › tugmasi uchun. Oxirgi mavzuda `null` (chegara). */
   nextTopicId: string | null;
-  /**
-   * › bosilsa EKRANDA biror narsa o'zgaradimi.
-   *
-   * `false` — bosish `TopicProgress` ga `DONE` yozadi, lekin joriy mavzu ham,
-   * haftaning kunlari ham o'zgarmaydi. UI bunday tugmani o'chirib qo'yadi:
-   * ishlamaydigan tugmani bosib, keyin "nega hech narsa bo'lmadi" deb
-   * o'ylashdan ko'ra o'chirilgani yaxshi.
-   *
-   * NEGA BU TEZ-TEZ `false` BO'LADI: anchor — SANA (`taughtOn`), indeks emas.
-   * › joriy mavzuni BUGUNGI sana bilan belgilaydi, reja esa o'sha mavzuni
-   * allaqachon bugunga qo'ygan — ya'ni `anchorShift` dagi `delta` nolga teng
-   * va reja siljimaydi. To'liq tahlil: `docs/qarzlar-kechiktirilgan.md`
-   * ("shiftClassPosition" bandi).
-   */
-  forwardMoves: boolean;
   /** `placeTopics` dan o'tkaziladi — chaqiruvchi tushib qolgan mavzuni sezsin. */
   unplaced: UnplacedTopic[];
   /** `false` — anchor eskirgan (mavzu ro'yxatda yo'q) va E'TIBORGA OLINMADI. */
@@ -154,32 +170,55 @@ function topicsByDay(slots: PlacementSlot[]): Map<number, string[]> {
   return byDay;
 }
 
-/** Kun -> mavzular ro'yxatining solishtiriladigan "barmoq izi". */
-function fingerprint(slots: PlacementSlot[]): string {
-  return slots.map((slot) => `${dayNumber(slot.date)}:${slot.topicId}`).join("|");
-}
-
 export function positionForClass(input: PositionInput): ClassPosition {
   const weekdays = normalizeWeekdays(input.weekdays);
   const mode: PositionMode = weekdays.length > 0 ? "days" : "week";
 
-  const place = (anchor: PlacementAnchor | undefined) =>
-    placeTopics({
-      quarters: input.quarters,
-      holidays: input.holidays,
-      topics: input.topics,
-      lessonsPerWeek: input.lessonsPerWeek,
-      weekdays: mode === "days" ? weekdays : FALLBACK_WEEKDAYS,
-      anchor,
-      maxTopicsPerLesson: input.maxTopicsPerLesson,
-    });
+  const placement = placeTopics({
+    quarters: input.quarters,
+    holidays: input.holidays,
+    topics: input.topics,
+    lessonsPerWeek: input.lessonsPerWeek,
+    weekdays: mode === "days" ? weekdays : FALLBACK_WEEKDAYS,
+    anchor: input.anchor,
+    maxTopicsPerLesson: input.maxTopicsPerLesson,
+  });
 
-  const placement = place(input.anchor);
+  const ordered = [...input.topics].sort((a, b) => a.order - b.order);
+  const indexById = new Map(ordered.map((topic, index) => [topic.id, index]));
+  // Butun bo'lmagan yoki berilmagan qiymat 0 deb olinadi — bazadagi ustun
+  // `Int`, lekin modul sof bo'lgani uchun kirishga ishonmaydi.
+  const offset =
+    input.topicOffset !== undefined && Number.isInteger(input.topicOffset)
+      ? input.topicOffset
+      : 0;
+
+  /**
+   * Reja bo'yicha mavzuni KO'RSATKICH bo'yicha mavzuga aylantiradi.
+   *
+   * Chegara HAQIQIY ro'yxatga qisiladi: birinchi mavzudan oldinga ham,
+   * oxirgisidan keyinga ham chiqib bo'lmaydi. Qisish shu yerda bo'lgani
+   * uchun bazadagi `topicOffset` qanchalik katta bo'lsa ham ko'rinish
+   * buzilmaydi (masalan mavzular ro'yxati qisqarib qolsa).
+   */
+  const shift = (topicId: string): string => {
+    const index = indexById.get(topicId);
+    if (index === undefined) return topicId;
+    const moved = Math.min(Math.max(index + offset, 0), ordered.length - 1);
+    return ordered[moved]?.id ?? topicId;
+  };
 
   // BITTA `Map` — hafta kunlari, bugun VA ertaga shundan o'qiladi. Ertangi kun
   // keyingi ISO haftaga tushishi mumkin (bugun yakshanba bo'lsa), shuning
   // uchun u hafta oynasidan emas, BUTUN `slots` dan qidiriladi.
-  const byDay = topicsByDay(placement.slots);
+  const planByDay = topicsByDay(placement.slots);
+  // Kunlar ham KO'RSATKICH bo'yicha suriladi: aks holda sarlavhada bir mavzu,
+  // kunlar ro'yxatida boshqasi turardi. Qisish tufayli chetda takror paydo
+  // bo'lishi mumkin, shuning uchun takrorsizlantiramiz.
+  const byDay = new Map<number, string[]>(
+    [...planByDay].map(([day, ids]) => [day, [...new Set(ids.map(shift))]]),
+  );
+
   const todayDay = dayNumber(input.today);
   const weekStartDay = todayDay - (isoWeekday(todayDay) - 1);
 
@@ -195,26 +234,13 @@ export function positionForClass(input: PositionInput): ClassPosition {
     }
   }
 
-  const currentTopicId = currentTopicIdOn(placement.slots, input.today);
-  const ordered = [...input.topics].sort((a, b) => a.order - b.order);
-  const index = ordered.findIndex((topic) => topic.id === currentTopicId);
+  const planTopicId = currentTopicIdOn(placement.slots, input.today);
+  const currentTopicId = planTopicId === null ? null : shift(planTopicId);
+  const index = currentTopicId === null ? -1 : (indexById.get(currentTopicId) ?? -1);
 
   // Tig'izlangan kunda OXIRGISI — `currentTopicIdOn` bilan bir xil qoida (eng
   // katta `order`). To'liq ro'yxat `days[].topicIds` da qoladi.
   const lastOf = (day: number) => byDay.get(day)?.at(-1) ?? null;
-
-  const nextTopicId =
-    index < 0 ? (ordered[0]?.id ?? null) : (ordered[index + 1]?.id ?? null);
-
-  // › BOSILSA NIMA BO'LISHINI OLDINDAN HISOBLAYMIZ: action aynan shuni
-  // yozadi — joriy mavzu + bugungi sana. Rejani qayta qurib, natija
-  // o'zgarganini tekshiramiz. Bu ikkinchi `placeTopics` chaqirig'i, lekin u
-  // sinf boshiga bir marta va modul sof — narxi arzon.
-  const forwardMoves =
-    nextTopicId !== null &&
-    (currentTopicId === null ||
-      fingerprint(place({ topicId: currentTopicId, taughtOn: input.today }).slots) !==
-        fingerprint(placement.slots));
 
   return {
     mode,
@@ -229,8 +255,7 @@ export function positionForClass(input: PositionInput): ClassPosition {
     previousTopicId: index > 0 ? (ordered[index - 1]?.id ?? null) : null,
     // `index < 0` — reja hali boshlanmagan: "keyingi" = birinchi mavzu.
     // Oxirgi mavzuda `ordered[index + 1]` — `undefined`, ya'ni chegara.
-    nextTopicId,
-    forwardMoves,
+    nextTopicId: index < 0 ? (ordered[0]?.id ?? null) : (ordered[index + 1]?.id ?? null),
     unplaced: placement.unplaced,
     anchorApplied: placement.anchorApplied,
   };

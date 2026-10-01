@@ -20,13 +20,15 @@ import { isoDate } from "@/lib/zod/iso-date";
  * Mahalliy yarim kecha yozilsa butun reja bir kunga siljiydi va hech qayerda
  * xato chiqmaydi — shuning uchun `schoolDay(new Date())` MAJBURIY.
  *
- * MA'LUM CHEKLOV — `shiftClassPosition` "oldinga": anchor SANA, indeks emas.
- * `placement.ts` dagi `anchorShift` `delta` ni `Math.max(0, …)` bilan qisadi,
- * ya'ni rejadan OLDINDA ketayotgan sinfda › bosilsa "o'tdim" yoziladi, lekin
- * ko'rinadigan joriy mavzu SILJIMAYDI (reja allaqachon bu mavzuni keyinroq
- * tugatishni mo'ljallagan). Rejada yoki orqada turgan sinflarda — to'g'ri
- * ishlaydi. Tuzatish `TeachingClass.topicOffset` ustunini talab qiladi, u esa
- * spek sxemasida yo'q. Qarz: `docs/qarzlar-kechiktirilgan.md`.
+ * IKKI YO'NALISH ARALASHTIRILMAYDI:
+ * - `markTopicTaught` -> `TopicProgress` (TARIX/audit: "qachon o'tdik"). U
+ *   rejaning SANALARINI kalibrlaydi.
+ * - `shiftClassPosition` -> `TeachingClass.topicOffset` (KO'RSATKICH: "hozir
+ *   qayerdamiz"). U `TopicProgress` ga TEGMAYDI.
+ *
+ * Nega shunday: avval surish `DONE` yozish orqali qilingan edi va ishlamasdi
+ * — anchor sana bo'lgani uchun joriy mavzuni bugungi kun bilan belgilash
+ * rejani o'zi turgan joyiga qadardi. Batafsil: `lib/calendar/position.ts`.
  */
 
 export type ProgressError = "invalid" | "topilmadi" | "chegara";
@@ -62,7 +64,14 @@ const shiftSchema = z.object({
 function findOwnedClass(userId: string, teachingClassId: string) {
   return prisma.teachingClass.findFirst({
     where: { id: teachingClassId, userId, deletedAt: null },
-    select: { id: true, subjectId: true, grade: true, lessonsPerWeek: true, academicYearId: true },
+    select: {
+      id: true,
+      subjectId: true,
+      grade: true,
+      lessonsPerWeek: true,
+      academicYearId: true,
+      topicOffset: true,
+    },
   });
 }
 
@@ -99,17 +108,21 @@ export async function markTopicTaught(input: unknown): Promise<ProgressResult> {
 }
 
 /**
- * Sinfni bir mavzu oldinga yoki orqaga suradi.
+ * Sinfning KO'RSATKICHINI bir mavzu oldinga yoki orqaga suradi.
  *
- * Sxemada "pozitsiya" ustuni YO'Q — sinfning turgan joyi oxirgi `DONE`
- * `TopicProgress` qatoridan kelib chiqadi. Shuning uchun:
- * - **oldinga** = "joriy mavzuni tugatdik" -> `DONE` yoziladi;
- * - **orqaga** = "yo'q, hali tugatmadik" -> oxirgi `DONE` `PLANNED` ga
- *   qaytariladi. Anchor so'rovi `status: DONE` bo'yicha filtrlaydi, ya'ni qator
- *   tushib qolgach reja O'ZI oldingi `DONE` nuqtadan QAYTA hisoblanadi.
+ * FAQAT `TeachingClass.topicOffset` o'zgaradi. `TopicProgress` ga TEGILMAYDI
+ * — u tarix/audit ("qaysi mavzuni qachon o'tdik"), bu esa ko'rsatkich
+ * ("hozir qayerdamiz"). Ikkalasi bir-biriga qo'shilib ketmasligi kerak:
+ * `lib/calendar/position.ts` dagi "UCH XIL NARSA" izohiga qarang.
  *
- * Chegaralar HAR IKKISI YOZISHDAN OLDIN tekshiriladi, shuning uchun chegarada
- * hech narsa yozilmaydi va `revalidatePath` ham chaqirilmaydi.
+ * CHEGARA haqiqiy mavzular ro'yxatiga qarab qisiladi — birinchi mavzudan
+ * oldinga ham, oxirgisidan keyinga ham chiqib bo'lmaydi. Tekshiruv
+ * YOZISHDAN OLDIN, shuning uchun chegarada hech narsa yozilmaydi va
+ * `revalidatePath` ham chaqirilmaydi.
+ *
+ * Chegara UI dagi tugma holati bilan BIR XIL manbadan: ikkalasi ham
+ * `positionForClass` ning `previousTopicId`/`nextTopicId` ini o'qiydi, ya'ni
+ * "tugma faol, lekin server rad etadi" holati yuzaga kelmaydi.
  */
 export async function shiftClassPosition(input: unknown): Promise<ShiftResult> {
   const user = await requireOnboarded();
@@ -121,30 +134,6 @@ export async function shiftClassPosition(input: unknown): Promise<ShiftResult> {
   const klass = await findOwnedClass(user.id, teachingClassId);
   if (!klass) return { ok: false, error: "topilmadi" };
 
-  // ORQAGA — hisob umuman kerak emas: oxirgi `DONE` qatorni `PLANNED` ga
-  // qaytarish yetarli. `taughtOn: null` — sxemadagi invariantni saqlash uchun.
-  if (direction === "backward") {
-    const latest = await prisma.topicProgress.findFirst({
-      where: { teachingClassId, status: "DONE" },
-      orderBy: [{ taughtOn: "desc" }, { createdAt: "desc" }],
-      select: { id: true, topicId: true },
-    });
-    // CHEGARA: birinchi mavzudan orqaga yo'l yo'q.
-    if (!latest) return { ok: false, error: "chegara" };
-
-    // Qator O'CHIRILMAYDI (CLAUDE.md) — `createdAt` "bir vaqtlar shu yerda
-    // edik" izi bo'lib qoladi.
-    await prisma.topicProgress.update({
-      where: { id: latest.id },
-      data: { status: "PLANNED", taughtOn: null },
-    });
-
-    revalidateProgress();
-    // Qaytarilgan mavzu endi JORIY bo'ladi — qayta hisob kerak emas.
-    return { ok: true, currentTopicId: latest.topicId };
-  }
-
-  // OLDINGA — joriy mavzuni bilish kerak, ya'ni to'liq hisob.
   const [year] = await prisma.academicYear.findMany({
     where: { id: klass.academicYearId },
     take: 1,
@@ -182,15 +171,7 @@ export async function shiftClassPosition(input: unknown): Promise<ShiftResult> {
   const sequenced = flattenTopicTree(topicRows);
   if (sequenced.length === 0) return { ok: false, error: "topilmadi" };
 
-  // CHEGARA — YOZISHDAN OLDIN: oxirgi mavzu allaqachon `DONE` bo'lsa oldinga
-  // suriladigan joy yo'q.
-  const lastTopicId = sequenced[sequenced.length - 1]!.id;
-  const lastDone = await prisma.topicProgress.findFirst({
-    where: { teachingClassId, topicId: lastTopicId, status: "DONE" },
-    select: { id: true },
-  });
-  if (lastDone) return { ok: false, error: "chegara" };
-
+  // Kalibrovka (rejaning sanalari) — tarixdan. Ko'rsatkichni surmaydi.
   const anchorRow = await prisma.topicProgress.findFirst({
     where: { teachingClassId, status: "DONE", taughtOn: { not: null } },
     orderBy: [{ taughtOn: "desc" }, { createdAt: "desc" }],
@@ -202,7 +183,6 @@ export async function shiftClassPosition(input: unknown): Promise<ShiftResult> {
     select: { weekday: true },
   });
 
-  const today = schoolDay(new Date());
   const position = positionForClass({
     quarters: year?.quarters ?? [],
     holidays: year?.holidays ?? [],
@@ -212,19 +192,19 @@ export async function shiftClassPosition(input: unknown): Promise<ShiftResult> {
     anchor: anchorRow?.taughtOn
       ? { topicId: anchorRow.topicId, taughtOn: anchorRow.taughtOn }
       : undefined,
-    today,
+    topicOffset: klass.topicOffset,
+    today: schoolDay(new Date()),
   });
 
-  // Reja hali boshlanmagan bo'lsa birinchi mavzu "tugadi" deb belgilanadi.
-  const targetId = position.currentTopicId ?? sequenced[0]!.id;
+  // CHEGARA — YOZISHDAN OLDIN. Manba UI dagi tugma holati bilan BIR XIL.
+  const target = direction === "forward" ? position.nextTopicId : position.previousTopicId;
+  if (target === null) return { ok: false, error: "chegara" };
 
-  await prisma.topicProgress.upsert({
-    where: { teachingClassId_topicId: { teachingClassId, topicId: targetId } },
-    create: { teachingClassId, topicId: targetId, status: "DONE", taughtOn: today },
-    update: { status: "DONE", taughtOn: today },
+  await prisma.teachingClass.update({
+    where: { id: teachingClassId },
+    data: { topicOffset: klass.topicOffset + (direction === "forward" ? 1 : -1) },
   });
 
   revalidateProgress();
-  const index = sequenced.findIndex((topic) => topic.id === targetId);
-  return { ok: true, currentTopicId: sequenced[index + 1]?.id ?? targetId };
+  return { ok: true, currentTopicId: target };
 }

@@ -326,49 +326,124 @@ describe("chegaralar", () => {
   });
 });
 
-describe("forwardMoves — › natija beradimi", () => {
-  it("oxirgi mavzuda false (chegara)", () => {
-    const result = position({ topics: topics(2), today: d("2026-09-03") });
+describe("topicOffset — ko'rsatkich", () => {
+  const TODAY = d("2026-09-17");
 
-    expect(result.currentTopicId).toBe("t2");
+  it("offset 0 — reja bo'yicha", () => {
+    expect(position({ today: TODAY, topicOffset: 0 }).currentTopicId).toBe("t6");
+  });
+
+  it("offset +1 keyingi mavzuni ko'rsatadi", () => {
+    expect(position({ today: TODAY, topicOffset: 1 }).currentTopicId).toBe("t7");
+  });
+
+  it("offset -1 oldingi mavzuni ko'rsatadi", () => {
+    expect(position({ today: TODAY, topicOffset: -1 }).currentTopicId).toBe("t5");
+  });
+
+  it("offset haftaning KUNLARINI ham suradi", () => {
+    const plan = position({ today: TODAY, topicOffset: 0 });
+    const moved = position({ today: TODAY, topicOffset: 2 });
+
+    // Sarlavhadagi mavzu va kunlar ro'yxati BIR XIL ko'rsatkichdan kelishi
+    // kerak — aks holda kartada bir mavzu, kunlar ro'yxatida boshqasi turardi.
+    expect(plan.days.map((day) => day.topicIds)).toEqual([["t5"], ["t6"]]);
+    expect(moved.days.map((day) => day.topicIds)).toEqual([["t7"], ["t8"]]);
+  });
+
+  it("offset weekTopicIds ga ham qo'llanadi", () => {
+    expect(position({ today: TODAY, topicOffset: 2 }).weekTopicIds).toEqual(["t7", "t8"]);
+  });
+
+  it("butun bo'lmagan offset 0 deb olinadi", () => {
+    expect(position({ today: TODAY, topicOffset: 1.5 }).currentTopicId).toBe("t6");
+  });
+});
+
+describe("chegara — haqiqiy mavzular ro'yxatiga qisiladi", () => {
+  it("birinchi mavzudan oldinga chiqmaydi", () => {
+    // Juda katta manfiy offset ham ro'yxat boshidan nari o'tkazmaydi.
+    const result = position({ today: d("2026-09-17"), topicOffset: -999 });
+
+    expect(result.currentTopicId).toBe("t1");
+    expect(result.previousTopicId).toBeNull();
+    expect(result.nextTopicId).toBe("t2");
+  });
+
+  it("oxirgi mavzudan keyinga o'tmaydi", () => {
+    const result = position({ today: d("2026-09-17"), topicOffset: 999 });
+
+    expect(result.currentTopicId).toBe("t40");
     expect(result.nextTopicId).toBeNull();
-    expect(result.forwardMoves).toBe(false);
+    expect(result.previousTopicId).toBe("t39");
   });
 
-  it("reja boshlanmagan — true (birinchi mavzu belgilanadi)", () => {
-    const result = position({ today: d("2026-08-25") });
+  it("chegarada kunlar ham qisiladi (takrorsiz)", () => {
+    const result = position({ today: d("2026-09-17"), topicOffset: 999 });
 
-    expect(result.currentTopicId).toBeNull();
-    expect(result.forwardMoves).toBe(true);
+    // Ikki kun ham oxirgi mavzuga qisiladi, lekin ro'yxat takrorlanmaydi.
+    for (const day of result.days) {
+      expect(day.topicIds).toEqual(["t40"]);
+    }
+  });
+});
+
+describe("strelkalar ko'rinadigan mavzuni o'zgartiradi", () => {
+  const TODAY = d("2026-09-17");
+
+  it("› bir qadam oldinga suradi", () => {
+    const before = position({ today: TODAY, topicOffset: 0 });
+    // `shiftClassPosition` aynan shuni qiladi: offset + 1.
+    const after = position({ today: TODAY, topicOffset: 1 });
+
+    expect(after.currentTopicId).not.toBe(before.currentTopicId);
+    expect(after.currentTopicId).toBe(before.nextTopicId);
   });
 
-  it("reja allaqachon joriy mavzuda — false", () => {
-    // Anchor SANA bo'lgani uchun joriy mavzuni bugungi kun bilan belgilash
-    // rejani siljitmaydi: `delta` nolga teng.
-    const result = position({ today: d("2026-09-17") });
+  it("‹ bir qadam orqaga suradi", () => {
+    const before = position({ today: TODAY, topicOffset: 0 });
+    const after = position({ today: TODAY, topicOffset: -1 });
 
-    expect(result.currentTopicId).not.toBeNull();
-    expect(result.nextTopicId).not.toBeNull();
-    expect(result.forwardMoves).toBe(false);
+    expect(after.currentTopicId).not.toBe(before.currentTopicId);
+    expect(after.currentTopicId).toBe(before.previousTopicId);
   });
 
-  it("orqada turgan sinfda ham false — anchor joriy mavzuni bugunga qadaydi", () => {
-    const result = position({
-      anchor: { topicId: "t1", taughtOn: d("2026-09-15") },
-      today: d("2026-09-17"),
-    });
+  it("› keyin ‹ — boshlang'ich holatga qaytadi", () => {
+    const start = position({ today: TODAY, topicOffset: 3 });
+    const roundTrip = position({ today: TODAY, topicOffset: 3 + 1 - 1 });
 
-    expect(result.forwardMoves).toBe(false);
+    expect(roundTrip).toEqual(start);
+  });
+});
+
+describe("7-A ni surish 7-B ga ta'sir qilmaydi", () => {
+  const TODAY = d("2026-09-17");
+
+  it("turli offset — turli mavzu, bir-biriga bog'liq emas", () => {
+    const a = position({ today: TODAY, topicOffset: 2 });
+    const b = position({ today: TODAY, topicOffset: 0 });
+
+    expect(a.currentTopicId).toBe("t8");
+    expect(b.currentTopicId).toBe("t6");
   });
 
-  it("mavzu yo'q — false", () => {
-    expect(position({ topics: [] }).forwardMoves).toBe(false);
+  it("7-A ni surgandan keyin 7-B natijasi O'ZGARMAYDI", () => {
+    const bBefore = position({ today: TODAY, topicOffset: 0, weekdays: [1, 3] });
+
+    // 7-A surildi (offset 0 -> 1), 7-B esa tegilmadi.
+    position({ today: TODAY, topicOffset: 1 });
+    const bAfter = position({ today: TODAY, topicOffset: 0, weekdays: [1, 3] });
+
+    expect(bAfter).toEqual(bBefore);
   });
 
-  it("hisob natijani O'ZGARTIRMAYDI (sof funksiya)", () => {
-    const args = input();
+  it("bir sinfning offseti ikkinchisining kunlariga tegmaydi", () => {
+    const a = position({ today: TODAY, topicOffset: 5, weekdays: [2, 4] });
+    const b = position({ today: TODAY, topicOffset: 0, weekdays: [2, 4] });
 
-    expect(positionForClass(args)).toEqual(positionForClass(args));
+    expect(a.days.map((day) => day.topicIds)).not.toEqual(b.days.map((day) => day.topicIds));
+    // 7-B hamon reja bo'yicha.
+    expect(b.currentTopicId).toBe("t6");
   });
 });
 

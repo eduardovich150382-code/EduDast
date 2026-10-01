@@ -31,6 +31,7 @@ type ClassRow = {
   grade: number;
   label: string;
   lessonsPerWeek: number;
+  topicOffset: number;
   subjectId: string;
   subjectSlug: string;
   subjectName: string;
@@ -94,6 +95,7 @@ export default async function IshPage() {
       grade: true,
       label: true,
       lessonsPerWeek: true,
+      topicOffset: true,
       subjectId: true,
       subject: { select: { slug: true, nameUz: true, nameUzCyrl: true, nameRu: true } },
       slots: { where: { deletedAt: null }, select: { weekday: true } },
@@ -114,6 +116,7 @@ export default async function IshPage() {
       grade: row.grade,
       label: row.label,
       lessonsPerWeek: row.lessonsPerWeek,
+      topicOffset: row.topicOffset,
       subjectId: row.subjectId,
       subjectSlug: row.subject.slug,
       subjectName: subjectName(row.subject, locale),
@@ -168,6 +171,7 @@ export default async function IshPage() {
         lessonsPerWeek: row.lessonsPerWeek,
         weekdays: row.weekdays,
         anchor: row.anchor,
+        topicOffset: row.topicOffset,
         today,
       }),
     };
@@ -259,23 +263,15 @@ export default async function IshPage() {
               <p className="text-xs text-ink-2">{t("topicNumber", { number: order })}</p>
             )}
           </div>
+          {/* Chegara server bilan BIR XIL manbadan — `shiftClassPosition` ham
+              aynan shu ikki maydonni o'qiydi, ya'ni "tugma faol, lekin server
+              rad etadi" holati bo'lmaydi. */}
           <TopicShift
             teachingClassId={entry.row.id}
-            // Server'ning orqaga chegarasi — "`DONE` qator bormi", reja
-            // bo'yicha oldingi mavzu bormi EMAS. `anchor` aynan o'sha qatordan
-            // keladi, ya'ni shart bir xil bo'ladi va tugma bosilganda kafolatli
-            // "chegara" xatosi chiqmaydi.
-            canBack={entry.row.anchor !== undefined}
-            canForward={entry.position.forwardMoves}
+            canBack={entry.position.previousTopicId !== null}
+            canForward={entry.position.nextTopicId !== null}
             backLabel={t("shiftBackward")}
             forwardLabel={t("shiftForward")}
-            // Oxirgi mavzu — oddiy chegara, izoh kerak emas. Surish natija
-            // bermasa esa sabab aytiladi.
-            idleNote={
-              entry.position.nextTopicId !== null && !entry.position.forwardMoves
-                ? t("alreadyOnTopic")
-                : undefined
-            }
             errors={{ chegara: t("errors.chegara") }}
             genericError={t("errors.generic")}
           />
@@ -339,11 +335,6 @@ export default async function IshPage() {
             ? t("summaryNone")
             : t("summary", { lessons: lessonCount, ready: readyCount })}
         </p>
-        {/* › nega o'chirilgani — sahifada BIR MARTA. Har kartada takrorlansa
-            hafta ro'yxatini o'qib bo'lmay qolardi. */}
-        {positions.some(
-          ({ position }) => position.nextTopicId !== null && !position.forwardMoves,
-        ) && <p className="text-xs text-ink-2">{t("alreadyOnTopic")}</p>}
       </div>
 
       {quarters.length === 0 && <Empty text={t("noCalendar")} />}
