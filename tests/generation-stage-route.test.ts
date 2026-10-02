@@ -73,8 +73,11 @@ function params(overrides: Record<string, unknown> = {}) {
 function wireDocument(overrides: Record<string, unknown> = {}) {
   mocks.documentFindFirst.mockResolvedValue({
     status: "QUEUED",
+    // `type` — 10-sessiyadan boshlab konveyer shu bo'yicha tarmoqlanadi.
+    type: "LESSON_PLAN",
     topicId: "t-1",
     inputParams: params(),
+    creditsHeldFor: 5,
     topic: TOPIC,
     ...overrides,
   });
@@ -208,12 +211,20 @@ describe("1-bosqich", () => {
       purpose: string;
     };
 
-    expect(request.system).toHaveLength(3);
-    expect(request.system[0]?.cacheable).toBe(true);
+    // Tartib: umumiy qo'llanma -> kontekst -> turga xos qo'llanma ->
+    // o'qituvchi parametrlari (10-sessiya).
+    expect(request.system).toHaveLength(4);
+    // `SHARED_GUIDE` ning O'ZIGA chegara qo'yilmaydi: u yolg'iz o'zi
+    // minimal token chegarasidan qisqa chiqishi mumkin, kontekstdan
+    // keyingi chegara esa uni baribir qamrab oladi.
+    expect(request.system[0]?.cacheable).toBeUndefined();
+    expect(request.system[0]?.text).toContain("o'quv materiali tayyorlaydigan");
     expect(request.system[1]?.cacheable).toBe(true);
+    expect(request.system[2]?.cacheable).toBe(true);
+    expect(request.system[2]?.text).toContain("Pedagogik talablar");
     // O'qituvchi parametrlari kesh chegarasidan KEYIN.
-    expect(request.system[2]?.cacheable).toBeUndefined();
-    expect(request.system[2]?.text).toContain("45 daqiqa");
+    expect(request.system[3]?.cacheable).toBeUndefined();
+    expect(request.system[3]?.text).toContain("45 daqiqa");
     // Bosqichga xos ko'rsatma `messages` da — `system` prefiksini buzmaydi.
     expect(request.messages[0]?.content).toContain("SKELETINI");
     expect(request.purpose).toBe("lesson-plan:stage-1");
@@ -243,6 +254,7 @@ describe("1-bosqich", () => {
     };
     mocks.documentFindFirst.mockResolvedValue({
       status: "QUEUED",
+      type: "LESSON_PLAN",
       topicId: "t-1",
       inputParams: params({ durationMinutes: 90 }),
       topic: TOPIC,
@@ -273,6 +285,7 @@ describe("mazmun bosqichi", () => {
   beforeEach(() => {
     mocks.documentFindFirst.mockResolvedValue({
       status: "RUNNING",
+      type: "LESSON_PLAN",
       topicId: "t-1",
       inputParams: params({ progress: { stage: 1, total: 3, attempts: 0 }, skeleton: SKELETON }),
       topic: TOPIC,
@@ -411,6 +424,7 @@ describe("yakunlash", () => {
     mocks.documentFindFirst
       .mockResolvedValueOnce({
         status: "RUNNING",
+        type: "LESSON_PLAN",
         topicId: "t-1",
         inputParams: params({ progress: { stage: 2, total: 3, attempts: 0 }, skeleton: SKELETON }),
         topic: TOPIC,
@@ -465,6 +479,7 @@ describe("yakunlash", () => {
     mocks.documentFindFirst
       .mockResolvedValueOnce({
         status: "RUNNING",
+        type: "LESSON_PLAN",
         topicId: "t-1",
         inputParams: params({ progress: { stage: 3, total: 3, attempts: 0 }, skeleton: SKELETON }),
         topic: TOPIC,
@@ -478,5 +493,176 @@ describe("yakunlash", () => {
     expect(mocks.claimStage).not.toHaveBeenCalled();
     expect(mocks.runLlm).not.toHaveBeenCalled();
     expect(mocks.charge).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* TEST turi (10-sessiya)                                             */
+/* ------------------------------------------------------------------ */
+
+describe("TEST turi", () => {
+  const BLUEPRINT = {
+    title: "Tezlanish — nazorat testi",
+    objectives: ["Tezlanishni ta'riflaydi", "Tezlanishni hisoblaydi"],
+    items: [
+      { objective: "Tezlanishni ta'riflaydi", count: 3, bloom: "remember" },
+      { objective: "Tezlanishni hisoblaydi", count: 3, bloom: "apply" },
+    ],
+  };
+
+  function testParams(overrides: Record<string, unknown> = {}) {
+    return {
+      questionCount: 6,
+      kinds: ["mcq", "short"],
+      difficulty: "mixed",
+      contextChunkIds: ["c-1"],
+      progress: { stage: 0, total: 3, attempts: 0 },
+      ...overrides,
+    };
+  }
+
+  function wireTest(overrides: Record<string, unknown> = {}) {
+    mocks.documentFindFirst.mockResolvedValue({
+      status: "QUEUED",
+      type: "TEST",
+      topicId: "t-1",
+      inputParams: testParams(),
+      creditsHeldFor: 5,
+      topic: TOPIC,
+      ...overrides,
+    });
+    wireClaim();
+  }
+
+  it("purpose dars ishlanmadan AJRALADI — marja tahlili aralashmaydi", async () => {
+    wireTest();
+    mocks.runLlm.mockResolvedValue(llmResult(BLUEPRINT));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    const request = mocks.runLlm.mock.calls[0]?.[0] as { purpose: string };
+    expect(request.purpose).toBe("test:stage-1");
+  });
+
+  it("kesh prefiksi dars ishlanma bilan BIR XIL — ikkinchi hujjat arzon", async () => {
+    // Qabul mezoni: bir mavzudan dars ishlanma, keyin test yaratilsa
+    // prefiks keshdan o'qiladi. Buning sharti — birinchi IKKI qism aynan
+    // bir xil bo'lishi.
+    wireDocument();
+    mocks.runLlm.mockResolvedValue(llmResult(SKELETON));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+    const lesson = mocks.runLlm.mock.calls[0]?.[0] as {
+      system: { text: string; cacheable?: boolean }[];
+    };
+
+    vi.clearAllMocks();
+    mocks.buildTopicContext.mockResolvedValue("## Kurikulum konteksti");
+    mocks.commitStage.mockResolvedValue(true);
+    wireTest();
+    mocks.runLlm.mockResolvedValue(llmResult(BLUEPRINT));
+    await runStage(ARGS);
+    const test = mocks.runLlm.mock.calls[0]?.[0] as {
+      system: { text: string; cacheable?: boolean }[];
+    };
+
+    expect(test.system[0]?.text).toBe(lesson.system[0]?.text);
+    expect(test.system[1]?.text).toBe(lesson.system[1]?.text);
+    // Turga xos qo'llanma esa BOSHQA — va u kesh chegarasidan keyin.
+    expect(test.system[2]?.text).not.toBe(lesson.system[2]?.text);
+    expect(test.system[2]?.text).toContain("Test tuzish talablari");
+    expect(test.system[3]?.text).toContain("6 ta");
+  });
+
+  it("blueprint ni inputParams ga yozadi", async () => {
+    wireTest();
+    mocks.runLlm.mockResolvedValue(llmResult(BLUEPRINT));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    expect(await runStage(ARGS)).toEqual({ kind: "advanced", stage: 1, total: 3 });
+
+    const commit = mocks.commitStage.mock.calls[0]?.[1] as {
+      paramsPatch?: { blueprint?: unknown };
+      progressPatch?: unknown;
+    };
+    expect(commit.paramsPatch?.blueprint).toEqual(BLUEPRINT);
+    // `total` QAYTARILMAYDI: savol soni boshidan ma'lum, reja hujjat
+    // yaratilganda to'liq hisoblangan.
+    expect(commit.progressPatch).toBeUndefined();
+  });
+
+  it("buzuq blueprint DARHOL release — savollar bosqichiga pul ketmaydi", async () => {
+    wireTest();
+    // Yig'indi 6 emas, 4 — ya'ni so'ralgan testdan boshqa narsa.
+    mocks.runLlm.mockResolvedValue(
+      llmResult({
+        ...BLUEPRINT,
+        items: [{ objective: "Tezlanishni ta'riflaydi", count: 4, bloom: "remember" }],
+      }),
+    );
+    const { runStage } = await import("@/lib/generation/run-stage");
+    const outcome = await runStage(ARGS);
+
+    expect(outcome.kind).toBe("failed");
+    // AYNAN BITTA chaqiruv: 2 va 3-bosqich umuman boshlanmaydi.
+    expect(mocks.runLlm).toHaveBeenCalledTimes(1);
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    // Kredit QAYTADI va `CreditTx` da GENERATION yozuvi paydo bo'lmaydi
+    // (`charge` — `CreditTx` yozadigan yagona yo'l).
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("blueprint"));
+    expect(mocks.charge).not.toHaveBeenCalled();
+  });
+
+  it("savol soni mos kelmasa release — yarim test saqlanmaydi", async () => {
+    wireTest({
+      status: "RUNNING",
+      inputParams: testParams({
+        progress: { stage: 1, total: 3, attempts: 0 },
+        blueprint: BLUEPRINT,
+      }),
+    });
+    // 6 ta kerak, model 1 ta qaytardi.
+    mocks.runLlm.mockResolvedValue(
+      llmResult({
+        questions: [
+          {
+            kind: "mcq",
+            text: "Tezlanishning o'lchov birligi qaysi?",
+            options: ["m/s^2", "m/s", "N/kg", "kg*m"],
+            pairs: [],
+            answer: "m/s^2",
+            explanation: "Tezlanish tezlikning vaqtga nisbati.",
+            points: 1,
+            bloom: "remember",
+          },
+        ],
+      }),
+    );
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("failed");
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("savollar"));
+    expect(mocks.charge).not.toHaveBeenCalled();
+  });
+
+  it("qo'llab-quvvatlanmagan tur JIM O'TMAYDI", async () => {
+    // `GUIDE` ni hozircha hech kim yaratmaydi, lekin yaratilib qolsa
+    // uni dars ishlanma sifatida ishlash o'qituvchiga mutlaqo boshqa
+    // hujjatni berardi.
+    mocks.documentFindFirst.mockResolvedValue({
+      status: "QUEUED",
+      type: "GUIDE",
+      topicId: "t-1",
+      inputParams: testParams(),
+      creditsHeldFor: 5,
+      topic: TOPIC,
+    });
+    const { runStage } = await import("@/lib/generation/run-stage");
+    const outcome = await runStage(ARGS);
+
+    expect(outcome.kind).toBe("failed");
+    expect(mocks.runLlm).not.toHaveBeenCalled();
+    expect(mocks.claimStage).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("GUIDE"));
   });
 });

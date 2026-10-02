@@ -37,7 +37,7 @@ function load(name: string) {
 function score(name: string, terms: string[] = TERMS, hasContext = true) {
   return scoreDocument({
     content: load(name),
-    durationMinutes: DURATION,
+    spec: { type: "LESSON_PLAN", durationMinutes: DURATION },
     curriculumTerms: terms,
     hasContext,
   });
@@ -76,7 +76,7 @@ describe("veto darvozasi", () => {
     // Bo'sh hujjat ham, daqiqasi buzilgani ham FAILED; lekin bo'shi PASTROQ.
     const empty = scoreDocument({
       content: { v: 1, blocks: [] },
-      durationMinutes: DURATION,
+      spec: { type: "LESSON_PLAN", durationMinutes: DURATION },
       curriculumTerms: TERMS,
       hasContext: true,
     });
@@ -190,7 +190,7 @@ describe("sxema kafolatlagan tekshiruvlar ball TO'QIMAYDI", () => {
     // hujjat chala qolgan holat shu yerda ushlanadi.
     const report = scoreDocument({
       content: { v: 1, blocks: [] },
-      durationMinutes: DURATION,
+      spec: { type: "LESSON_PLAN", durationMinutes: DURATION },
       curriculumTerms: TERMS,
       hasContext: true,
     });
@@ -300,6 +300,181 @@ describe("hisobot shakli", () => {
       expect(note.code).toMatch(/^[a-z_]+(:[A-Za-z_]+)?$/);
       expect(["error", "warn"]).toContain(note.severity);
       expect(RULES[note.rule]).toBeDefined();
+    }
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* TEST turi (10-sessiya)                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Bloom taqsimoti — `test-yaxshi.json` ning blueprint'i.
+ *
+ * Haqiqiy oqimda bu `inputParams.blueprint` dan `bloomTargets()` orqali
+ * keladi (`lib/generation/run-stage.ts`).
+ */
+const GOOD_BLOOM = { remember: 2, understand: 2, apply: 2 };
+
+function testScore(
+  name: string,
+  spec: { questionCount: number; bloomTargets: Record<string, number> },
+) {
+  return scoreDocument({
+    content: load(name),
+    spec: { type: "TEST", ...spec },
+    curriculumTerms: TERMS,
+    hasContext: true,
+  });
+}
+
+function testCodes(
+  name: string,
+  spec: { questionCount: number; bloomTargets: Record<string, number> },
+): string[] {
+  return testScore(name, spec).notes.map((note) => note.code);
+}
+
+describe("test — yaxshi namuna", () => {
+  it("toza test ogohlantirish chegarasidan yuqori ball oladi", () => {
+    const report = testScore("test-yaxshi.json", {
+      questionCount: 6,
+      bloomTargets: GOOD_BLOOM,
+    });
+    expect(report.notes).toEqual([]);
+    expect(report.cappedByError).toBe(false);
+    expect(report.score).toBeGreaterThanOrEqual(SCORE_WARN);
+  });
+
+  it("DARS ISHLANMA tekshiruvlari testga QO'LLANMAYDI", () => {
+    // Testda `stages` yoki `homework` bloki yo'q — dars ishlanmaning
+    // majburiy bloklari testda talab qilinsa har test FAILED bo'lardi.
+    const codes = testCodes("test-yaxshi.json", {
+      questionCount: 6,
+      bloomTargets: GOOD_BLOOM,
+    });
+    expect(codes).not.toContain("missing_block:stages");
+    expect(codes).not.toContain("missing_block:homework");
+    expect(codes).not.toContain("minutes:no_stages");
+  });
+});
+
+describe("test — veto beradigan nuqsonlar", () => {
+  it("javoblar kaliti yo'q — VETO va kredit qaytadi", () => {
+    const report = testScore("test-kalit-yoq.json", {
+      questionCount: 2,
+      bloomTargets: { remember: 1, understand: 1 },
+    });
+    // Blokning o'zi yo'q VA savollar kalitsiz — ikki xil kod, bitta sabab.
+    expect(report.notes.map((n) => n.code)).toContain("missing_block:answerKey");
+    expect(report.notes.map((n) => n.code)).toContain("answer_key:missing");
+    expect(report.cappedByError).toBe(true);
+    expect(report.score).toBeLessThan(SCORE_FAIL);
+  });
+
+  it("kalit ziddiyatli — bir savolga ikki xil javob VETO", () => {
+    // "mcq da ikkita to'g'ri javob" ni blok sxemasi imkonsiz qiladi
+    // (`answer` — bitta matn), shuning uchun ziddiyat kalitda ko'rinadi.
+    const report = testScore("test-kalit-ziddiyatli.json", {
+      questionCount: 2,
+      bloomTargets: { remember: 1, understand: 1 },
+    });
+    expect(report.notes.map((n) => n.code)).toContain("answer_key:conflict");
+    expect(report.cappedByError).toBe(true);
+    expect(report.score).toBeLessThan(SCORE_FAIL);
+  });
+
+  it("savol soni so'ralganiga teng emas — VETO, chunki kredit shunga yechilgan", () => {
+    const report = testScore("test-yaxshi.json", {
+      questionCount: 20,
+      bloomTargets: GOOD_BLOOM,
+    });
+    expect(report.notes.map((n) => n.code)).toContain("question_count:mismatch");
+    expect(report.cappedByError).toBe(true);
+    expect(report.score).toBeLessThan(SCORE_FAIL);
+  });
+});
+
+describe("test — ogohlantiradigan, lekin yiqitmaydigan nuqsonlar", () => {
+  it("hamma tasdiq to'g'ri, variant takrorlangan, javob cho'zilgan", () => {
+    const report = testScore("test-truefalse-bir-xil.json", {
+      questionCount: 5,
+      bloomTargets: { remember: 3, understand: 2 },
+    });
+    const codes = report.notes.map((n) => n.code);
+    expect(codes).toContain("truefalse:skew");
+    expect(codes).toContain("mcq:duplicate_option");
+    expect(codes).toContain("mcq:tell");
+    // HECH BIRI pul qaytarmaydi: o'qituvchi bu testni tahrirlab ishlatadi.
+    expect(report.notes.every((n) => n.severity === "warn")).toBe(true);
+    expect(report.cappedByError).toBe(false);
+    expect(report.score).toBeGreaterThanOrEqual(SCORE_FAIL);
+  });
+
+  it("Bloom taqsimoti chetlashsa ogohlantirish, veto EMAS", () => {
+    const report = testScore("test-yaxshi.json", {
+      questionCount: 6,
+      // Blueprint 6 ta "create" so'ragan, hujjatda bittasi ham yo'q.
+      bloomTargets: { create: 6 },
+    });
+    const drift = report.notes.find((n) => n.code === "bloom:drift");
+    expect(drift?.severity).toBe("warn");
+    expect(report.cappedByError).toBe(false);
+  });
+
+  it("±1 savollik chetlanish kechiriladi", () => {
+    const report = testScore("test-yaxshi.json", {
+      questionCount: 6,
+      bloomTargets: { remember: 3, understand: 2, apply: 1 },
+    });
+    expect(report.notes.map((n) => n.code)).not.toContain("bloom:drift");
+  });
+});
+
+describe("test — ikki answerKey bloki (2a/2b choki)", () => {
+  /** `buildTestPlan(24)` reja 2a/2b ga bo'linadigan eng kichik holat. */
+  const SPEC = { questionCount: 24, bloomTargets: { remember: 8, understand: 8, apply: 8 } };
+
+  it("ikki kalit bloki BIRLASHTIRIB qaraladi — kalit yetishmagan deb hisoblanmaydi", () => {
+    const codes = testCodes("test-ikki-kalit.json", SPEC);
+    expect(codes).not.toContain("answer_key:missing");
+    expect(codes).not.toContain("answer_key:conflict");
+    expect(codes).not.toContain("missing_block:answerKey");
+  });
+
+  it("24 savolli test o'tadi", () => {
+    const report = testScore("test-ikki-kalit.json", SPEC);
+    expect(report.notes).toEqual([]);
+    expect(report.score).toBeGreaterThanOrEqual(SCORE_WARN);
+  });
+
+  it("moslashtirish juftliklari tekshiriladi va matnga tushadi", () => {
+    // Juftliklar `renderDocument` ga chiqmasa qamrov va kirill tekshiruvi
+    // ularni ko'rmay qolardi.
+    const codes = testCodes("test-ikki-kalit.json", SPEC);
+    expect(codes).not.toContain("match:invalid");
+  });
+});
+
+describe("test — izohlarning shakli", () => {
+  it("yangi qoidalar ham RULES jadvalida va kod naqshiga mos", () => {
+    const reports = [
+      testScore("test-truefalse-bir-xil.json", {
+        questionCount: 5,
+        bloomTargets: { remember: 3, understand: 2 },
+      }),
+      testScore("test-kalit-ziddiyatli.json", {
+        questionCount: 2,
+        bloomTargets: { remember: 1, understand: 1 },
+      }),
+    ];
+    for (const report of reports) {
+      expect(report.notes.length).toBeGreaterThan(0);
+      for (const note of report.notes) {
+        expect(note.code).toMatch(/^[a-z_]+(:[A-Za-z_]+)?$/);
+        expect(RULES[note.rule]).toBeDefined();
+        expect(note.severity).toBe(RULES[note.rule].severity);
+      }
     }
   });
 });

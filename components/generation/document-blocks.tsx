@@ -158,6 +158,17 @@ export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
               <Section key={block.id}>
                 <p className="text-sm font-medium text-ink">{block.text}</p>
                 {block.options.length > 0 && <Bullets items={block.options} />}
+                {block.pairs !== undefined && (
+                  <ul className="flex flex-col gap-1">
+                    {block.pairs.map((pair, i) => (
+                      <li key={i} className="flex flex-wrap gap-2 text-sm text-ink">
+                        <span>{pair.left}</span>
+                        <span className="text-ink-2">—</span>
+                        <span>{pair.right}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <p className="text-sm text-ink-2">
                   {t("answer")}: {block.answer}
                 </p>

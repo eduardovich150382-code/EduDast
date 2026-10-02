@@ -118,4 +118,28 @@ describe("renderBlock", () => {
     // `toLocaleString` bo'lsa "1 000" yoki "1,000" chiqardi.
     expect(renderBlock(block)).toContain("(1000 ball)");
   });
+
+  it("moslashtirish juftliklari matnga chiqadi", () => {
+    // SHART: bu matn `lib/generation/quality.ts` ga kiradi. Juftliklar
+    // chiqmasa ulardagi kirill yoki kurikulum atamalari tekshiruvdan
+    // jimgina o'tib ketardi.
+    const block: Block = {
+      id: "q",
+      type: "question",
+      kind: "match",
+      text: "Kattalik va birlikni moslashtiring.",
+      options: [],
+      pairs: [
+        { left: "Tezlanish", right: "m/s^2" },
+        { left: "Tezlik", right: "m/s" },
+      ],
+      answer: "Tezlanish - m/s^2",
+      points: 2,
+      bloom: "understand",
+    };
+    const out = renderBlock(block);
+    expect(out).toContain("Tezlanish");
+    expect(out).toContain("m/s^2");
+    expect(out).toContain("Tezlik");
+  });
 });

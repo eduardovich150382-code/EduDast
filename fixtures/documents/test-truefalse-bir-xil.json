@@ -1,0 +1,127 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanish — nazorat testi"
+    },
+    {
+      "id": "s1-objectives-0",
+      "type": "objectives",
+      "items": [
+        "Tezlanishning ta'rifini va o'lchov birligini aytib beradi",
+        "Tekis va notekis harakatni bir-biridan farqlaydi"
+      ]
+    },
+    {
+      "id": "s2-question-0",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanishning xalqaro birliklar tizimidagi o'lchov birligi qaysi?",
+      "options": [
+        "tezlikning vaqt birligi ichidagi o'zgarishini ko'rsatadigan m/s^2 birligi",
+        "m/s",
+        "N/kg",
+        "m/s"
+      ],
+      "answer": "tezlikning vaqt birligi ichidagi o'zgarishini ko'rsatadigan m/s^2 birligi",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2-question-1",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tekis to'g'ri chiziqli harakatda jismning tezlanishi nolga teng bo'ladi.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2-question-2",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanish vektor kattalik bo'lib, uning yo'nalishi ham hisobga olinadi.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2-question-3",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Erkin tushish tezlanishi Yer yuzida taxminan 9,8 m/s^2 ga teng.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2-question-4",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanish formulasida tezlik o'zgarishi vaqtga bo'linadi.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2-answerKey-0",
+      "type": "answerKey",
+      "items": [
+        {
+          "questionId": "s2-question-0",
+          "answer": "tezlikning vaqt birligi ichidagi o'zgarishini ko'rsatadigan m/s^2 birligi",
+          "explanation": "Tezlanish tezlikning vaqtga nisbati, ya'ni (m/s)/s = m/s^2."
+        },
+        {
+          "questionId": "s2-question-1",
+          "answer": "to'g'ri",
+          "explanation": "Tezlik o'zgarmasa tezlanish ham nolga teng bo'ladi."
+        },
+        {
+          "questionId": "s2-question-2",
+          "answer": "to'g'ri",
+          "explanation": "Tezlanishning yo'nalishi tezlik o'zgarishining yo'nalishi bilan bir xil."
+        },
+        {
+          "questionId": "s2-question-3",
+          "answer": "to'g'ri",
+          "explanation": "Erkin tushish tezlanishi g harfi bilan belgilanadi."
+        },
+        {
+          "questionId": "s2-question-4",
+          "answer": "to'g'ri",
+          "explanation": "Formula a = (v - v0) / t ko'rinishida yoziladi."
+        }
+      ]
+    },
+    {
+      "id": "s3-rubric-0",
+      "type": "rubric",
+      "criteria": [
+        {
+          "name": "Ta'rifning to'g'riligi",
+          "maxPoints": 2,
+          "descriptors": [
+            "Ta'rif to'liq va o'lchov birligi bilan berilgan",
+            "Ta'rif berilgan, lekin birlik ko'rsatilmagan"
+          ]
+        },
+        {
+          "name": "Tasdiqlarni baholash",
+          "maxPoints": 2,
+          "descriptors": [
+            "Barcha tasdiqlar to'g'ri baholangan",
+            "Tasdiqlarning yarmidan ko'pi to'g'ri baholangan"
+          ]
+        }
+      ]
+    }
+  ]
+}

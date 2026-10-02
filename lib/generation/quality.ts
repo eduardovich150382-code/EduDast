@@ -1,5 +1,6 @@
-import type { DocumentContent } from "@/lib/documents/blocks";
+import type { BlockType, DocumentContent } from "@/lib/documents/blocks";
 import { renderDocument } from "@/lib/documents/render";
+import type { BloomTargets } from "./plans-test";
 
 /**
  * AI'SIZ sifat bahosi.
@@ -123,7 +124,15 @@ type RuleId =
   | "coverage_missing"
   | "lang_cyrillic"
   | "md_artifact"
-  | "length_short";
+  | "length_short"
+  // 10-sessiya — `TEST` turiga xos qoidalar.
+  | "question_count"
+  | "answer_key_conflict"
+  | "match_invalid"
+  | "mcq_tell"
+  | "mcq_duplicate_option"
+  | "truefalse_skew"
+  | "bloom_drift";
 
 export type Severity = "error" | "warn";
 
@@ -153,6 +162,32 @@ export const RULES: Record<RuleId, { severity: Severity; why: string }> = {
   md_artifact: { severity: "warn", why: "Markdown belgisi tozalanmagan." },
   /** Qisqa bandlarni o'qituvchi o'zi to'ldirib ishlatadi. */
   length_short: { severity: "warn", why: "Bandlar juda qisqa." },
+
+  /**
+   * Kredit AYNAN savol soniga qarab yechiladi
+   * (`lib/credits/cost-table.ts`). 20 savol uchun to'lab 12 ta olish — pul
+   * masalasi, shuning uchun `error`.
+   */
+  question_count: { severity: "error", why: "Savol soni so'ralganiga teng emas." },
+  /** Bir savolga ikki xil javob — o'qituvchi qaysi biri to'g'ri ekanini bilmaydi. */
+  answer_key_conflict: { severity: "error", why: "Javoblar kaliti ziddiyatli." },
+  /** Juftliklari buzilgan moslashtirish savolini berib bo'lmaydi. */
+  match_invalid: { severity: "error", why: "Moslashtirish juftliklari qoidaga mos emas." },
+  /**
+   * `warn`, `error` EMAS: o'qituvchi uzun variantni qisqartirib ishlatadi.
+   * Lekin ball pasayadi — "uzun variant = to'g'ri javob" testning o'lchash
+   * qobiliyatini yo'q qiladi.
+   */
+  mcq_tell: { severity: "warn", why: "To'g'ri javob variantlardan sezilarli uzun." },
+  /** Takrorlangan variant o'lik tanlov, lekin savol baribir ishlaydi. */
+  mcq_duplicate_option: { severity: "warn", why: "Variantlar ichida takror bor." },
+  /** Taxmin bilan o'tish osonlashadi, lekin test yaroqli qoladi. */
+  truefalse_skew: { severity: "warn", why: "To'g'ri/noto'g'ri nisbati muvozanatsiz." },
+  /**
+   * `warn`: taqsimot TAXMINIY o'lcham. Model savolni blueprint'dagidan
+   * bir daraja yuqori yozgani uchun pul qaytarish haddan ziyod.
+   */
+  bloom_drift: { severity: "warn", why: "Bloom taqsimoti blueprint'dan chetlashgan." },
 };
 
 export type QualityNote = {
@@ -256,6 +291,18 @@ function note(notes: QualityNote[], rule: RuleId, code: string, message: string)
 /* ------------------------------------------------------------------ */
 
 /**
+ * Hujjat turiga xos baho parametrlari.
+ *
+ * `durationMinutes` ni to'g'ridan-to'g'ri olish o'rniga diskriminatsiyalangan
+ * union: test uchun dars davomiyligi MA'NOSIZ, savol soni esa majburiy.
+ * Ikkisini bitta ixtiyoriy maydonga siqish "test uchun daqiqa tekshirilmay
+ * qolgan" turidagi jim xatoning yo'li edi.
+ */
+export type ScoreSpec =
+  | { type: "LESSON_PLAN"; durationMinutes: number }
+  | { type: "TEST"; questionCount: number; bloomTargets: BloomTargets };
+
+/**
  * Sxema KAFOLATLAGAN bloklar.
  *
  * Ular BALLGA KIRMAYDI, faqat veto izohi beradi. Sabab: bu bloklarni
@@ -265,20 +312,53 @@ function note(notes: QualityNote[], rule: RuleId, code: string, message: string)
  * bosqichlardan biri commit bo'lmay hujjat chala qolgan holat veto bilan
  * ushlanadi.
  */
-const REQUIRED_BLOCKS = ["heading", "objectives", "materials", "stages", "homework"] as const;
+const LESSON_BLOCKS = [
+  "heading",
+  "objectives",
+  "materials",
+  "stages",
+  "homework",
+] as const satisfies readonly BlockType[];
 
+/** Testning majburiy bloklari — yuqoridagi izoh bunga ham tegishli. */
+const TEST_BLOCKS = [
+  "heading",
+  "objectives",
+  "question",
+  "answerKey",
+  "rubric",
+] as const satisfies readonly BlockType[];
+
+function requireBlocks(
+  present: ReadonlySet<BlockType>,
+  required: readonly BlockType[],
+  notes: QualityNote[],
+): void {
+  for (const type of required) {
+    if (!present.has(type)) {
+      note(notes, "missing_block", `missing_block:${type}`, `Majburiy blok yo'q: ${type}`);
+    }
+  }
+}
+
+/** Turga qarab tarmoqlanadi — tana `measure*Structure` larda. */
 function measureStructure(
+  content: DocumentContent,
+  spec: ScoreSpec,
+  notes: QualityNote[],
+): Measure {
+  return spec.type === "TEST"
+    ? measureTestStructure(content, spec, notes)
+    : measureLessonStructure(content, spec.durationMinutes, notes);
+}
+
+function measureLessonStructure(
   content: DocumentContent,
   durationMinutes: number,
   notes: QualityNote[],
 ): Measure {
   const present = new Set(content.blocks.map((block) => block.type));
-
-  for (const type of REQUIRED_BLOCKS) {
-    if (!present.has(type)) {
-      note(notes, "missing_block", `missing_block:${type}`, `Majburiy blok yo'q: ${type}`);
-    }
-  }
+  requireBlocks(present, LESSON_BLOCKS, notes);
 
   let points = 0;
   let total = 0;
@@ -344,6 +424,298 @@ function measureStructure(
         `${String(broken.length)} ta test savoli variant qoidasiga mos emas`,
       );
     }
+  }
+
+  return { raw: points / total };
+}
+
+/* ------------------------------------------------------------------ */
+/* Test strukturasi (10-sessiya)                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * To'g'ri/noto'g'ri tasdiqlar nisbatining ruxsat etilgan oynasi.
+ *
+ * NEGA 30-70 %, 50 % EMAS: aniq yarmini talab qilish model uchun sun'iy
+ * shart, va 7 savolda uni bajarish mumkin ham emas. Oyna esa "hammasi
+ * to'g'ri" turidagi haqiqiy nuqsonni ushlaydi.
+ */
+const TRUEFALSE_MIN_RATIO = 0.3;
+const TRUEFALSE_MAX_RATIO = 0.7;
+
+/**
+ * Nisbat o'lchanadigan eng kam savol soni.
+ *
+ * Ikki savolda nisbat 0, 0.5 yoki 1 bo'ladi — ya'ni oynaga tushishi
+ * tasodifga bog'liq. Shundan kam bo'lsa tekshiruv UMUMAN o'tkazilmaydi.
+ */
+const TRUEFALSE_MIN_COUNT = 3;
+
+/**
+ * To'g'ri javob qolgan variantlarning o'rtachasidan shuncha barobar uzun
+ * bo'lsa — "uzun variant = to'g'ri javob" belgisi.
+ *
+ * 1.6 ataylab keng: to'g'ri javob tabiiy ravishda biroz uzunroq bo'lishi
+ * mumkin (birlik, aniqlik), 1.6 barobar esa allaqachon naqsh.
+ */
+const MCQ_TELL_FACTOR = 1.6;
+
+/** Bloom taqsimotining ruxsat etilgan chetlanishi (savol soni bo'yicha). */
+const BLOOM_TOLERANCE = 1;
+
+/** `truefalse` javobining kanonik shakllari (apostrof normallashtirilgan). */
+const TRUE_ANSWER = "to'g'ri";
+const FALSE_ANSWER = "noto'g'ri";
+
+type Part = { points: number; total: number };
+
+type QuestionBlock = Extract<DocumentContent["blocks"][number], { type: "question" }>;
+type AnswerKeyItem = Extract<
+  DocumentContent["blocks"][number],
+  { type: "answerKey" }
+>["items"][number];
+
+/**
+ * Javoblar kalitining to'liqligi.
+ *
+ * BARCHA `answerKey` bloklari birlashtirib qaraladi: 20 tadan ko'p savolli
+ * test `2a`/`2b` bosqichlariga bo'linadi va har biri O'Z kalit blokini
+ * yozadi (`plans-test.ts`). Faqat birinchisiga qarash testning yarmini
+ * "kalitsiz" deb yiqitardi.
+ */
+function checkAnswerKey(
+  questions: QuestionBlock[],
+  items: AnswerKeyItem[],
+  notes: QualityNote[],
+): Part {
+  const ids = new Set(questions.map((question) => question.id));
+  const byQuestion = new Map<string, Set<string>>();
+  const unknown: string[] = [];
+
+  for (const item of items) {
+    if (!ids.has(item.questionId)) {
+      unknown.push(item.questionId);
+      continue;
+    }
+    const answers = byQuestion.get(item.questionId) ?? new Set<string>();
+    answers.add(normalizeWord(item.answer));
+    byQuestion.set(item.questionId, answers);
+  }
+
+  const missing = questions.filter((question) => !byQuestion.has(question.id));
+  if (missing.length > 0) {
+    // Kod `missing_block:answerKey` EMAS: blokning butunlay yo'qligini
+    // `requireBlocks` allaqachon o'sha kod bilan belgilaydi, ikkisi
+    // to'qnashsa admin panelida guruhlash chalkashardi.
+    note(
+      notes,
+      "missing_answer_key",
+      "answer_key:missing",
+      `${String(missing.length)} savolning javobi kalitda yo'q`,
+    );
+    return { points: 0, total: 2 };
+  }
+
+  const conflicting = [...byQuestion.values()].filter((answers) => answers.size > 1).length;
+  if (conflicting > 0 || unknown.length > 0) {
+    note(
+      notes,
+      "answer_key_conflict",
+      "answer_key:conflict",
+      `Kalitda ${String(conflicting)} ta ziddiyatli javob, ${String(unknown.length)} ta noma'lum savol havolasi`,
+    );
+    return { points: 1, total: 2 };
+  }
+
+  return { points: 2, total: 2 };
+}
+
+/** Variantli savollarning qoidalari — sxema kafolatlamagan qismi. */
+function checkMcq(questions: QuestionBlock[], notes: QualityNote[]): Part {
+  const mcq = questions.filter((question) => question.kind === "mcq");
+  if (mcq.length === 0) return { points: 0, total: 0 };
+
+  let points = 2;
+
+  const invalid = mcq.filter((question) => !question.options.includes(question.answer));
+  if (invalid.length > 0) {
+    note(
+      notes,
+      "mcq_invalid",
+      "mcq:invalid",
+      `${String(invalid.length)} ta savolning to'g'ri javobi variantlar ichida yo'q`,
+    );
+    points -= 1;
+  }
+
+  const duplicated = mcq.filter((question) => {
+    const seen = new Set(question.options.map(normalizeWord));
+    return seen.size !== question.options.length;
+  });
+  if (duplicated.length > 0) {
+    note(
+      notes,
+      "mcq_duplicate_option",
+      "mcq:duplicate_option",
+      `${String(duplicated.length)} ta savolda takrorlangan variant bor`,
+    );
+    points -= 1;
+  }
+
+  const telling = mcq.filter((question) => {
+    const others = question.options.filter((option) => option !== question.answer);
+    if (others.length < 2) return false;
+    const average = others.reduce((sum, option) => sum + option.length, 0) / others.length;
+    return average > 0 && question.answer.length > average * MCQ_TELL_FACTOR;
+  });
+  if (telling.length > 0) {
+    note(
+      notes,
+      "mcq_tell",
+      "mcq:tell",
+      `${String(telling.length)} ta savolda to'g'ri javob qolgan variantlardan sezilarli uzun`,
+    );
+    points -= 1;
+  }
+
+  return { points: Math.max(0, points), total: 2 };
+}
+
+/** To'g'ri va noto'g'ri tasdiqlar muvozanati. */
+function checkTrueFalse(questions: QuestionBlock[], notes: QualityNote[]): Part {
+  const items = questions.filter((question) => question.kind === "truefalse");
+  if (items.length < TRUEFALSE_MIN_COUNT) return { points: 0, total: 0 };
+
+  const positive = items.filter(
+    (question) => normalizeWord(question.answer) === TRUE_ANSWER,
+  ).length;
+  const recognized = items.filter((question) => {
+    const answer = normalizeWord(question.answer);
+    return answer === TRUE_ANSWER || answer === FALSE_ANSWER;
+  }).length;
+
+  // Kanonik bo'lmagan javob ("ha", "rost") nisbatni hisoblashni ma'nosiz
+  // qiladi — bu `truefalse` qoidasining buzilishi, shuning uchun belgi.
+  if (recognized !== items.length) {
+    note(
+      notes,
+      "truefalse_skew",
+      "truefalse:unrecognized",
+      `${String(items.length - recognized)} ta tasdiqning javobi "to'g'ri"/"noto'g'ri" shaklida emas`,
+    );
+    return { points: 0, total: 1 };
+  }
+
+  const ratio = positive / items.length;
+  if (ratio < TRUEFALSE_MIN_RATIO || ratio > TRUEFALSE_MAX_RATIO) {
+    note(
+      notes,
+      "truefalse_skew",
+      "truefalse:skew",
+      `${String(items.length)} tasdiqdan ${String(positive)} tasi "to'g'ri" (${(ratio * 100).toFixed(0)} %)`,
+    );
+    return { points: 0, total: 1 };
+  }
+
+  return { points: 1, total: 1 };
+}
+
+/** Moslashtirish juftliklari: ikki ustun ham to'la va takrorsiz. */
+function checkMatch(questions: QuestionBlock[], notes: QualityNote[]): Part {
+  const items = questions.filter((question) => question.kind === "match");
+  if (items.length === 0) return { points: 0, total: 0 };
+
+  const broken = items.filter((question) => {
+    const pairs = question.pairs ?? [];
+    if (pairs.length < 2) return true;
+    const left = new Set(pairs.map((pair) => normalizeWord(pair.left)));
+    const right = new Set(pairs.map((pair) => normalizeWord(pair.right)));
+    return left.size !== pairs.length || right.size !== pairs.length;
+  });
+
+  if (broken.length > 0) {
+    note(
+      notes,
+      "match_invalid",
+      "match:invalid",
+      `${String(broken.length)} ta moslashtirish savolining juftliklari buzuq`,
+    );
+    return { points: 0, total: 1 };
+  }
+
+  return { points: 1, total: 1 };
+}
+
+/** Bloom taqsimoti blueprint'ga mosmi (±1 savol). */
+function checkBloom(
+  questions: QuestionBlock[],
+  targets: BloomTargets,
+  notes: QualityNote[],
+): Part {
+  const levels = Object.keys(targets);
+  if (levels.length === 0) return { points: 0, total: 0 };
+
+  const actual = new Map<string, number>();
+  for (const question of questions) {
+    actual.set(question.bloom, (actual.get(question.bloom) ?? 0) + 1);
+  }
+
+  const drifted: string[] = [];
+  for (const level of new Set([...levels, ...actual.keys()])) {
+    const want = targets[level as keyof BloomTargets] ?? 0;
+    const have = actual.get(level) ?? 0;
+    if (Math.abs(have - want) > BLOOM_TOLERANCE) {
+      drifted.push(`${level}: ${String(have)}/${String(want)}`);
+    }
+  }
+
+  if (drifted.length > 0) {
+    note(notes, "bloom_drift", "bloom:drift", `Bloom taqsimoti chetlashgan — ${drifted.join(", ")}`);
+    return { points: 0, total: 1 };
+  }
+
+  return { points: 1, total: 1 };
+}
+
+function measureTestStructure(
+  content: DocumentContent,
+  spec: Extract<ScoreSpec, { type: "TEST" }>,
+  notes: QualityNote[],
+): Measure {
+  const present = new Set(content.blocks.map((block) => block.type));
+  requireBlocks(present, TEST_BLOCKS, notes);
+
+  const questions = content.blocks.filter(
+    (block): block is QuestionBlock => block.type === "question",
+  );
+  const keyItems = content.blocks.flatMap((block) =>
+    block.type === "answerKey" ? block.items : [],
+  );
+
+  // Savol soni — o'lchamning O'ZAGI: kredit aynan shunga qarab yechiladi.
+  let points = 0;
+  let total = 2;
+  if (questions.length === spec.questionCount) {
+    points += 2;
+  } else {
+    note(
+      notes,
+      "question_count",
+      "question_count:mismatch",
+      `Savollar soni ${String(questions.length)}, so'ralgani ${String(spec.questionCount)}`,
+    );
+  }
+
+  const parts = [
+    checkAnswerKey(questions, keyItems, notes),
+    checkMcq(questions, notes),
+    checkTrueFalse(questions, notes),
+    checkMatch(questions, notes),
+    checkBloom(questions, spec.bloomTargets, notes),
+  ];
+  for (const part of parts) {
+    points += part.points;
+    total += part.total;
   }
 
   return { raw: points / total };
@@ -486,6 +858,11 @@ function measureLength(content: DocumentContent, notes: QualityNote[]): Measure 
           if (item.length < 20) short += 1;
         }
         break;
+      // Savol matni: "Tezlanish?" sxemadan o'tadi, lekin savol emas.
+      case "question":
+        total += 1;
+        if (block.text.length < 25) short += 1;
+        break;
       default:
         break;
     }
@@ -556,7 +933,8 @@ function aggregate(measures: Record<ComponentName, Measure>): {
 
 export function scoreDocument(input: {
   content: DocumentContent;
-  durationMinutes: number;
+  /** Hujjat turiga xos parametrlar — yuqoridagi `ScoreSpec`. */
+  spec: ScoreSpec;
   /** `Topic.objectives` va `Topic.keywords` — kurikulum qamrovi uchun. */
   curriculumTerms: string[];
   /**
@@ -570,7 +948,7 @@ export function scoreDocument(input: {
   const text = renderDocument(input.content);
 
   const { weighted, components } = aggregate({
-    structure: measureStructure(input.content, input.durationMinutes, notes),
+    structure: measureStructure(input.content, input.spec, notes),
     coverage: measureCoverage(text, input.curriculumTerms, input.hasContext, notes),
     language: measureLanguage(text, notes),
     length: measureLength(input.content, notes),

@@ -166,6 +166,26 @@
       "ruxsat": "Bu fan yoki sinf sizning ro'yxatingizda yo'q.",
       "kredit": "Kredit yetarli emas.",
       "xato": "Nimadir xato ketdi. Qaytadan urinib ko'ring."
+    },
+    "docType": "Hujjat turi",
+    "typeLesson": "Dars ishlanma",
+    "typeTest": "Test",
+    "titleTest": "Test yaratish",
+    "descriptionTest": "Mavzuni tanlang — kurikulumga bog'langan test tayyorlanadi.",
+    "questionCount": "Savol soni",
+    "questionCountLabel": "{count} savol",
+    "kindsLabel": "Savol turlari",
+    "kind": {
+      "mcq": "Variantli",
+      "short": "Qisqa javobli",
+      "truefalse": "To'g'ri-noto'g'ri",
+      "match": "Moslashtirish"
+    },
+    "difficultyLabel": "Qiyinlik",
+    "difficulty": {
+      "easy": "Oson",
+      "mixed": "Aralash",
+      "hard": "Murakkab"
     }
   },
   "Documents": {

@@ -35,6 +35,7 @@ type Params = {
 };
 type Row = {
   status: "QUEUED" | "RUNNING" | "DONE" | "FAILED";
+  type: "LESSON_PLAN" | "TEST";
   topicId: string;
   inputParams: Params;
   contentJson: { v: number; blocks: Block[] };
@@ -189,6 +190,7 @@ beforeEach(() => {
 
   row = {
     status: "QUEUED",
+    type: "LESSON_PLAN",
     topicId: "t-1",
     inputParams: {
       durationMinutes: DURATION,

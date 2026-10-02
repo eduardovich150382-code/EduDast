@@ -66,9 +66,24 @@ export function buildPlan(skeletonStageCount: number | null): GenerationPlan {
   };
 }
 
-/** `LlmCall.purpose` — marja tahlili shu kalit bo'yicha guruhlanadi. */
-export function stagePurpose(spec: StageSpec): string {
-  return `lesson-plan:stage-${spec.id}`;
+/**
+ * Hujjat turining `purpose` dagi prefiksi.
+ *
+ * `DocumentType` ning O'ZI ishlatilmaydi: `purpose` — tahlil kaliti, enum
+ * esa baza sxemasi. Ikkisini bog'lash enum qiymatini qayta nomlashni
+ * bir yillik marja tarixini ikkiga bo'lib yuboradigan ishga aylantirardi.
+ */
+export type GenerationFeature = "lesson-plan" | "test";
+
+/**
+ * `LlmCall.purpose` — marja tahlili shu kalit bo'yicha guruhlanadi.
+ *
+ * Dars ishlanma uchun chiqish 10-sessiyada O'ZGARMADI
+ * (`lesson-plan:stage-1`), ya'ni bazadagi eski qatorlar yangisi bilan bir
+ * guruhda qoladi. Qo'shilgani faqat ikkinchi tur: `test:stage-*`.
+ */
+export function stagePurpose(spec: StageSpec, feature: GenerationFeature): string {
+  return `${feature}:stage-${spec.id}`;
 }
 
 /* ------------------------------------------------------------------ */

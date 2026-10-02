@@ -96,6 +96,10 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 \- PR tavsifida: nima o'zgardi, qanday test qilindi, qo'lda tekshirish kerak bo'lgan joy.
 
+\- Yangi shox HAR DOIM `git fetch origin` dan keyin `origin/main` dan ochiladi,
+&#x20;  lokal `main` dan EMAS. Lokal `main` oldingi sessiya merge bo'lgach eskiradi
+&#x20;  va shox oldingi sessiya ustiga qurilib qoladi (ikki marta shunday bo'ldi).
+
 \- `main` ga to'g'ridan-to'g'ri push YO'Q.
 
 
