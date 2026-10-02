@@ -56,7 +56,16 @@ const TOPIC = {
   subject: { slug: "fizika" },
 };
 
-const INPUT = { topicId: "t-1", durationMinutes: 45 };
+const INPUT = { type: "LESSON_PLAN", topicId: "t-1", durationMinutes: 45 };
+
+/** Test generatsiyasining tipik kirishi (10-sessiya). */
+const TEST_INPUT = {
+  type: "TEST",
+  topicId: "t-1",
+  questionCount: 10,
+  kinds: ["mcq", "short"],
+  difficulty: "mixed",
+};
 
 function wireHappyPath(): void {
   mocks.requireOnboarded.mockResolvedValue(USER);
@@ -111,13 +120,23 @@ describe("validatsiya", () => {
 
   it.each([
     ["bo'sh obyekt", {}],
-    ["topicId yo'q", { durationMinutes: 45 }],
-    ["davomiylik yo'q", { topicId: "t-1" }],
-    ["davomiylik juda qisqa", { topicId: "t-1", durationMinutes: 10 }],
-    ["davomiylik juda uzun", { topicId: "t-1", durationMinutes: 240 }],
-    ["davomiylik kasr", { topicId: "t-1", durationMinutes: 45.5 }],
-    ["davomiylik satr", { topicId: "t-1", durationMinutes: "45" }],
-    ["topicId bo'sh", { topicId: "", durationMinutes: 45 }],
+    ["tur yo'q", { topicId: "t-1", durationMinutes: 45 }],
+    ["noma'lum tur", { type: "GUIDE", topicId: "t-1", durationMinutes: 45 }],
+    ["topicId yo'q", { type: "LESSON_PLAN", durationMinutes: 45 }],
+    ["davomiylik yo'q", { type: "LESSON_PLAN", topicId: "t-1" }],
+    ["davomiylik juda qisqa", { ...INPUT, durationMinutes: 10 }],
+    ["davomiylik juda uzun", { ...INPUT, durationMinutes: 240 }],
+    ["davomiylik kasr", { ...INPUT, durationMinutes: 45.5 }],
+    ["davomiylik satr", { ...INPUT, durationMinutes: "45" }],
+    ["topicId bo'sh", { ...INPUT, topicId: "" }],
+    // TEST turining chegaralari — `UNIT_LIMITS.TEST` dan o'qiladi.
+    ["savol soni juda kam", { ...TEST_INPUT, questionCount: 4 }],
+    ["savol soni juda ko'p", { ...TEST_INPUT, questionCount: 41 }],
+    ["savol soni kasr", { ...TEST_INPUT, questionCount: 10.5 }],
+    ["savol turlari bo'sh", { ...TEST_INPUT, kinds: [] }],
+    ["noma'lum savol turi", { ...TEST_INPUT, kinds: ["essay"] }],
+    ["noma'lum qiyinlik", { ...TEST_INPUT, difficulty: "qiyin" }],
+    ["savol soni yo'q", { type: "TEST", topicId: "t-1", kinds: ["mcq"], difficulty: "mixed" }],
     ["null", null],
   ])("%s rad etiladi", async (_name, input) => {
     const { boshlaGeneratsiya } = await import("@/server/generation-actions");
@@ -127,7 +146,7 @@ describe("validatsiya", () => {
 
   it("Zod xato MATNI qaytarilmaydi", async () => {
     const { boshlaGeneratsiya } = await import("@/server/generation-actions");
-    const result = await boshlaGeneratsiya({ topicId: "t-1", durationMinutes: 5 });
+    const result = await boshlaGeneratsiya({ ...INPUT, durationMinutes: 5 });
     expect(result).toEqual({ ok: false, error: "invalid" });
   });
 });
@@ -266,5 +285,82 @@ describe("boshlang'ich hujjat holati", () => {
     await boshlaGeneratsiya(INPUT);
 
     expect(order).toEqual(["context", "transaction"]);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* TEST turi (10-sessiya)                                             */
+/* ------------------------------------------------------------------ */
+
+describe("TEST turi", () => {
+  beforeEach(wireHappyPath);
+
+  type CreateData = {
+    type: string;
+    title: string;
+    creditsHeldFor: number;
+    inputParams: {
+      progress: { stage: number; total: number; attempts: number };
+      questionCount: number;
+      kinds: string[];
+      difficulty: string;
+      durationMinutes?: number;
+    };
+  };
+
+  async function create(input: unknown): Promise<CreateData> {
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    const result = await boshlaGeneratsiya(input);
+    expect(result.ok).toBe(true);
+    return mocks.documentCreate.mock.calls[0]?.[0]?.data as CreateData;
+  }
+
+  it("TEST hujjati o'z turi va nomi bilan yaratiladi", async () => {
+    const data = await create(TEST_INPUT);
+    expect(data.type).toBe("TEST");
+    expect(data.title).toContain("test");
+  });
+
+  it("inputParams da savol parametrlari, davomiylik YO'Q", async () => {
+    // Dars davomiyligi testda ma'nosiz — `run-stage` uni talab qilmaydi.
+    const data = await create(TEST_INPUT);
+    expect(data.inputParams.questionCount).toBe(10);
+    expect(data.inputParams.kinds).toEqual(["mcq", "short"]);
+    expect(data.inputParams.difficulty).toBe("mixed");
+    expect(data.inputParams.durationMinutes).toBeUndefined();
+  });
+
+  it("narx savol soniga qarab band qilinadi", async () => {
+    const { creditCost } = await import("@/lib/credits/cost-table");
+    const data = await create({ ...TEST_INPUT, questionCount: 40 });
+    const expected = creditCost({ type: "TEST", questionCount: 40 });
+
+    expect(data.creditsHeldFor).toBe(expected);
+    expect(mocks.hold).toHaveBeenCalledWith("u-1", expected, expect.any(String), expect.anything());
+    // Ko'p savol — qimmatroq: narx jadvalining monoton kafolati.
+    expect(expected).toBeGreaterThan(creditCost({ type: "TEST", questionCount: 5 }));
+  });
+
+  it("progress.total rejadan olinadi — testda u BOSHIDAN aniq", async () => {
+    // 20 tagacha uch bosqich, undan ko'pi 2a/2b ga bo'linadi.
+    const kichik = await create(TEST_INPUT);
+    expect(kichik.inputParams.progress).toEqual({ stage: 0, total: 3, attempts: 0 });
+
+    mocks.documentCreate.mockClear();
+    const katta = await create({ ...TEST_INPUT, questionCount: 40 });
+    expect(katta.inputParams.progress.total).toBe(4);
+  });
+
+  it("ruxsat tekshiruvi TEST uchun ham ishlaydi — kredit band qilinmaydi", async () => {
+    mocks.topicFindFirst.mockResolvedValue({
+      id: "t-1",
+      grade: 11,
+      titleUz: "Tezlanish",
+      subject: { slug: "fizika" },
+    });
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+
+    expect(await boshlaGeneratsiya(TEST_INPUT)).toEqual({ ok: false, error: "ruxsat" });
+    expect(mocks.hold).not.toHaveBeenCalled();
   });
 });

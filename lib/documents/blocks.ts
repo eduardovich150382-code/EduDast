@@ -43,6 +43,8 @@ export const BLOOM = [
   "create",
 ] as const;
 
+export type BloomLevel = (typeof BLOOM)[number];
+
 const Bloom = z.enum(BLOOM);
 
 const Heading = z.strictObject({
@@ -111,12 +113,27 @@ const Stages = z.strictObject({
 });
 
 /**
+ * Moslashtirish savolining bitta juftligi.
+ *
+ * NEGA ALOHIDA MAYDON, `options` ichida ajratgichli satr EMAS: atamaning
+ * o'zida tire uchraydi ("Nyuton-metr — ish birligi"), ya'ni satrni
+ * ajratgich bo'yicha bo'lish ertami-kechmi noto'g'ri joyda kesardi.
+ * Bundan tashqari muharrir (13-sessiya) va eksport (17-sessiya) ham o'sha
+ * kelishuvni bilishga majbur bo'lib qolardi.
+ */
+const Pair = z.strictObject({ left: txt(200), right: txt(200) });
+
+/**
  * Bitta savol = bitta blok.
  *
  * `answer` — MATN, variant indeksi EMAS. Indeks variantlar tartibi
  * o'zgarganda (tahrirlash — 13-sessiya, tasodifiylashtirish — o'yin)
  * jimgina noto'g'ri javobga aylanadi; matn esa `answerKey` da va eksportda
  * o'zini o'zi tushuntiradi.
+ *
+ * `pairs` IXTIYORIY (10-sessiya): faqat `match` turida to'ldiriladi.
+ * Ixtiyoriy bo'lgani uchun mavjud hujjatlar o'zgarishsiz tahlil qilinadi,
+ * `DocumentContent.v` 1 da qoladi va migratsiya kerak emas.
  */
 const Question = z
   .strictObject({
@@ -125,6 +142,7 @@ const Question = z
     kind: z.enum(["mcq", "short", "truefalse", "match"]),
     text: txt(1_000),
     options: z.array(txt(300)).max(8).default([]),
+    pairs: z.array(Pair).min(2).max(10).optional(),
     answer: txt(500),
     points: z.number().int().min(1).max(20),
     bloom: Bloom,
@@ -155,11 +173,29 @@ const Question = z
         message: "truefalse: variant ro'yxati bo'lmaydi",
       });
     }
-    if (question.kind === "match" && question.options.length < 2) {
+    if (question.kind === "match") {
+      // Juftliklar `pairs` da (yuqoridagi izoh), `options` da EMAS.
+      if (question.pairs === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["pairs"],
+          message: "match: juftliklar (pairs) bo'lishi kerak",
+        });
+      }
+      if (question.options.length !== 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["options"],
+          message: "match: variant ro'yxati bo'lmaydi, juftliklar pairs da",
+        });
+      }
+    } else if (question.pairs !== undefined) {
+      // BO'SH MASSIV HAM "BERILGAN": o'girgich (`plans-test.ts`) maydonni
+      // `match` dan boshqa turda butunlay tashlab ketishi shart.
       ctx.addIssue({
         code: "custom",
-        path: ["options"],
-        message: "match: kamida 2 ta juft bo'lishi kerak",
+        path: ["pairs"],
+        message: "pairs faqat match turida bo'ladi",
       });
     }
   });

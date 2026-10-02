@@ -142,9 +142,56 @@ describe("savol qoidalari", () => {
     expect(Block.safeParse(block).success).toBe(true);
   });
 
-  it("match: 2 tadan kam juft rad etiladi", () => {
-    const block = mcq({ kind: "match", options: ["a"], answer: "a-1" });
+  /**
+   * `match` juftliklari — 10-sessiya.
+   *
+   * Juftliklar `pairs` da, `options` dagi ajratgichli satrda EMAS: atamaning
+   * o'zida tire uchraydi, ya'ni satrni bo'lish ertami-kechmi noto'g'ri
+   * joyda kesardi.
+   */
+  const PAIRS = [
+    { left: "Tezlanish", right: "m/s^2" },
+    { left: "Tezlik", right: "m/s" },
+  ];
+
+  it("match: pairs bilan o'tadi", () => {
+    const block = mcq({ kind: "match", options: [], pairs: PAIRS, answer: "Tezlanish - m/s^2" });
+    expect(Block.safeParse(block).success).toBe(true);
+  });
+
+  it("match: pairs yo'q bo'lsa rad etiladi", () => {
+    const block = mcq({ kind: "match", options: [], answer: "a-1" });
     expect(Block.safeParse(block).success).toBe(false);
+  });
+
+  it("match: 2 tadan kam juft rad etiladi", () => {
+    const block = mcq({
+      kind: "match",
+      options: [],
+      pairs: [{ left: "Tezlanish", right: "m/s^2" }],
+      answer: "a-1",
+    });
+    expect(Block.safeParse(block).success).toBe(false);
+  });
+
+  it("match: variant ro'yxati bo'lsa rad etiladi", () => {
+    // Juftliklar ikki joyda saqlanishi — muharrir va eksport uchun tuzoq.
+    const block = mcq({ kind: "match", options: ["a", "b"], pairs: PAIRS, answer: "a-1" });
+    expect(Block.safeParse(block).success).toBe(false);
+  });
+
+  it.each(["mcq", "short", "truefalse"])("%s: pairs berilsa rad etiladi", (kind) => {
+    // BO'SH MASSIV HAM "berilgan" hisoblanadi — o'girgich maydonni
+    // butunlay tashlab ketishi shart (`plans-test.ts`).
+    const base =
+      kind === "mcq"
+        ? mcq({ pairs: PAIRS })
+        : mcq({ kind, options: [], answer: "ha", pairs: PAIRS });
+    expect(Block.safeParse(base).success).toBe(false);
+  });
+
+  it("pairs: bo'sh massiv ham rad etiladi", () => {
+    expect(Block.safeParse(mcq({ pairs: [] })).success).toBe(false);
   });
 });
 

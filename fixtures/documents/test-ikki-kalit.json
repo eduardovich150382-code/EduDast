@@ -1,0 +1,486 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanish — yarim yillik nazorat testi"
+    },
+    {
+      "id": "s1-objectives-0",
+      "type": "objectives",
+      "items": [
+        "Tezlanishning ta'rifini va o'lchov birligini aytib beradi",
+        "Tezlanish formulasi yordamida masala yechadi",
+        "Tekis va notekis harakatni bir-biridan farqlaydi"
+      ]
+    },
+    {
+      "id": "s2a-question-0",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanishning o'lchov birligi qaysi?",
+      "options": [
+        "m/s^2",
+        "m/s",
+        "N/kg",
+        "kg*m"
+      ],
+      "answer": "m/s^2",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-1",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlik 10 m/s dan 20 m/s ga 5 s da ortdi. Tezlanish qancha?",
+      "options": [
+        "2 m/s^2",
+        "6 m/s^2",
+        "0,5 m/s^2",
+        "15 m/s^2"
+      ],
+      "answer": "2 m/s^2",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-2",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Erkin tushish tezlanishi qanday harf bilan belgilanadi?",
+      "options": [
+        "g harfi",
+        "a harfi",
+        "v harfi",
+        "t harfi"
+      ],
+      "answer": "g harfi",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-3",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanish qanday kattalik?",
+      "options": [
+        "vektor",
+        "skalyar",
+        "o'zgarmas",
+        "nisbiy"
+      ],
+      "answer": "vektor",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-4",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tekis harakatda tezlanish qanday bo'ladi?",
+      "options": [
+        "nolga teng",
+        "o'sib boradi",
+        "manfiy",
+        "kamayadi"
+      ],
+      "answer": "nolga teng",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-5",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanish formulasida nima vaqtga bo'linadi?",
+      "options": [
+        "tezlik o'zgarishi",
+        "bosib o'tilgan yo'l",
+        "jism massasi",
+        "kuch moduli"
+      ],
+      "answer": "tezlik o'zgarishi",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-6",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Sekinlashuvchi harakatda tezlanish qayerga yo'nalgan?",
+      "options": [
+        "harakatga qarshi",
+        "harakat bo'ylab",
+        "tezlik bo'ylab",
+        "pastga qarab"
+      ],
+      "answer": "harakatga qarshi",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-7",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanish 3 m/s^2, vaqt 4 s. Tezlik qancha ortadi?",
+      "options": [
+        "12 m/s",
+        "7 m/s",
+        "0,75 m/s",
+        "24 m/s"
+      ],
+      "answer": "12 m/s",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2a-question-8",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanishni hisoblash formulasini yozing va harflarni izohlang.",
+      "options": [],
+      "answer": "a = (v - v0) / t",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2a-question-9",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanishning o'lchov birligini xalqaro tizimda yozing.",
+      "options": [],
+      "answer": "m/s^2",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2a-question-10",
+      "type": "question",
+      "kind": "short",
+      "text": "Erkin tushish tezlanishining Yer yuzidagi qiymatini yozing.",
+      "options": [],
+      "answer": "9,8 m/s^2",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2a-question-11",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlik 20 m/s dan 5 m/s ga 3 s da kamaydi. Tezlanishni toping.",
+      "options": [],
+      "answer": "-5 m/s^2",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2a-answerKey-0",
+      "type": "answerKey",
+      "items": [
+        {
+          "questionId": "s2a-question-0",
+          "answer": "m/s^2",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-1",
+          "answer": "2 m/s^2",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-2",
+          "answer": "g harfi",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-3",
+          "answer": "vektor",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-4",
+          "answer": "nolga teng",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-5",
+          "answer": "tezlik o'zgarishi",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-6",
+          "answer": "harakatga qarshi",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-7",
+          "answer": "12 m/s",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-8",
+          "answer": "a = (v - v0) / t",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-9",
+          "answer": "m/s^2",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-10",
+          "answer": "9,8 m/s^2",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2a-question-11",
+          "answer": "-5 m/s^2",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        }
+      ]
+    },
+    {
+      "id": "s2b-question-0",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanish qanday kattalik ekanini va nimasi borligini yozing.",
+      "options": [],
+      "answer": "vektor, yo'nalishi bor",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2b-question-1",
+      "type": "question",
+      "kind": "short",
+      "text": "Tekis notekis harakatda qanday kattalik o'zgarishini yozing.",
+      "options": [],
+      "answer": "tezlik",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2b-question-2",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanish nolga teng bo'lgan harakat turini nomlang.",
+      "options": [],
+      "answer": "tekis to'g'ri chiziqli harakat",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2b-question-3",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanish formulasidagi v0 nimani bildiradi?",
+      "options": [],
+      "answer": "boshlang'ich tezlik",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s2b-question-4",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tekis to'g'ri chiziqli harakatda tezlanish nolga teng bo'ladi.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-5",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanish faqat tezlik ortganda vujudga keladi.",
+      "options": [],
+      "answer": "noto'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-6",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Erkin tushish tezlanishi taxminan 9,8 m/s^2 ga teng.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-7",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanish skalyar kattalik, uning yo'nalishi yo'q.",
+      "options": [],
+      "answer": "noto'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-8",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanish formulasida tezlik o'zgarishi vaqtga bo'linadi.",
+      "options": [],
+      "answer": "to'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-9",
+      "type": "question",
+      "kind": "truefalse",
+      "text": "Tezlanishning o'lchov birligi m/s hisoblanadi.",
+      "options": [],
+      "answer": "noto'g'ri",
+      "points": 1,
+      "bloom": "apply"
+    },
+    {
+      "id": "s2b-question-10",
+      "type": "question",
+      "kind": "match",
+      "text": "Kattalik va uning o'lchov birligini moslashtiring.",
+      "options": [],
+      "answer": "Tezlanish - m/s^2, Tezlik - m/s, Vaqt - sekund, Massa - kilogramm",
+      "points": 2,
+      "bloom": "apply",
+      "pairs": [
+        {
+          "left": "Tezlanish",
+          "right": "m/s^2"
+        },
+        {
+          "left": "Tezlik",
+          "right": "m/s"
+        },
+        {
+          "left": "Vaqt",
+          "right": "sekund"
+        },
+        {
+          "left": "Massa",
+          "right": "kilogramm"
+        }
+      ]
+    },
+    {
+      "id": "s2b-question-11",
+      "type": "question",
+      "kind": "match",
+      "text": "Harakat turini tezlanish qiymatiga moslashtiring.",
+      "options": [],
+      "answer": "Tekis - nol, Tezlanuvchi - musbat, Sekinlashuvchi - manfiy",
+      "points": 2,
+      "bloom": "apply",
+      "pairs": [
+        {
+          "left": "Tekis harakat",
+          "right": "tezlanish nolga teng"
+        },
+        {
+          "left": "Tezlanuvchi harakat",
+          "right": "tezlanish musbat"
+        },
+        {
+          "left": "Sekinlashuvchi harakat",
+          "right": "tezlanish manfiy"
+        }
+      ]
+    },
+    {
+      "id": "s2b-answerKey-0",
+      "type": "answerKey",
+      "items": [
+        {
+          "questionId": "s2b-question-0",
+          "answer": "vektor, yo'nalishi bor",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-1",
+          "answer": "tezlik",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-2",
+          "answer": "tekis to'g'ri chiziqli harakat",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-3",
+          "answer": "boshlang'ich tezlik",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-4",
+          "answer": "to'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-5",
+          "answer": "noto'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-6",
+          "answer": "to'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-7",
+          "answer": "noto'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-8",
+          "answer": "to'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-9",
+          "answer": "noto'g'ri",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-10",
+          "answer": "Tezlanish - m/s^2, Tezlik - m/s, Vaqt - sekund, Massa - kilogramm",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        },
+        {
+          "questionId": "s2b-question-11",
+          "answer": "Tekis - nol, Tezlanuvchi - musbat, Sekinlashuvchi - manfiy",
+          "explanation": "Javob mavzudagi tezlanish formulasidan kelib chiqadi: a = (v - v0) / t."
+        }
+      ]
+    },
+    {
+      "id": "s3-rubric-0",
+      "type": "rubric",
+      "criteria": [
+        {
+          "name": "Formulani to'g'ri qo'llash",
+          "maxPoints": 2,
+          "descriptors": [
+            "Formula to'g'ri yozilgan va qiymatlar o'rniga to'g'ri qo'yilgan",
+            "Formula yozilgan, lekin hisobda arifmetik xato bor"
+          ]
+        },
+        {
+          "name": "Moslashtirish topshirig'i",
+          "maxPoints": 2,
+          "descriptors": [
+            "Barcha juftliklar to'g'ri moslashtirilgan",
+            "Juftliklarning yarmidan ko'pi to'g'ri moslashtirilgan"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -71,7 +71,7 @@ describe("buildPlan", () => {
 
   it("purpose bo'linishni ko'rsatadi — marja tahlili uchun", () => {
     const plan = buildPlan(8);
-    expect(plan.stages.map(stagePurpose)).toEqual([
+    expect(plan.stages.map((spec) => stagePurpose(spec, "lesson-plan"))).toEqual([
       "lesson-plan:stage-1",
       "lesson-plan:stage-2a",
       "lesson-plan:stage-2b",

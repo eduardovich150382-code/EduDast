@@ -64,6 +64,12 @@ function lines(block: Block): string[] {
     case "question": {
       const out = [block.text];
       for (const option of block.options) out.push(`${BULLET}${option}`);
+      // Juftliklar SHART chiqarilsin: bu matn `quality.ts` ga kiradi va
+      // chiqarilmasa juftliklardagi kirill yoki kurikulum atamalari
+      // tekshiruvdan jimgina o'tib ketardi.
+      for (const pair of block.pairs ?? []) {
+        out.push(`${BULLET}${pair.left} — ${pair.right}`);
+      }
       out.push(`Javob: ${block.answer}`);
       return out;
     }

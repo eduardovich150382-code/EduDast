@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { CreateForm } from "@/components/generation/create-form";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
-import { creditCost } from "@/lib/credits/cost-table";
+import { creditCost, UNIT_LIMITS } from "@/lib/credits/cost-table";
 import { prisma } from "@/lib/db";
 import { GRADES } from "@/lib/grades";
 import { getAppLocale } from "@/lib/i18n/get-app-locale";
@@ -23,7 +23,34 @@ import { topicTitle } from "@/lib/topic-title";
 const DURATIONS = [35, 45, 60, 90];
 const DEFAULT_DURATION = 45;
 
-type Search = { fan?: string; sinf?: string; chorak?: string; mavzu?: string };
+/**
+ * Savol soni variantlari.
+ *
+ * Ro'yxat o'qituvchi uchun qulay sonlardan iborat (5, 10, 15 ...), lekin
+ * `UNIT_LIMITS.TEST` chegarasi bo'yicha FILTRLANADI: narx jadvali
+ * chegarasini o'zgartirsa, bu ro'yxat o'zi moslashadi va formada
+ * to'lanmaydigan son qolmaydi.
+ */
+const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30, 40].filter(
+  (count) => count >= UNIT_LIMITS.TEST.min && count <= UNIT_LIMITS.TEST.max,
+);
+const DEFAULT_QUESTION_COUNT = 10;
+
+/** `?tur=test` — JavaScript'siz ishlaydigan tur tanlovi. */
+const KINDS = { dars: "LESSON_PLAN", test: "TEST" } as const;
+type KindParam = keyof typeof KINDS;
+
+function readKind(value: string | undefined): KindParam {
+  return value === "test" ? "test" : "dars";
+}
+
+type Search = {
+  fan?: string;
+  sinf?: string;
+  chorak?: string;
+  mavzu?: string;
+  tur?: string;
+};
 
 function Empty({ text }: { text: string }) {
   return (
@@ -40,7 +67,11 @@ export default async function YaratPage({
   const user = (await auth())!;
   const locale = await getAppLocale();
   const t = await getTranslations("Generator");
-  const { fan, sinf, chorak, mavzu } = await searchParams;
+  const { fan, sinf, chorak, mavzu, tur } = await searchParams;
+  const turParam = readKind(tur);
+  const kind = KINDS[turParam];
+  const title = kind === "TEST" ? t("titleTest") : t("title");
+  const description = kind === "TEST" ? t("descriptionTest") : t("description");
 
   const subjects = await prisma.subject.findMany({
     where: { slug: { in: user.subjects } },
@@ -54,7 +85,7 @@ export default async function YaratPage({
 
   if (!subject || grade === undefined) {
     return (
-      <Shell title={t("title")} description={t("description")}>
+      <Shell title={title} description={description}>
         <Empty text={t("noSelection")} />
       </Shell>
     );
@@ -84,8 +115,19 @@ export default async function YaratPage({
   const topics = topicRows.map((topic) => ({ id: topic.id, title: topicTitle(topic, locale) }));
 
   return (
-    <Shell title={t("title")} description={t("description")}>
+    <Shell title={title} description={description}>
       <form method="get" className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-xs text-ink-2">
+          {t("docType")}
+          <select
+            name="tur"
+            defaultValue={turParam}
+            className="h-9 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
+          >
+            <option value="dars">{t("typeLesson")}</option>
+            <option value="test">{t("typeTest")}</option>
+          </select>
+        </label>
         <label className="flex flex-col gap-1 text-xs text-ink-2">
           {t("subject")}
           <select
@@ -123,11 +165,20 @@ export default async function YaratPage({
         <Empty text={t("noTopics")} />
       ) : (
         <CreateForm
+          kind={kind}
           topics={topics}
           selectedTopicId={topics.find((topic) => topic.id === mavzu)?.id ?? null}
           durations={DURATIONS}
           defaultDuration={DEFAULT_DURATION}
           cost={creditCost({ type: "LESSON_PLAN" })}
+          // Har variantning narxi SERVERDA hisoblanadi: formula mijozda
+          // takrorlansa, ko'rsatilgan narx bilan yechilgan kredit
+          // farq qilib ketishi mumkin edi.
+          questionOptions={QUESTION_COUNTS.map((value) => ({
+            value,
+            cost: creditCost({ type: "TEST", questionCount: value }),
+          }))}
+          defaultQuestionCount={DEFAULT_QUESTION_COUNT}
         />
       )}
     </Shell>

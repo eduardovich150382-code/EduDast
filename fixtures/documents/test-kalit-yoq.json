@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanish — nazorat testi"
+    },
+    {
+      "id": "s1-objectives-0",
+      "type": "objectives",
+      "items": [
+        "Tezlanishning ta'rifini va o'lchov birligini aytib beradi",
+        "Tezlanish formulasi yordamida masala yechadi"
+      ]
+    },
+    {
+      "id": "s2-question-0",
+      "type": "question",
+      "kind": "mcq",
+      "text": "Tezlanishning xalqaro birliklar tizimidagi o'lchov birligi qaysi?",
+      "options": ["m/s^2", "m/s", "kg*m/s", "N/kg^2"],
+      "answer": "m/s^2",
+      "points": 1,
+      "bloom": "remember"
+    },
+    {
+      "id": "s2-question-1",
+      "type": "question",
+      "kind": "short",
+      "text": "Tezlanishni hisoblash formulasini yozing va harflarning ma'nosini ayting.",
+      "options": [],
+      "answer": "a = (v - v0) / t",
+      "points": 2,
+      "bloom": "understand"
+    },
+    {
+      "id": "s3-rubric-0",
+      "type": "rubric",
+      "criteria": [
+        {
+          "name": "Formulani to'g'ri yozish",
+          "maxPoints": 2,
+          "descriptors": [
+            "Formula va barcha harflarning ma'nosi to'g'ri yozilgan",
+            "Formula yozilgan, lekin harflar izohlanmagan"
+          ]
+        },
+        {
+          "name": "Hisoblashning to'g'riligi",
+          "maxPoints": 2,
+          "descriptors": [
+            "Javob birligi bilan to'g'ri ko'rsatilgan",
+            "Hisob to'g'ri, lekin o'lchov birligi yozilmagan"
+          ]
+        }
+      ]
+    }
+  ]
+}

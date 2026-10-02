@@ -15,11 +15,34 @@ import {
   Stage1Out,
   Stage2Out,
   Stage3Out,
+  type GenerationFeature,
   type StageSpec,
 } from "./plans";
-import { FROZEN_GUIDE, teacherParams } from "./prompts";
+import {
+  bloomTargets,
+  buildTestPlan,
+  checkBlueprint,
+  checkTestQuestions,
+  testBlueprintBlocks,
+  testClosingBlocks,
+  testQuestionBlocks,
+  testStageInstruction,
+  TestBlueprintOut,
+  TestClosingOut,
+  TestQuestionsOut,
+} from "./plans-test";
+import {
+  DIFFICULTIES,
+  LESSON_GUIDE,
+  lessonTail,
+  QUESTION_KINDS,
+  SHARED_GUIDE,
+  teacherParams,
+  TEST_GUIDE,
+  testTail,
+} from "./prompts";
 import { buildTopicContext } from "./retrieval";
-import { scoreDocument, SCORE_FAIL } from "./quality";
+import { scoreDocument, SCORE_FAIL, type ScoreSpec } from "./quality";
 
 /**
  * AYNAN BITTA bosqichni bajaradi.
@@ -63,12 +86,104 @@ const ProgressSchema = z.object({
  * dastur xatosi, uni jimgina yutish keyingi sessiyada qidiriladigan
  * "sababsiz FAILED" ga aylanardi.
  */
-const ParamsSchema = z.object({
-  durationMinutes: z.number().int().min(1),
+const BaseParams = z.object({
   contextChunkIds: z.array(z.string()),
   progress: ProgressSchema,
+});
+
+const LessonParams = BaseParams.extend({
+  durationMinutes: z.number().int().min(1),
   skeleton: Stage1Out.optional(),
 });
+
+const TestParams = BaseParams.extend({
+  questionCount: z.number().int().min(1),
+  kinds: z.array(z.enum(QUESTION_KINDS)).min(1),
+  difficulty: z.enum(DIFFICULTIES),
+  blueprint: TestBlueprintOut.optional(),
+});
+
+/**
+ * Bitta generatsiya ishi — tur va uning parametrlari BIRGA.
+ *
+ * `inputParams` ning o'zida `type` yo'q (u `Document.type` da), shuning
+ * uchun sxema turga qarab TANLANADI va natija shu union'ga o'raladi. Bir
+ * sxemaga ikki turning maydonlarini ixtiyoriy qilib tiqish `.parse` ning
+ * butun foydasini — "mos kelmasa bu dastur xatosi" kafolatini — yo'qotardi.
+ */
+type Job =
+  | { type: "LESSON_PLAN"; params: z.infer<typeof LessonParams> }
+  | { type: "TEST"; params: z.infer<typeof TestParams> };
+
+function readJob(type: string, inputParams: unknown): Job | null {
+  if (type === "LESSON_PLAN") {
+    return { type: "LESSON_PLAN", params: LessonParams.parse(inputParams) };
+  }
+  if (type === "TEST") {
+    return { type: "TEST", params: TestParams.parse(inputParams) };
+  }
+  return null;
+}
+
+const FEATURE: Record<Job["type"], GenerationFeature> = {
+  LESSON_PLAN: "lesson-plan",
+  TEST: "test",
+};
+
+/** Turga xos qo'llanma va parametr quyrug'i — kesh tartibini saqlaydi. */
+function systemParts(job: Job, context: string, topic: { grade: number; subjectName: string }) {
+  const guide = job.type === "TEST" ? TEST_GUIDE : LESSON_GUIDE;
+  const tail =
+    job.type === "TEST"
+      ? testTail({
+          questionCount: job.params.questionCount,
+          kinds: job.params.kinds,
+          difficulty: job.params.difficulty,
+        })
+      : lessonTail(job.params.durationMinutes);
+
+  // KESH TARTIBI: umumiy qo'llanma -> kontekst -> turga xos qo'llanma ->
+  // o'qituvchi parametrlari. Birinchi IKKITASI ikkala tur uchun aynan bir
+  // xil, shuning uchun bir mavzudan dars ishlanma yaratgan o'qituvchi test
+  // yaratganda prefiks keshdan o'qiladi.
+  //
+  // `SHARED_GUIDE` ga `cacheable` QO'YILMAYDI: u yolg'iz o'zi Anthropic'ning
+  // minimal token chegarasidan qisqa chiqishi mumkin, chegara esa kontekstdan
+  // keyin baribir bor va u shu matnni ham qamrab oladi.
+  return [
+    { text: SHARED_GUIDE },
+    { text: context, cacheable: true },
+    { text: guide, cacheable: true },
+    { text: `${teacherParams(topic)}\n${tail}` },
+  ] satisfies SystemPart[];
+}
+
+/** Bosqichga xos ko'rsatma — `messages` ga boradi, `system` ga EMAS. */
+function instructionFor(job: Job, spec: StageSpec): string {
+  if (job.type === "TEST") {
+    return testStageInstruction(spec, {
+      questionCount: job.params.questionCount,
+      kinds: job.params.kinds,
+      blueprint: job.params.blueprint ?? null,
+    });
+  }
+  return stageInstruction(spec, {
+    durationMinutes: job.params.durationMinutes,
+    skeleton: job.params.skeleton ?? null,
+  });
+}
+
+/** Yakuniy baho parametrlari. */
+function scoreSpecFor(job: Job): ScoreSpec {
+  if (job.type === "TEST") {
+    return {
+      type: "TEST",
+      questionCount: job.params.questionCount,
+      bloomTargets: bloomTargets(job.params.blueprint?.items ?? []),
+    };
+  }
+  return { type: "LESSON_PLAN", durationMinutes: job.params.durationMinutes };
+}
 
 /**
  * Qayta urinish mumkin bo'lgan xatolar.
@@ -96,8 +211,10 @@ export async function runStage(args: {
     where: { id: documentId, userId, deletedAt: null },
     select: {
       status: true,
+      type: true,
       topicId: true,
       inputParams: true,
+      creditsHeldFor: true,
       topic: {
         select: {
           grade: true,
@@ -113,15 +230,28 @@ export async function runStage(args: {
   if (doc.status === "DONE") return { kind: "complete" };
   if (doc.status === "FAILED") return { kind: "failed", reason: "hujjat allaqachon bekor qilingan" };
 
-  const params = ParamsSchema.parse(doc.inputParams);
-  const plan = buildPlan(params.skeleton?.stages.length ?? null);
+  // Qo'llab-quvvatlanmagan tur (`GUIDE`/`SLIDES`/`CROSSWORD` — hozircha
+  // hech kim yaratmaydi). JIM O'TIB KETMAYMIZ: dars ishlanma sifatida
+  // ishlashga urinish o'qituvchiga mutlaqo boshqa hujjatni berardi.
+  const job = readJob(doc.type, doc.inputParams);
+  if (!job) {
+    const reason = `qo'llab-quvvatlanmagan hujjat turi: ${doc.type}`;
+    await release(userId, doc.creditsHeldFor, documentId, reason);
+    return { kind: "failed", reason };
+  }
+
+  const { params } = job;
+  const plan =
+    job.type === "TEST"
+      ? buildTestPlan(job.params.questionCount)
+      : buildPlan(job.params.skeleton?.stages.length ?? null);
   const stageIndex = params.progress.stage;
   const spec = plan.stages[stageIndex];
 
   // Kursor rejadan chiqib ketgan: hamma bosqich yozilgan, lekin kredit
   // yechilmagan. Bu faqat oxirgi bosqich commit'idan keyin jarayon o'lganda
   // bo'ladi — yakunni shu yerda tugatamiz.
-  if (!spec) return finishDocument({ documentId, userId, params, topic: doc.topic });
+  if (!spec) return finishDocument({ documentId, userId, job, topic: doc.topic });
 
   // Bosqichni EGALLASH — poyga darvozasi. Qulfsiz o'qish (yuqorida) eskirgan
   // bo'lsa shu yerda `null` qaytadi va hech narsa buzilmaydi.
@@ -138,36 +268,15 @@ export async function runStage(args: {
 
   const context = await buildTopicContext(doc.topicId, params.contextChunkIds);
 
-  // KESH TARTIBI: muzlatilgan qism -> kontekst -> o'qituvchi parametrlari.
-  // Bosqichga xos ko'rsatma `messages` da, `system` da EMAS — aks holda har
-  // bosqich prefiksni buzib, keshni butunlay yo'q qilardi.
-  const system: SystemPart[] = [
-    { text: FROZEN_GUIDE, cacheable: true },
-    { text: context, cacheable: true },
-    {
-      text: teacherParams({
-        grade: doc.topic.grade,
-        durationMinutes: params.durationMinutes,
-        subjectName: doc.topic.subject.nameUz,
-      }),
-    },
-  ];
-
-  const instruction = stageInstruction(spec, {
-    durationMinutes: params.durationMinutes,
-    skeleton: params.skeleton ?? null,
+  const system = systemParts(job, context, {
+    grade: doc.topic.grade,
+    subjectName: doc.topic.subject.nameUz,
   });
 
+  const instruction = instructionFor(job, spec);
+
   try {
-    const produced = await produceBlocks({
-      spec,
-      system,
-      instruction,
-      documentId,
-      userId,
-      durationMinutes: params.durationMinutes,
-      skeleton: params.skeleton ?? null,
-    });
+    const produced = await produceBlocks({ spec, system, instruction, documentId, userId, job });
 
     if (!produced.ok) {
       await release(userId, claimed.creditsHeldFor, documentId, produced.reason);
@@ -197,12 +306,7 @@ export async function runStage(args: {
       return { kind: "advanced", stage: nextIndex, total };
     }
 
-    return finishDocument({
-      documentId,
-      userId,
-      params: { ...params, skeleton: params.skeleton },
-      topic: doc.topic,
-    });
+    return finishDocument({ documentId, userId, job, topic: doc.topic });
   } catch (error) {
     if (isRetryable(error)) {
       // `release` YO'Q: ijara 90 soniyada bo'shaydi va AYNI bosqich qayta
@@ -224,33 +328,57 @@ type Produced =
     }
   | { ok: false; reason: string };
 
-/** Bitta `runLlm` va uning natijasini bloklarga o'girish. */
+/** `runLlm` ning bosqichdan bosqichga o'zgarmaydigan qismi. */
+type LlmBase = {
+  purpose: string;
+  tier: "mid";
+  userId: string;
+  documentId: string;
+  system: SystemPart[];
+  messages: { role: "user"; content: string }[];
+};
+
+/**
+ * Bitta `runLlm` va uning natijasini bloklarga o'girish.
+ *
+ * TUR BO'YICHA TARMOQLANADI, lekin "bitta chaqiruvda bitta `runLlm`"
+ * qoidasi ikkala tarmoqda ham saqlanadi.
+ */
 async function produceBlocks(args: {
   spec: StageSpec;
   system: SystemPart[];
   instruction: string;
   documentId: string;
   userId: string;
-  durationMinutes: number;
-  skeleton: Stage1Out | null;
+  job: Job;
 }): Promise<Produced> {
-  const { spec, system, instruction, documentId, userId } = args;
+  const { spec, system, instruction, documentId, userId, job } = args;
 
-  const base = {
-    purpose: stagePurpose(spec),
-    tier: "mid" as const,
+  const base: LlmBase = {
+    purpose: stagePurpose(spec, FEATURE[job.type]),
+    tier: "mid",
     userId,
     // A/B taqsimoti shundan hashlanadi — bitta hujjatning HAMMA bosqichi
     // bir xil provayderga tushadi, aks holda kesh va muzlatilgan
     // kontekstning foydasi yo'qoladi.
     documentId,
     system,
-    messages: [{ role: "user" as const, content: instruction }],
+    messages: [{ role: "user", content: instruction }],
   };
 
+  return job.type === "TEST"
+    ? produceTestBlocks(spec, base, job.params)
+    : produceLessonBlocks(spec, base, job.params);
+}
+
+async function produceLessonBlocks(
+  spec: StageSpec,
+  base: LlmBase,
+  params: z.infer<typeof LessonParams>,
+): Promise<Produced> {
   if (spec.kind === "skeleton") {
     const result = await runLlm({ ...base, schema: Stage1Out });
-    const gate = checkSkeleton(result.data, args.durationMinutes);
+    const gate = checkSkeleton(result.data, params.durationMinutes);
     if (!gate.ok) return { ok: false, reason: gate.reason };
 
     return {
@@ -265,7 +393,7 @@ async function produceBlocks(args: {
   }
 
   if (spec.kind === "content") {
-    const skeleton = args.skeleton;
+    const skeleton = params.skeleton;
     if (!skeleton) return { ok: false, reason: "mazmun bosqichi uchun skelet yo'q" };
 
     const range = spec.range ?? { from: 0, to: skeleton.stages.length };
@@ -297,6 +425,52 @@ async function produceBlocks(args: {
 }
 
 /**
+ * Test bosqichlari.
+ *
+ * Dars ishlanmadan farqi: `total` bu yerda QAYTARILMAYDI — savol soni
+ * boshidan ma'lum, ya'ni reja hujjat yaratilgan paytda to'liq hisoblangan
+ * (`server/generation-actions.ts`).
+ */
+async function produceTestBlocks(
+  spec: StageSpec,
+  base: LlmBase,
+  params: z.infer<typeof TestParams>,
+): Promise<Produced> {
+  if (spec.kind === "skeleton") {
+    const result = await runLlm({ ...base, schema: TestBlueprintOut });
+    const gate = checkBlueprint(result.data, params.questionCount);
+    if (!gate.ok) return { ok: false, reason: gate.reason };
+
+    return {
+      ok: true,
+      blocks: testBlueprintBlocks(spec, result.data),
+      // Blueprint o'qituvchiga ko'rsatiladigan mazmun emas, keyingi
+      // bosqichlar uchun ko'rsatma — `skeleton` bilan bir xil yo'l.
+      paramsPatch: { blueprint: result.data },
+    };
+  }
+
+  if (spec.kind === "content") {
+    const blueprint = params.blueprint;
+    if (!blueprint) return { ok: false, reason: "savollar bosqichi uchun blueprint yo'q" };
+
+    const range = spec.range ?? { from: 0, to: params.questionCount };
+
+    const result = await runLlm({ ...base, schema: TestQuestionsOut });
+    const gate = checkTestQuestions(result.data, {
+      expected: range.to - range.from,
+      kinds: params.kinds,
+    });
+    if (!gate.ok) return { ok: false, reason: `bosqich ${spec.id}: ${gate.reason}` };
+
+    return { ok: true, blocks: testQuestionBlocks(spec, result.data) };
+  }
+
+  const result = await runLlm({ ...base, schema: TestClosingOut });
+  return { ok: true, blocks: testClosingBlocks(spec, result.data) };
+}
+
+/**
  * Oxirgi bosqichdan keyingi yakun: sifat bahosi -> `charge` yoki `release`.
  *
  * `charge` HUJJATNI O'ZI `DONE` qiladi va `CreditTx` yozadi — bitta
@@ -306,7 +480,7 @@ async function produceBlocks(args: {
 async function finishDocument(args: {
   documentId: string;
   userId: string;
-  params: z.infer<typeof ParamsSchema>;
+  job: Job;
   topic: { objectives: string[]; keywords: string[] };
 }): Promise<StageOutcome> {
   const { documentId, userId } = args;
@@ -320,11 +494,11 @@ async function finishDocument(args: {
   const content = DocumentContent.parse(doc.contentJson);
   const report = scoreDocument({
     content,
-    durationMinutes: args.params.durationMinutes,
+    spec: scoreSpecFor(args.job),
     curriculumTerms: [...args.topic.objectives, ...args.topic.keywords],
     // Parcha topilmagan mavzuda qamrov o'lchami hujjatni emas, bazamizdagi
     // bo'shliqni o'lchaydi — shuning uchun u vazndan chiqariladi.
-    hasContext: args.params.contextChunkIds.length > 0,
+    hasContext: args.job.params.contextChunkIds.length > 0,
   });
 
   if (report.score < SCORE_FAIL) {
