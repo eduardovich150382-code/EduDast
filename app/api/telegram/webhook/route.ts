@@ -6,8 +6,15 @@ import {
   parseStartCommand,
 } from "@/lib/auth/telegram-login";
 import { upsertTelegramUser } from "@/lib/auth/upsert-telegram-user";
+import { appBaseUrl } from "@/lib/app-url";
+import { schoolDay } from "@/lib/calendar/placement";
+import { loadTeacherWeek } from "@/lib/calendar/week-data";
 import { prisma } from "@/lib/db";
+import { anchorDayFor, summarizeWeek, type ReminderLesson } from "@/lib/reminders/plan";
+import { renderReminder, renderToday } from "@/lib/reminders/render";
+import { reminderDateFormat, reminderTranslate } from "@/lib/reminders/translate";
 import { sendMessage } from "@/lib/telegram/api";
+import { looksLikeCommand, parseBotCommand, type BotCommand } from "@/lib/telegram/commands";
 import { isAppLocale } from "@/lib/i18n/locale-path";
 import { routing, type AppLocale } from "@/lib/i18n/routing";
 
@@ -81,20 +88,174 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!message || !from || from.is_bot) return OK;
 
   const start = parseStartCommand(message.text);
-  if (!start) return OK;
+  if (start) {
+    try {
+      await handleStart({
+        chatId: message.chat.id,
+        code: start.code,
+        from,
+        origin: request.nextUrl.origin,
+      });
+    } catch (error) {
+      console.error("[telegram/webhook] /start ishlov berishda xato.", error);
+    }
+    return OK;
+  }
 
-  try {
-    await handleStart({
-      chatId: message.chat.id,
-      code: start.code,
-      from,
-      origin: request.nextUrl.origin,
-    });
-  } catch (error) {
-    console.error("[telegram/webhook] /start ishlov berishda xato.", error);
+  const command = parseBotCommand(message.text);
+  if (command) {
+    try {
+      await handleCommand({
+        command,
+        chatId: message.chat.id,
+        telegramId: BigInt(from.id),
+        fallbackLocale: localeFromTelegram(from.language_code),
+        origin: request.nextUrl.origin,
+      });
+    } catch (error) {
+      // `/start` bilan bir xil intizom: xato logga tushadi, javob 200.
+      console.error(`[telegram/webhook] /${command} ishlov berishda xato.`, error);
+    }
+    return OK;
+  }
+
+  // Noma'lum BUYRUQ ("/xyz") ga javob beramiz, oddiy matnga esa YO'Q:
+  // o'qituvchi botga shunchaki yozganida "buyruqni bilmayman" deyish
+  // bezovta qilardi.
+  if (looksLikeCommand(message.text)) {
+    try {
+      const locale = localeFromTelegram(from.language_code);
+      const translate = await getTranslations({ locale, namespace: "Bot" });
+      await sendMessage(message.chat.id, translate("unknownCommand"));
+    } catch (error) {
+      console.error("[telegram/webhook] noma'lum buyruqqa javob berilmadi.", error);
+    }
   }
 
   return OK;
+}
+
+/**
+ * `/bugun`, `/hafta`, `/eslatma`.
+ *
+ * Foydalanuvchi `telegramId` bo'yicha topiladi — botda sessiya cookie'si
+ * yo'q, ya'ni `auth()` ishlamaydi. Topilmasa saytga havola bilan
+ * "avval kiring" deyiladi (yangi akkaunt YARATILMAYDI: akkaunt faqat
+ * `/start` dagi tasdiqlangan login oqimida ochiladi).
+ */
+async function handleCommand(input: {
+  command: BotCommand;
+  chatId: number;
+  telegramId: bigint;
+  fallbackLocale: AppLocale;
+  origin: string;
+}): Promise<void> {
+  const { command, chatId, telegramId, origin } = input;
+
+  const user = await prisma.user.findFirst({
+    where: { telegramId, deletedAt: null },
+    select: {
+      id: true,
+      locale: true,
+      region: true,
+      remindersEnabled: true,
+      weeklyDigestEnabled: true,
+    },
+  });
+
+  if (!user) {
+    const translate = await getTranslations({
+      locale: input.fallbackLocale,
+      namespace: "Bot",
+    });
+    await sendMessage(chatId, translate("notLinked", { url: `${origin}/${input.fallbackLocale}/kirish` }));
+    return;
+  }
+
+  // Til SAYT sozlamasidan (`User.locale`), Telegram ilovasi tilidan EMAS:
+  // o'qituvchi saytni kirillda ishlatib, Telegram'i ruscha bo'lishi mumkin.
+  const locale = isAppLocale(user.locale) ? user.locale : input.fallbackLocale;
+  const translateBot = await getTranslations({ locale, namespace: "Bot" });
+
+  if (command === "eslatma") {
+    const next = !user.remindersEnabled;
+    await prisma.user.update({ where: { id: user.id }, data: { remindersEnabled: next } });
+    await sendMessage(
+      chatId,
+      next
+        ? translateBot("remindersOn")
+        : `${translateBot("remindersOff")}\n${origin}/${locale}/ish/sozlamalar`,
+    );
+    return;
+  }
+
+  // `/hafta` anchori — ERTANGI kun, cron'dagi xulosa bilan AYNI.
+  // `schoolDay(new Date())` AYNI tuzoqqa tushardi: yakshanba ISO 7, ya'ni
+  // oyna tugayotgan haftani berardi va o'qituvchi yakshanba kechqurun
+  // `/hafta` yozsa O'TGAN haftasini ko'rardi. Ertangi kun esa har doim
+  // joriy yoki kelayotgan haftada, shuning uchun shart kerak emas.
+  // `/bugun` esa chindan bugun.
+  const now = new Date();
+  const anchorDay = command === "hafta" ? anchorDayFor(now) : schoolDay(now);
+
+  const week = await loadTeacherWeek({ id: user.id, region: user.region, locale }, { anchorDay });
+  const summary = summarizeWeek({
+    anchorDay,
+    inTeachingPeriod: week.period !== null,
+    quarter: week.period?.quarter ?? null,
+    classes: week.classes.map((entry) => ({
+      classId: entry.row.id,
+      grade: entry.row.grade,
+      label: entry.row.label,
+      subjectName: entry.row.subjectName,
+      subjectSlug: entry.row.subjectSlug,
+      position: entry.position,
+      topicTitleById: entry.titleById,
+    })),
+    docsByTopic: week.docsByTopic,
+  });
+
+  const context = {
+    translate: await reminderTranslate(locale),
+    formatDate: reminderDateFormat(locale),
+    baseUrl: appBaseUrl() ?? origin,
+    locale,
+  };
+
+  if (command === "bugun") {
+    const today = summary.lessons.filter(
+      (lesson: ReminderLesson) =>
+        lesson.date !== null && lesson.date.getTime() === anchorDay.getTime(),
+    );
+    await sendMessage(
+      chatId,
+      today.length === 0 ? translateBot("todayNone") : renderToday(today, context),
+    );
+    return;
+  }
+
+  if (summary.lessons.length === 0) {
+    await sendMessage(chatId, translateBot("weekNone"));
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    renderReminder(
+      {
+        userId: user.id,
+        chatId: String(chatId),
+        locale,
+        kind: "weeklyDigest",
+        lessons: summary.lessons,
+        weekStart: summary.weekStart,
+        weekEnd: summary.weekEnd,
+        lessonCount: summary.lessonCount,
+        readyCount: summary.readyCount,
+      },
+      context,
+    ),
+  );
 }
 
 async function handleStart(input: {
