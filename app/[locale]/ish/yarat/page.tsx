@@ -1,206 +1,327 @@
 import { getTranslations } from "next-intl/server";
-import { CreateForm } from "@/components/generation/create-form";
-import { Button } from "@/components/ui/button";
+import { StepConfirm } from "@/components/generation/step-confirm";
+import { StepParams } from "@/components/generation/step-params";
+import { StepTopic } from "@/components/generation/step-topic";
+import { StepType } from "@/components/generation/step-type";
+import type { PickerNode, PickerTopic } from "@/components/generation/topic-picker";
+import { Wizard } from "@/components/generation/wizard";
 import { auth } from "@/lib/auth";
-import { creditCost, UNIT_LIMITS } from "@/lib/credits/cost-table";
+import { creditCost } from "@/lib/credits/cost-table";
+import { searchTopics } from "@/lib/curriculum/search";
 import { prisma } from "@/lib/db";
+import {
+  documentTypeFor,
+  type SupportedDocumentType,
+} from "@/lib/documents/type-param";
+import {
+  inferStep,
+  parseWizardParams,
+  previousStep,
+  QUESTION_COUNTS,
+  resolveParams,
+  resolveStep,
+  startInputFor,
+  wizardQuery,
+  type WizardParams,
+} from "@/lib/generation/wizard-params";
 import { GRADES } from "@/lib/grades";
 import { getAppLocale } from "@/lib/i18n/get-app-locale";
 import { subjectName } from "@/lib/subject-name";
 import { topicTitle } from "@/lib/topic-title";
 
 /**
- * Dars ishlanma yaratish sahifasi.
+ * Yaratish sehrgari — qadamli, holat `searchParams` da.
  *
- * Fan/sinf/chorak tanlovi `?fan=&sinf=&chorak=` bilan — JavaScript'siz
- * ishlaydi va "Rejam" dan kelgan havola to'g'ridan-to'g'ri mavzuni ochadi
- * (`app/[locale]/ish/rejam/page.tsx` naqshi).
+ * NEGA SERVER COMPONENT (klient holat mashinasi emas):
+ *   1. NARX SERVERDA hisoblanadi. `creditCost()` mijozga umuman o'tmaydi —
+ *      formula ikki joyda yashasa, o'qituvchiga ko'rsatilgan narx bilan
+ *      yechilgan kredit ertami-kechmi farq qilardi.
+ *   2. Brauzerning "orqaga" tugmasi va havolani ulashish tekinga ishlaydi.
+ *   3. JavaScript'siz ham yuradi: faqat oxirgi "Yaratish" tugmasi klient.
  *
- * To'liq sehrgar (bosqichma-bosqich, oldindan ko'rish bilan) — 11-sessiya.
+ * Parametr shartnomasi va qadam mashinasi `lib/generation/wizard-params.ts`
+ * da — sof modul, `tests/wizard-params.test.ts` bilan qoplangan. Bu sahifa
+ * faqat BAZA ishini qiladi va qadamni tanlaydi.
+ *
+ * `?fan=&sinf=&chorak=&mavzu=` nomlari O'ZGARMADI, shuning uchun bosh
+ * sahifa (`app/[locale]/ish/page.tsx` dagi `prepareHref`) va "Rejam"
+ * havolalari hech qanday tahrirsiz ishlashda davom etadi. Ular `tur`
+ * bermaydi — shunda sehrgar 1-qadamdan boshlanadi, lekin mavzu
+ * TANLANGAN holda keyingi qadamlarga o'tadi.
  */
 
-/** Dars davomiyligi variantlari. 90 — qo'sh dars. */
-const DURATIONS = [35, 45, 60, 90];
-const DEFAULT_DURATION = 45;
-
-/**
- * Savol soni variantlari.
- *
- * Ro'yxat o'qituvchi uchun qulay sonlardan iborat (5, 10, 15 ...), lekin
- * `UNIT_LIMITS.TEST` chegarasi bo'yicha FILTRLANADI: narx jadvali
- * chegarasini o'zgartirsa, bu ro'yxat o'zi moslashadi va formada
- * to'lanmaydigan son qolmaydi.
- */
-const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30, 40].filter(
-  (count) => count >= UNIT_LIMITS.TEST.min && count <= UNIT_LIMITS.TEST.max,
-);
-const DEFAULT_QUESTION_COUNT = 10;
-
-/** `?tur=test` — JavaScript'siz ishlaydigan tur tanlovi. */
-const KINDS = { dars: "LESSON_PLAN", test: "TEST" } as const;
-type KindParam = keyof typeof KINDS;
-
-function readKind(value: string | undefined): KindParam {
-  return value === "test" ? "test" : "dars";
-}
-
-type Search = {
-  fan?: string;
-  sinf?: string;
-  chorak?: string;
-  mavzu?: string;
-  tur?: string;
-};
-
-function Empty({ text }: { text: string }) {
-  return (
-    <p className="rounded-md border border-line px-3 py-6 text-center text-sm text-ink-2">{text}</p>
-  );
-}
+/** Qidiruv natijasi shifti — har chaqiruv bitta embedding puli turadi. */
+const SEARCH_LIMIT = 20;
 
 export default async function YaratPage({
   searchParams,
 }: {
-  searchParams: Promise<Search>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // `IshLayout` allaqachon `requireOnboarded()` chaqirgan (React `cache()`).
   const user = (await auth())!;
   const locale = await getAppLocale();
   const t = await getTranslations("Generator");
-  const { fan, sinf, chorak, mavzu, tur } = await searchParams;
-  const turParam = readKind(tur);
-  const kind = KINDS[turParam];
-  const title = kind === "TEST" ? t("titleTest") : t("title");
-  const description = kind === "TEST" ? t("descriptionTest") : t("description");
+  const params = parseWizardParams(await searchParams);
 
-  const subjects = await prisma.subject.findMany({
+  const subjectRows = await prisma.subject.findMany({
     where: { slug: { in: user.subjects } },
     orderBy: { slug: "asc" },
-    select: { slug: true, nameUz: true, nameUzCyrl: true, nameRu: true },
+    select: { id: true, slug: true, nameUz: true, nameUzCyrl: true, nameRu: true },
   });
   const grades = GRADES.filter((grade) => user.grades.includes(grade));
 
-  const subject = subjects.find((item) => item.slug === fan) ?? subjects[0];
-  const grade = grades.find((item) => item === Number(sinf)) ?? grades[0];
-
-  if (!subject || grade === undefined) {
+  if (subjectRows.length === 0 || grades.length === 0) {
     return (
-      <Shell title={title} description={description}>
-        <Empty text={t("noSelection")} />
-      </Shell>
+      <Wizard
+        step="tur"
+        title={t("title")}
+        description={t("description")}
+        backQuery={null}
+      >
+        <p className="rounded-md border border-line px-3 py-6 text-center text-sm text-ink-2">
+          {t("noSelection")}
+        </p>
+      </Wizard>
     );
   }
 
-  const quarterFilter = Number(chorak);
+  // Mavzu RUXSAT bilan hal qilinadi: faqat o'qituvchining fan va sinf
+  // ro'yxatidagi mavzu "tanlangan" hisoblanadi. Aks holda ulashilgan havola
+  // bilan boshqa fan mavzusini tanlab, xatoni faqat "Yaratish" da ko'rardi.
+  const topic =
+    params.topicId === null
+      ? null
+      : await prisma.topic.findFirst({
+          where: {
+            id: params.topicId,
+            deletedAt: null,
+            grade: { in: grades },
+            subject: { slug: { in: user.subjects } },
+          },
+          select: {
+            id: true,
+            grade: true,
+            titleUz: true,
+            titleUzCyrl: true,
+            titleRu: true,
+            subject: {
+              select: { slug: true, nameUz: true, nameUzCyrl: true, nameRu: true },
+            },
+          },
+        });
+
+  const step = resolveStep(
+    params.step,
+    inferStep(params, { topicResolved: topic !== null }),
+  );
+
+  const docType: SupportedDocumentType =
+    params.type === null ? "LESSON_PLAN" : documentTypeFor(params.type);
+  const isTest = docType === "TEST";
+  const title = isTest ? t("titleTest") : t("title");
+  const description = isTest ? t("descriptionTest") : t("description");
+
+  const previous = previousStep(step);
+  const backQuery =
+    previous === null ? null : wizardQuery(params, { qadam: previous });
+
+  // Narx BITTA joyda hisoblanadi — tasdiqlash ekranidagi son bilan
+  // `boshlaGeneratsiya` yechadigan kredit bir xil formuladan chiqishi uchun
+  // (ikkisi ham `creditCost`, ikkisi ham serverda).
+  const resolved = resolveParams(params);
+  const cost =
+    resolved.type === "TEST"
+      ? creditCost({ type: "TEST", questionCount: resolved.questionCount })
+      : creditCost({ type: "LESSON_PLAN" });
+
+  return (
+    <Wizard
+      step={step}
+      title={title}
+      description={description}
+      backQuery={backQuery}
+    >
+      {step === "tur" && <StepType params={params} />}
+
+      {step === "mavzu" &&
+        (await renderTopicStep({ params, subjectRows, grades, locale, topic }))}
+
+      {step === "param" && (
+        <StepParams
+          params={params}
+          lessonCost={creditCost({ type: "LESSON_PLAN" })}
+          // Har variantning narxi SERVERDA: formula mijozda takrorlansa,
+          // ko'rsatilgan narx bilan yechilgan kredit farq qilishi mumkin edi.
+          questionCosts={QUESTION_COUNTS.map((value) => ({
+            value,
+            cost: creditCost({ type: "TEST", questionCount: value }),
+          }))}
+        />
+      )}
+
+      {step === "tasdiq" && topic !== null && (
+        <StepConfirm
+          input={startInputFor(params, topic.id)}
+          summary={[
+            { label: t("summaryType"), value: isTest ? t("typeTest") : t("typeLesson") },
+            { label: t("summaryTopic"), value: topicTitle(topic, locale) },
+            { label: t("summaryParams"), value: paramsSummary() },
+          ]}
+          cost={cost}
+          // Mavjud balans = balans - band qilingan (`BalanceChip` bilan bir xil).
+          balance={Math.max(0, user.creditBalance - user.creditsHeld)}
+        />
+      )}
+    </Wizard>
+  );
+
+  /** Tasdiqlash ekranidagi "Parametrlar" qatori. */
+  function paramsSummary(): string {
+    if (resolved.type === "TEST") {
+      return [
+        t("questionCountLabel", { count: resolved.questionCount }),
+        resolved.kinds.map((kind) => t(`kind.${kind}`)).join(", "),
+        t(`difficulty.${resolved.difficulty}`),
+      ].join(" · ");
+    }
+    return t("durationLabel", { minutes: resolved.durationMinutes });
+  }
+}
+
+type TopicStepArgs = {
+  params: WizardParams;
+  subjectRows: {
+    id: string;
+    slug: string;
+    nameUz: string;
+    nameUzCyrl: string;
+    nameRu: string;
+  }[];
+  grades: number[];
+  locale: Awaited<ReturnType<typeof getAppLocale>>;
+  topic: { id: string } | null;
+};
+
+async function renderTopicStep({
+  params,
+  subjectRows,
+  grades,
+  locale,
+}: TopicStepArgs) {
+  const t = await getTranslations("Generator");
+
+  const subject =
+    subjectRows.find((row) => row.slug === params.subject) ?? subjectRows[0]!;
+  const grade = grades.find((item) => item === params.grade) ?? grades[0]!;
+
+  const results =
+    params.query === ""
+      ? null
+      : await runSearch({ query: params.query, subjectId: subject.id, grade, locale });
+
   const topicRows = await prisma.topic.findMany({
     where: {
-      subject: { slug: subject.slug },
+      subjectId: subject.id,
       grade,
       deletedAt: null,
-      ...(Number.isInteger(quarterFilter) && quarterFilter > 0
-        ? { quarter: quarterFilter }
-        : {}),
+      ...(params.quarter === null ? {} : { quarter: params.quarter }),
     },
     // `slug` ikkinchi mezon SHART — CSV'da `order` takrorlanadi va Postgres
     // teng qiymatlarda tartibni kafolatlamaydi (`rejam` bilan bir xil sabab).
     orderBy: [{ order: "asc" }, { slug: "asc" }],
     select: {
       id: true,
+      parentId: true,
       titleUz: true,
       titleUzCyrl: true,
       titleRu: true,
     },
   });
 
-  const topics = topicRows.map((topic) => ({ id: topic.id, title: topicTitle(topic, locale) }));
+  // Daraxt — `app/[locale]/admin/mavzular/page.tsx` naqshi.
+  const childrenByParent = new Map<string, PickerTopic[]>();
+  for (const row of topicRows) {
+    if (row.parentId === null) continue;
+    const list = childrenByParent.get(row.parentId) ?? [];
+    list.push({ id: row.id, title: topicTitle(row, locale) });
+    childrenByParent.set(row.parentId, list);
+  }
+  const tree: PickerNode[] = topicRows
+    .filter((row) => row.parentId === null)
+    .map((row) => ({
+      id: row.id,
+      title: topicTitle(row, locale),
+      children: childrenByParent.get(row.id) ?? [],
+    }));
+
+  // Bo'sh holatlar: chorak filtri bo'shatganini "mavzu yuklanmagan" dan
+  // ajratish kerak — ikkisi o'qituvchidan boshqa-boshqa ish talab qiladi.
+  let emptyMessage: string | null = null;
+  if (results === null && topicRows.length === 0) {
+    emptyMessage = params.quarter === null ? t("noTopics") : t("emptyQuarter");
+  }
 
   return (
-    <Shell title={title} description={description}>
-      <form method="get" className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs text-ink-2">
-          {t("docType")}
-          <select
-            name="tur"
-            defaultValue={turParam}
-            className="h-9 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-          >
-            <option value="dars">{t("typeLesson")}</option>
-            <option value="test">{t("typeTest")}</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-2">
-          {t("subject")}
-          <select
-            name="fan"
-            defaultValue={subject.slug}
-            className="h-9 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-          >
-            {subjects.map((item) => (
-              <option key={item.slug} value={item.slug}>
-                {subjectName(item, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-2">
-          {t("grade")}
-          <select
-            name="sinf"
-            defaultValue={String(grade)}
-            className="h-9 rounded-lg border border-line bg-paper px-2 text-sm text-ink"
-          >
-            {grades.map((item) => (
-              <option key={item} value={item}>
-                {t("gradeLabel", { grade: item })}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" variant="outline" size="sm">
-          {t("show")}
-        </Button>
-      </form>
-
-      {topics.length === 0 ? (
-        <Empty text={t("noTopics")} />
-      ) : (
-        <CreateForm
-          kind={kind}
-          topics={topics}
-          selectedTopicId={topics.find((topic) => topic.id === mavzu)?.id ?? null}
-          durations={DURATIONS}
-          defaultDuration={DEFAULT_DURATION}
-          cost={creditCost({ type: "LESSON_PLAN" })}
-          // Har variantning narxi SERVERDA hisoblanadi: formula mijozda
-          // takrorlansa, ko'rsatilgan narx bilan yechilgan kredit
-          // farq qilib ketishi mumkin edi.
-          questionOptions={QUESTION_COUNTS.map((value) => ({
-            value,
-            cost: creditCost({ type: "TEST", questionCount: value }),
-          }))}
-          defaultQuestionCount={DEFAULT_QUESTION_COUNT}
-        />
-      )}
-    </Shell>
+    <StepTopic
+      params={params}
+      subjects={subjectRows.map((row) => ({
+        slug: row.slug,
+        name: subjectName(row, locale),
+      }))}
+      grades={grades}
+      selectedSubject={subject.slug}
+      selectedGrade={grade}
+      tree={tree}
+      results={results}
+      emptyMessage={emptyMessage}
+    />
   );
 }
 
-function Shell({
-  title,
-  description,
-  children,
+/**
+ * Mavzu qidiruvi.
+ *
+ * `searchTopics` ichida `embedQuery` bor — ya'ni HAR chaqiruv bitta
+ * embedding LLM chaqiruvi. Shuning uchun u faqat forma yuborilganda
+ * ishlaydi (`?q=`), hech qachon har harfda emas, va `limit` cheklangan.
+ *
+ * `mode` ("semantic" | "keyword") UI'ga CHIQARILMAYDI: o'qituvchiga uning
+ * ma'nosi yo'q, va bu ichki sifat ko'rsatkichi uchun i18n kaliti
+ * qo'shishga arzimaydi.
+ */
+async function runSearch({
+  query,
+  subjectId,
+  grade,
+  locale,
 }: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-ink">{title}</h1>
-        <p className="text-sm text-ink-2">{description}</p>
-      </div>
-      {children}
-    </div>
-  );
+  query: string;
+  subjectId: string;
+  grade: number;
+  locale: Awaited<ReturnType<typeof getAppLocale>>;
+}): Promise<PickerTopic[]> {
+  const { matches } = await searchTopics(query, {
+    subjectId,
+    grade,
+    limit: SEARCH_LIMIT,
+  });
+  const ids = matches.map((match) => match.id);
+  if (ids.length === 0) return [];
+
+  // `TopicMatch` faqat `titleUz` olib yuradi — ru va uz-Cyrl uchun
+  // qo'shimcha so'rov SHART, aks holda piker uchala tilda o'zbekcha
+  // ko'rsatardi.
+  const rows = await prisma.topic.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { id: true, titleUz: true, titleUzCyrl: true, titleRu: true },
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  // `in` TARTIBNI SAQLAMAYDI — `ids` bo'yicha qayta tartiblash SHART,
+  // aks holda semantik qidiruv relevantligini jimgina yo'qotardi.
+  return ids.flatMap((id) => {
+    const row = byId.get(id);
+    return row === undefined ? [] : [{ id, title: topicTitle(row, locale) }];
+  });
 }
