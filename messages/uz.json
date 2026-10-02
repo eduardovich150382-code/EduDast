@@ -114,7 +114,8 @@
     },
     "nav": {
       "week": "Hafta",
-      "documents": "Hujjatlar"
+      "documents": "Hujjatlar",
+      "settings": "Sozlamalar"
     },
     "loading": "Yuklanmoqda…"
   },
@@ -122,7 +123,32 @@
     "welcome": "Assalomu alaykum! EduDast — o'qituvchi uchun AI ish o'rni.\n\nKirish uchun saytdagi “Telegram bot orqali kirish” tugmasini bosing: {url}",
     "loginApproved": "Kirish tasdiqlandi. Endi brauzerga qayting — sahifa o'zi ochiladi.",
     "loginAlreadyUsed": "Bu kirish so'rovi allaqachon tasdiqlangan.",
-    "loginExpired": "Kirish so'rovining muddati o'tgan. Saytga qaytib, tugmani qaytadan bosing."
+    "loginExpired": "Kirish so'rovining muddati o'tgan. Saytga qaytib, tugmani qaytadan bosing.",
+    "notLinked": "Sizni tanimadim. Avval saytdan bir marta kiring, keyin bu buyruqlar ishlaydi: {url}",
+    "remindersOn": "Eslatmalar yoqildi. Ertangi darsingizga material yo'q bo'lsa, yozaman.",
+    "remindersOff": "Eslatmalar o'chirildi. Qaytarish uchun yana /eslatma yozing.",
+    "todayNone": "Bugun dars yo'q.",
+    "weekNone": "Bu haftada dars yo'q.",
+    "unknownCommand": "Bu buyruqni bilmayman. /bugun, /hafta yoki /eslatma yozing."
+  },
+  "Reminders": {
+    "today": {
+      "title": "Bugungi darslar:"
+    },
+    "daily": {
+      "title": "Ertaga {count} ta darsingizga material yo'q:",
+      "lessonLine": "{class}: {topic}"
+    },
+    "digest": {
+      "summary": "Kelayotgan haftada {lessons} ta dars, {ready} tasiga material tayyor."
+    },
+    "lessonLine": "{day}, {date} — {class}: {topic}",
+    "weekLine": "Bu hafta — {class}: {topic}",
+    "ready": "Tayyor: {items}",
+    "missing": "Kerak: {items}",
+    "nothingReady": "Hali hech narsa yo'q",
+    "open": "Darsni ochish",
+    "andMore": "...va yana {count} ta dars."
   },
   "Plan": {
     "title": "Rejam",
@@ -345,6 +371,26 @@
       "generic": "Saqlanmadi. Qaytadan urinib ko'ring."
     }
   },
+  "Settings": {
+    "title": "Sozlamalar",
+    "on": "Yoqilgan",
+    "off": "O'chirilgan",
+    "reminders": {
+      "title": "Eslatmalar",
+      "description": "Ertangi darsingizga material tayyor bo'lmasa, bot eslatib turadi."
+    },
+    "digest": {
+      "title": "Haftalik xulosa",
+      "description": "Yakshanba kechqurun kelayotgan haftaning xulosasi keladi."
+    },
+    "language": "Til",
+    "logout": "Chiqish",
+    "saved": "Saqlandi",
+    "errors": {
+      "invalid": "Ma'lumot noto'g'ri.",
+      "generic": "Saqlanmadi. Qaytadan urinib ko'ring."
+    }
+  },
   "Week": {
     "quarterWeek": "{quarter}-chorak, {week}-hafta",
     "noQuarter": "Ta'til",
@@ -385,6 +431,8 @@
     "errors": {
       "chegara": "Bu yo'nalishda surib bo'lmaydi.",
       "generic": "Bajarilmadi. Qaytadan urinib ko'ring."
-    }
+    },
+    "nextGap": "{day}dagi {class} darsiga hali hech narsa yo'q.",
+    "nextGapNoDay": "{class} darsiga hali hech narsa yo'q."
   }
 }
