@@ -135,6 +135,12 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 &#x20;  qo'sh, ESKI kalitni esa uni ishlatgan kod o'chgan commitda o'chir — ikkalasini
 &#x20;  bitta "rename" commitiga qo'shma.
 
+\- Vitest transform keshi `node_modules/.vitest-cache` da turadi (`fsModuleCache: true`).
+&#x20;  `node_modules/.vite` esa Vite'ning dep-optimizer keshi — boshqa narsa. Sovuq keshni
+&#x20;  sinash uchun IKKALASINI ham o'chir:
+&#x20;  `rm -rf node_modules/.vite node_modules/.vitest-cache`.
+&#x20;  Faqat `.vite` ni o'chirish "sovuq" yugurish emas — transform keshi joyida qoladi.
+
 \- `curl ... | grep "matn"` YOLG'ON IJOBIY beradi: next-intl butun tarjima
 &#x20;  daraxtini HTML payload'iga joylaydi, shuning uchun matn ekranda
 &#x20;  ko'rinmasa ham grep uni topadi. Ekranda chindan borligini brauzerda yoki
