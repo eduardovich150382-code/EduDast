@@ -58,10 +58,10 @@ export function RegionStep({
       )}
 
       <div className="sticky bottom-0 mt-auto flex gap-3 border-t border-line bg-paper py-4">
-        <Link href="/onboarding/sinflar" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/onboarding/sinflar" className={buttonVariants({ variant: "outline", size: "touch" })}>
           {backLabel}
         </Link>
-        <Button onClick={handleFinish} disabled={!selected || pending} className="flex-1">
+        <Button size="touch" onClick={handleFinish} disabled={!selected || pending} className="flex-1">
           {finishLabel}
         </Button>
       </div>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export function DevLoginForm({ label }: { label: string }) {
   return (
     <form action={devLogin}>
-      <Button type="submit" variant="outline" className="w-full">
+      <Button type="submit" variant="outline" size="touch" className="w-full">
         {label}
       </Button>
     </form>

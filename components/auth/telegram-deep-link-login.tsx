@@ -136,7 +136,7 @@ export function TelegramDeepLinkLogin({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button onClick={boshla} disabled={holat === "ochilmoqda"} size="lg">
+      <Button onClick={boshla} disabled={holat === "ochilmoqda"} size="touch">
         {holat === "ochilmoqda" ? (
           <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
         ) : (

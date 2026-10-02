@@ -60,7 +60,7 @@ export function TopicShift({
       <div className="flex gap-1">
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-touch"
           aria-label={backLabel}
           disabled={pending || !canBack}
           onClick={() => shift("backward")}
@@ -69,7 +69,7 @@ export function TopicShift({
         </Button>
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-touch"
           aria-label={forwardLabel}
           disabled={pending || !canForward}
           onClick={() => shift("forward")}

@@ -142,7 +142,7 @@ export function ScheduleGrid({
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon-touch"
             aria-label={labels.prevDay}
             disabled={day === WEEKDAYS[0]}
             onClick={() => setDay((previous) => previous - 1)}
@@ -152,7 +152,7 @@ export function ScheduleGrid({
           <span className="text-sm font-medium text-ink">{labels.weekdays[day]}</span>
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon-touch"
             aria-label={labels.nextDay}
             disabled={day === WEEKDAYS[WEEKDAYS.length - 1]}
             onClick={() => setDay((previous) => previous + 1)}
@@ -219,7 +219,7 @@ export function ScheduleGrid({
       )}
 
       <div className="sticky bottom-0 mt-auto flex items-center gap-3 border-t border-line bg-paper py-4">
-        <Button className="flex-1" disabled={pending} onClick={handleSave}>
+        <Button size="touch" className="flex-1" disabled={pending} onClick={handleSave}>
           {labels.save}
         </Button>
       </div>
@@ -233,7 +233,7 @@ export function ScheduleGrid({
               <p className="text-sm font-medium text-ink">{labels.chooseClass}</p>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="icon-touch"
                 aria-label={labels.close}
                 onClick={() => setPicking(null)}
               >
@@ -245,7 +245,7 @@ export function ScheduleGrid({
                 key={item.id}
                 type="button"
                 onClick={() => assign(picking.weekday, picking.lessonNo, item.id)}
-                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-muted"
+                className="flex min-h-11 items-center rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-muted"
               >
                 {item.name}
               </button>
@@ -253,7 +253,7 @@ export function ScheduleGrid({
             <button
               type="button"
               onClick={() => assign(picking.weekday, picking.lessonNo, null)}
-              className="rounded-lg border border-line px-3 py-2.5 text-left text-sm text-ink-2 hover:bg-muted"
+              className="flex min-h-11 items-center rounded-lg border border-line px-3 py-2.5 text-left text-sm text-ink-2 hover:bg-muted"
             >
               {labels.clear}
             </button>

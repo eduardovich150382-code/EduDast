@@ -281,7 +281,7 @@ export default async function IshPage() {
             <Link
               key={doc.id}
               href={`/ish/hujjat/${doc.id}`}
-              className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-ink underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-muted"
             >
               {t(`materials.${doc.type}`)}
             </Link>
@@ -386,7 +386,7 @@ export default async function IshPage() {
             )}
             <Link
               href="/ish/jadval"
-              className="flex items-center gap-1.5 text-xs text-ink-2 underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm text-ink-2 underline-offset-4 hover:underline"
             >
               <CalendarPlus className="size-3.5" strokeWidth={1.5} />
               {t("enterSchedule")}
@@ -403,9 +403,9 @@ export default async function IshPage() {
 }
 
 const LINK_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-lg border border-transparent bg-accent px-3.5 py-2 text-sm font-medium text-on-accent";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-transparent bg-accent px-4 py-2 text-sm font-medium text-on-accent";
 const PREPARE_BUTTON =
-  "inline-flex items-center gap-1 rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent";
+  "inline-flex min-h-11 items-center gap-1 rounded-full border border-accent px-4 py-2 text-sm font-medium text-accent";
 
 /** Sinf kurikulumi: yassilangan ketma-ketlik + ko'rinadigan nom va tartib. */
 async function loadTopics(subjectId: string, grade: number) {

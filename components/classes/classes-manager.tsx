@@ -154,7 +154,7 @@ export function ClassesManager({
               <div className="flex shrink-0 gap-1">
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-touch"
                   aria-label={labels.edit}
                   disabled={pending}
                   onClick={() => openEdit(row)}
@@ -163,7 +163,7 @@ export function ClassesManager({
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-touch"
                   aria-label={labels.delete}
                   disabled={pending}
                   onClick={() => handleDelete(row.id)}
@@ -253,15 +253,15 @@ export function ClassesManager({
       <div className="sticky bottom-0 mt-auto flex gap-3 border-t border-line bg-paper py-4">
         {draft ? (
           <>
-            <Button variant="outline" disabled={pending} onClick={() => setDraft(null)}>
+            <Button variant="outline" size="touch" disabled={pending} onClick={() => setDraft(null)}>
               {labels.cancel}
             </Button>
-            <Button className="flex-1" disabled={pending} onClick={handleSave}>
+            <Button size="touch" className="flex-1" disabled={pending} onClick={handleSave}>
               {labels.save}
             </Button>
           </>
         ) : (
-          <Button className="w-full" disabled={pending || subjects.length === 0} onClick={openNew}>
+          <Button size="touch" className="w-full" disabled={pending || subjects.length === 0} onClick={openNew}>
             <Plus className="size-4" strokeWidth={1.5} />
             {labels.add}
           </Button>

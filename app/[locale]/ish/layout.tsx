@@ -28,7 +28,7 @@ export default async function IshLayout({ children }: { children: ReactNode }) {
           <ThemeToggle />
           <LocaleSwitcher />
           <form action={logout}>
-            <Button type="submit" variant="ghost" size="sm">
+            <Button type="submit" variant="ghost" size="touch">
               {t("logout")}
             </Button>
           </form>

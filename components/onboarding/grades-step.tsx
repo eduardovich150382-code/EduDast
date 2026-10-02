@@ -66,10 +66,11 @@ export function GradesStep({
       )}
 
       <div className="sticky bottom-0 mt-auto flex gap-3 border-t border-line bg-paper py-4">
-        <Link href="/onboarding/fanlar" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/onboarding/fanlar" className={buttonVariants({ variant: "outline", size: "touch" })}>
           {backLabel}
         </Link>
         <Button
+          size="touch"
           onClick={handleContinue}
           disabled={selected.length === 0 || pending}
           className="flex-1"

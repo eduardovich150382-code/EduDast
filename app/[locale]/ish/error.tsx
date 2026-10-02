@@ -36,7 +36,7 @@ export default function IshError({
       <AlertTriangle className="size-8 text-warn" strokeWidth={1.5} />
       <h1 className="font-heading text-xl font-semibold text-ink">{t("title")}</h1>
       <p className="text-sm text-ink-2">{t("description")}</p>
-      <Button type="button" variant="outline" onClick={reset}>
+      <Button type="button" variant="outline" size="touch" onClick={reset}>
         {t("retry")}
       </Button>
     </div>

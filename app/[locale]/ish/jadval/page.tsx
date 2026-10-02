@@ -75,7 +75,7 @@ export default async function JadvalPage() {
           <p className="text-sm text-ink-2">{t("noClasses")}</p>
           <Link
             href="/ish/sinflarim"
-            className="text-sm text-ink underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm text-ink underline-offset-4 hover:underline"
           >
             {t("addClasses")}
           </Link>
