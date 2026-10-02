@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LlmError } from "@/lib/llm/errors";
+import { GET } from "@/app/api/cron/embeddings/route";
 
 /**
  * `app/api/cron/embeddings/route.ts`.
@@ -7,6 +8,12 @@ import { LlmError } from "@/lib/llm/errors";
  * ENG MUHIM TEKSHIRUV: sir sozlanmagan bo'lsa endpoint YOPIQ (503).
  * Ochiq qolgan cron endpoint — har kim bizning hisobimizdan pul
  * sarflashi mumkin degani.
+ *
+ * DIQQAT — `GET` STATIK import qilingani `route.ts:46` ning `CRON_SECRET` ni
+ * modul darajasida emas, `GET` ning ICHIDA o'qishiga bog'liq: agar u modul
+ * darajasiga ko'chsa, `vi.stubEnv` kech qoladi va yuqoridagi 503 testi
+ * jimgina noto'g'ri narsani tekshira boshlaydi (yiqilmaydi — shuning uchun
+ * xavfli).
  */
 
 const mocks = vi.hoisted(() => ({
@@ -55,39 +62,14 @@ beforeEach(() => {
 });
 
 describe("qorovul", () => {
-  /**
-   * BU TESTGA ALOHIDA TIMEOUT — fayldagi boshqalari 5 s da qoladi.
-   *
-   * Sabab: `await import(...)` test TANASI ichida, ya'ni marshrut modulining
-   * butun daraxtini transform qilish vaqti aynan shu testning byudjetiga
-   * tushadi. Fayldagi qolgan sakkiz test o'sha modulni keshdan oladi,
-   * shuning uchun sovuq keshda FAQAT birinchisi 5 s ga urilib yiqiladi.
-   *
-   * 20 s — transform narxi uchun keng zaxira; test o'zi millisekundlarda
-   * bajariladi, ya'ni bu son haqiqiy osilishni baribir tutadi.
-   *
-   * ESLATMA — bu tuzatish sababni emas, OQIBATNI bekitadi. Dinamik import
-   * bu yerda MAJBURIY EMAS: endpoint `CRON_SECRET` ni modul darajasida
-   * emas, `GET` ning ichida o'qiydi (`route.ts:46`), ya'ni `vi.stubEnv`
-   * statik import bilan ham ishlaydi (`vi.mock` importlardan yuqoriga
-   * ko'tariladi). Importni fayl boshiga chiqarish transform narxini
-   * yig'ish fazasiga o'tkazardi — u `testTimeout` ga bo'ysunmaydi va
-   * timeout umuman kerak bo'lmasdi. Bu alohida refaktoring sifatida
-   * qoldirildi: u fayldagi to'qqizta testning hammasiga tegadi.
-   */
-  it(
-    "CRON_SECRET sozlanmagan bo'lsa 503 — endpoint BUTUNLAY yopiq",
-    async () => {
-      vi.stubEnv("CRON_SECRET", "");
-      const { GET } = await import("@/app/api/cron/embeddings/route");
+  it("CRON_SECRET sozlanmagan bo'lsa 503 — endpoint BUTUNLAY yopiq", async () => {
+    vi.stubEnv("CRON_SECRET", "");
 
-      const res = await GET(request(`Bearer ${SECRET}`) as never);
+    const res = await GET(request(`Bearer ${SECRET}`) as never);
 
-      expect(res.status).toBe(503);
-      expect(mocks.findStaleTopics).not.toHaveBeenCalled();
-    },
-    20_000,
-  );
+    expect(res.status).toBe(503);
+    expect(mocks.findStaleTopics).not.toHaveBeenCalled();
+  });
 
   it.each([
     ["sarlavha yo'q", undefined],
@@ -98,8 +80,6 @@ describe("qorovul", () => {
     ["uzun sir", `Bearer ${SECRET}x`],
     ["boshqa sxema", `Basic ${SECRET}`],
   ])("noto'g'ri ruxsat → 401: %s", async (_nom, auth) => {
-    const { GET } = await import("@/app/api/cron/embeddings/route");
-
     const res = await GET(request(auth) as never);
 
     expect(res.status).toBe(401);
@@ -108,7 +88,6 @@ describe("qorovul", () => {
 
   it("to'g'ri sir bilan ishlaydi", async () => {
     mocks.findStaleTopics.mockResolvedValue([]);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -120,7 +99,6 @@ describe("qorovul", () => {
 describe("ish", () => {
   it("eskirgan qator yo'q bo'lsa chaqiruv qilmaydi", async () => {
     mocks.findStaleTopics.mockResolvedValue([]);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -131,7 +109,6 @@ describe("ish", () => {
     mocks.findStaleTopics.mockResolvedValueOnce(topics(10)).mockResolvedValue([]);
     mocks.writeTopicVectors.mockResolvedValue(10);
     mocks.countStaleTopics.mockResolvedValue(0);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -153,7 +130,6 @@ describe("ish", () => {
       async (_db: unknown, { limit }: { limit: number }) => topics(limit),
     );
     mocks.writeTopicVectors.mockImplementation(async (_tx, t: unknown[]) => t.length);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -169,7 +145,6 @@ describe("ish", () => {
     mocks.findStaleTopics.mockResolvedValue(topics(10));
     mocks.writeTopicVectors.mockResolvedValue(0);
     mocks.countStaleTopics.mockResolvedValue(10);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -190,7 +165,6 @@ describe("ish", () => {
     mocks.findStaleTopics.mockResolvedValue(topics(10));
     mocks.embedTopics.mockRejectedValue(new LlmError("rate_limit", "chegara"));
     mocks.countStaleTopics.mockResolvedValue(10);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
@@ -210,7 +184,6 @@ describe("ish", () => {
       .mockResolvedValueOnce([])
       .mockRejectedValue(new LlmError("overloaded", "band"));
     mocks.countStaleTopics.mockResolvedValue(104);
-    const { GET } = await import("@/app/api/cron/embeddings/route");
 
     const res = await GET(request(`Bearer ${SECRET}`) as never);
 
