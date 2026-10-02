@@ -102,6 +102,9 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 \- `main` ga to'g'ridan-to'g'ri push YO'Q.
 
+\- Har commit O'Z-O'ZICHA yashil bo'lsin, faqat yakuniy daraxt emas. PR'dan oldin:
+&#x20;  `git rebase origin/main --exec "pnpm typecheck && pnpm test"`.
+
 
 
 \## Ma'lumotlar bazasi qoidalari
@@ -111,6 +114,31 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 \- Hech qachon `delete` — `deletedAt` ishlating (soft delete)
 
 \- Har `@@index` ni sabab bilan qo'sh, ortiqcha indeks Neon 0.5GB ni yeydi
+
+
+
+\## Tekshirish tuzoqlari
+
+\- `i18n-usage` skaneri matn darajasida ishlaydi: nomfazani `useTranslations` /
+&#x20;  `getTranslations` natijasi tayinlangan O'ZGARUVCHI NOMI bo'yicha bog'laydi.
+&#x20;  Bitta faylda ikki nomfaza bo'lsa, har biriga alohida nom ber
+&#x20;  (`const tG = useTranslations("Generator")`, `const tD = useTranslations("Documents")`).
+&#x20;  Ikkalasi ham `t` bo'lsa, skaner kalitni "yo u, yo bu nomfazada bor" deb qabul
+&#x20;  qiladi va noto'g'ri nomfazadagi kalit jimgina o'tib ketadi.
+
+\- Dinamik kalitni (`t(\`features.${x}\`)`) skaner faqat PREFIKS darajasida
+&#x20;  tekshiradi. Ya'ni kalitni qayta nomlashni birorta test tutmaydi — uchala
+&#x20;  message faylini qo'lda solishtir.
+
+\- `i18n-usage` assimetrik: kodda ishlatilib messages'da yo'q kalit testni yiqitadi,
+&#x20;  ishlatilmagan kalit yiqitmaydi. Shuning uchun YANGI kalitni oldinroq commitda
+&#x20;  qo'sh, ESKI kalitni esa uni ishlatgan kod o'chgan commitda o'chir — ikkalasini
+&#x20;  bitta "rename" commitiga qo'shma.
+
+\- `curl ... | grep "matn"` YOLG'ON IJOBIY beradi: next-intl butun tarjima
+&#x20;  daraxtini HTML payload'iga joylaydi, shuning uchun matn ekranda
+&#x20;  ko'rinmasa ham grep uni topadi. Ekranda chindan borligini brauzerda yoki
+&#x20;  atrofidagi markup bo'yicha tekshir.
 
 
 

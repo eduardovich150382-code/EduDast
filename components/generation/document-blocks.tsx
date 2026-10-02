@@ -79,7 +79,7 @@ export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
                 {/* Mobil birinchi: jadval keng bo'lsa gorizontal suriladi,
                     sahifaning o'zi emas. */}
                 <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-                  <table className="w-full min-w-[28rem] border-collapse text-sm">
+                  <table className="w-full min-w-md border-collapse text-sm">
                     <thead>
                       <tr>
                         {block.headers.map((header, i) => (
