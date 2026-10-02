@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/stale-documents",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?tur=kunlik",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?tur=haftalik",
+      "schedule": "0 13 * * 0"
     }
   ]
 }
