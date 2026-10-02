@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { AlertTriangle, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/lib/i18n/navigation";
@@ -70,16 +71,12 @@ export function ScheduleGrid({
   // Telefonda ko'rinadigan kun. Dushanbadan boshlanadi.
   const [day, setDay] = useState(1);
   const [picking, setPicking] = useState<{ weekday: number; lessonNo: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
   const byId = new Map(classes.map((item) => [item.id, item]));
 
   function assign(weekday: number, lessonNo: number, classId: string | null) {
-    setError(null);
-    setSaved(false);
     setGrid((previous) => {
       const next = { ...previous };
       // Bitta katakda bitta sinf — yozish eskisini ALMASHTIRADI, ya'ni
@@ -100,10 +97,12 @@ export function ScheduleGrid({
     startTransition(async () => {
       const result = await saveScheduleSlots({ slots });
       if (!result.ok) {
-        setError(labels.errors[result.error] ?? labels.genericError);
+        toast.error(labels.errors[result.error] ?? labels.genericError);
         return;
       }
-      setSaved(true);
+      // Toast, inline belgi emas: saqlash tugmasi yopishqoq pastki panelda
+      // turadi va "saqlandi" yozuvi uning yonida tugmani siqib qo'yardi.
+      toast.success(labels.saved);
       router.refresh();
     });
   }
@@ -143,7 +142,7 @@ export function ScheduleGrid({
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon-touch"
             aria-label={labels.prevDay}
             disabled={day === WEEKDAYS[0]}
             onClick={() => setDay((previous) => previous - 1)}
@@ -153,7 +152,7 @@ export function ScheduleGrid({
           <span className="text-sm font-medium text-ink">{labels.weekdays[day]}</span>
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon-touch"
             aria-label={labels.nextDay}
             disabled={day === WEEKDAYS[WEEKDAYS.length - 1]}
             onClick={() => setDay((previous) => previous + 1)}
@@ -219,15 +218,8 @@ export function ScheduleGrid({
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="text-sm text-accent">
-          {error}
-        </p>
-      )}
-
       <div className="sticky bottom-0 mt-auto flex items-center gap-3 border-t border-line bg-paper py-4">
-        {saved && <span className="text-sm text-accent-2">{labels.saved}</span>}
-        <Button className="flex-1" disabled={pending} onClick={handleSave}>
+        <Button size="touch" className="flex-1" disabled={pending} onClick={handleSave}>
           {labels.save}
         </Button>
       </div>
@@ -241,7 +233,7 @@ export function ScheduleGrid({
               <p className="text-sm font-medium text-ink">{labels.chooseClass}</p>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="icon-touch"
                 aria-label={labels.close}
                 onClick={() => setPicking(null)}
               >
@@ -253,7 +245,7 @@ export function ScheduleGrid({
                 key={item.id}
                 type="button"
                 onClick={() => assign(picking.weekday, picking.lessonNo, item.id)}
-                className="rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-muted"
+                className="flex min-h-11 items-center rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-muted"
               >
                 {item.name}
               </button>
@@ -261,7 +253,7 @@ export function ScheduleGrid({
             <button
               type="button"
               onClick={() => assign(picking.weekday, picking.lessonNo, null)}
-              className="rounded-lg border border-line px-3 py-2.5 text-left text-sm text-ink-2 hover:bg-muted"
+              className="flex min-h-11 items-center rounded-lg border border-line px-3 py-2.5 text-left text-sm text-ink-2 hover:bg-muted"
             >
               {labels.clear}
             </button>

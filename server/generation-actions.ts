@@ -1,17 +1,16 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
 import { requireOnboarded } from "@/lib/auth";
-import { creditCost, UNIT_LIMITS } from "@/lib/credits/cost-table";
+import { creditCost } from "@/lib/credits/cost-table";
 import { isCreditError } from "@/lib/credits/errors";
 import { hold } from "@/lib/credits/ledger";
 import { EMPTY_CONTENT } from "@/lib/documents/blocks";
 import { prisma } from "@/lib/db";
 import { buildPlan } from "@/lib/generation/plans";
 import { buildTestPlan } from "@/lib/generation/plans-test";
-import { DIFFICULTIES, QUESTION_KINDS } from "@/lib/generation/prompts";
 import { resolveContextChunks } from "@/lib/generation/retrieval";
+import { startSchema } from "@/lib/generation/start-input";
 
 /**
  * Generatsiya action'lari (docs/sessions/08 — dars ishlanma).
@@ -37,45 +36,6 @@ export type GenerationError =
 export type GenerationResult =
   | { ok: true; documentId: string }
   | { ok: false; error: GenerationError };
-
-/**
- * Dars davomiyligi. 35 — qisqartirilgan dars, 90 — qo'sh dars.
- *
- * Yuqori chegara `blocks.ts` dagi `stages.minutes.max(120)` bilan mos:
- * bitta bosqich butun darsdan uzun bo'la olmaydi.
- */
-const MIN_DURATION = 35;
-const MAX_DURATION = 90;
-
-const topicIdSchema = z.string().min(1).max(64);
-
-/**
- * Boshlash parametrlari — HUJJAT TURI BO'YICHA diskriminatsiyalangan.
- *
- * `questionCount` chegarasi `UNIT_LIMITS.TEST` dan O'QILADI, qo'lda
- * takrorlanmaydi: narx jadvali ham, forma ham, bu validatsiya ham bitta
- * manbadan oziqlanadi (`lib/credits/cost-table.ts` dagi izoh). Takrorlansa
- * o'qituvchiga ko'rsatilgan narx bilan yechilgan kredit ertami-kechmi
- * farq qilardi.
- */
-const startSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("LESSON_PLAN"),
-    topicId: topicIdSchema,
-    durationMinutes: z.number().int().min(MIN_DURATION).max(MAX_DURATION),
-  }),
-  z.object({
-    type: z.literal("TEST"),
-    topicId: topicIdSchema,
-    questionCount: z
-      .number()
-      .int()
-      .min(UNIT_LIMITS.TEST.min)
-      .max(UNIT_LIMITS.TEST.max),
-    kinds: z.array(z.enum(QUESTION_KINDS)).min(1).max(QUESTION_KINDS.length),
-    difficulty: z.enum(DIFFICULTIES),
-  }),
-]);
 
 /**
  * Dars ishlanma generatsiyasini BOSHLAYDI.

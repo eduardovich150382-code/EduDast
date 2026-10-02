@@ -25,7 +25,10 @@ export function SelectableChip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
+        // `min-h-11` — 44px teginish nishoni (11-sessiya, 7-band). Balandlik
+        // `py` bilan emas, `min-h` bilan beriladi: uzun fan nomi ikki qatorga
+        // tushsa chip o'sadi, lekin hech qachon 44px dan kichik bo'lmaydi.
+        "inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors",
         selected
           ? "border-transparent bg-accent text-on-accent"
           : "border-line bg-surface text-ink hover:bg-muted",

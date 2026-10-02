@@ -45,20 +45,42 @@
 
   /* Soya — rangi --ink dan hosil qilinadi, qayta hardcode qilinmaydi */
   --shadow-card: 0 1px 3px rgb(from var(--ink) r g b / 6%);
+
+  /* Native boshqaruvlar (skrollbar, <select> ro'yxati, sana tanlagich)
+     brauzerning o'zi bo'yaydigan qismlar — ular tokenlarni ko'rmaydi,
+     faqat shu xususiyatni ko'radi. */
+  color-scheme: light;
 }
 
-/* Tungi rejim: tizim sozlamasiga qarab (bu sessiyada alohida almashtirgich
-   komponenti yo'q — keyingi sessiyada next-themes bilan .dark klassi
-   qo'shilsa, quyidagi qiymatlar o'sha klass ostida ham takrorlanadi). */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #14120f;
-    --surface: #1c1a16;
-    --line: #322e27;
-    --ink: #f5f1e8;
-    --ink-2: #a39a8c;
-    --accent: #e05d51;
-    --accent-2: #2fa693;
-    --warn: #f0b458;
-  }
+/*
+ * Tungi rejim: `.dark` KLASSI ostida, media query ostida EMAS.
+ *
+ * NEGA media query olib tashlandi (11-sessiya): next-themes
+ * `attribute="class"` bilan HAL QILINGAN tema nomini klass qilib yozadi —
+ * aniq yorug' tanlovda `<html class="light">`, tungida `<html class="dark">`.
+ * Agar `@media (prefers-color-scheme: dark)` ham qolsa, tungi OS'dagi
+ * o'qituvchi aniq "yorug'" ni tanlaganda `.light` klassi qo'yiladi-u,
+ * tokenlar baribir tungi qolardi — ya'ni tugma aynan bitta yo'nalishda
+ * buzuq ko'rinardi.
+ *
+ * Tizim sozlamasi baribir hurmat qilinadi: next-themes ilk bo'yoqdan OLDIN
+ * ishlaydigan bloklovchi inline skript joylaydi va `prefers-color-scheme`
+ * ga qarab `.dark` ni o'zi qo'yadi — miltillash yo'q. Yagona yo'qotish —
+ * JavaScript o'chirilganda avtomatik tungi rejim; rang sxemasi ilovaning
+ * funksiyasi emas, shuning uchun qabul qilinadi.
+ *
+ * Qiymatlarni ikki joyda (media query + klass) takrorlash ATAYLAB
+ * tanlanmadi: ikki palitra vaqt o'tib bir-biridan ajralib ketadi.
+ */
+.dark {
+  --paper: #14120f;
+  --surface: #1c1a16;
+  --line: #322e27;
+  --ink: #f5f1e8;
+  --ink-2: #a39a8c;
+  --accent: #e05d51;
+  --accent-2: #2fa693;
+  --warn: #f0b458;
+
+  color-scheme: dark;
 }

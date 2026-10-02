@@ -30,7 +30,7 @@ export function LocaleSwitcher() {
 
   return (
     <Select value={locale} onValueChange={handleChange}>
-      <SelectTrigger aria-label={t("label")} className="w-fit">
+      <SelectTrigger aria-label={t("label")} className="h-11 w-fit">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

@@ -70,6 +70,7 @@ export function SubjectsStep({
 
       <div className="sticky bottom-0 mt-auto border-t border-line bg-paper py-4">
         <Button
+          size="touch"
           onClick={handleContinue}
           disabled={selected.length === 0 || pending}
           className="w-full"

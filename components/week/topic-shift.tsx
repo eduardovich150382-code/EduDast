@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/lib/i18n/navigation";
 import { shiftClassPosition } from "@/server/progress-actions";
@@ -37,16 +38,17 @@ export function TopicShift({
   errors: Record<string, string>;
   genericError: string;
 }) {
-  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
   function shift(direction: "backward" | "forward") {
-    setError(null);
     startTransition(async () => {
       const result = await shiftClassPosition({ teachingClassId, direction });
       if (!result.ok) {
-        setError(errors[result.error] ?? genericError);
+        // Toast, inline `<p>` emas: bu tugmalar har bir sinf kartasining
+        // o'ng burchagida turadi, ya'ni inline xato kartani sakrab
+        // ko'tarib, o'qituvchi bosmoqchi bo'lgan narsani siljitardi.
+        toast.error(errors[result.error] ?? genericError);
         return;
       }
       router.refresh();
@@ -58,7 +60,7 @@ export function TopicShift({
       <div className="flex gap-1">
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-touch"
           aria-label={backLabel}
           disabled={pending || !canBack}
           onClick={() => shift("backward")}
@@ -67,7 +69,7 @@ export function TopicShift({
         </Button>
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-touch"
           aria-label={forwardLabel}
           disabled={pending || !canForward}
           onClick={() => shift("forward")}
@@ -75,11 +77,6 @@ export function TopicShift({
           <ChevronRight className="size-4" strokeWidth={1.5} />
         </Button>
       </div>
-      {error && (
-        <p role="alert" className="text-xs text-accent">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

@@ -111,7 +111,7 @@ export default async function SinflarimPage() {
           {rows.length > 0 && (
             <Link
               href="/ish/jadval"
-              className="text-center text-sm text-ink-2 underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center justify-center text-center text-sm text-ink-2 underline-offset-4 hover:underline"
             >
               {t("scheduleLink")}
             </Link>

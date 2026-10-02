@@ -194,7 +194,7 @@ export default async function RejamPage({
           </select>
         </label>
         <input type="hidden" name="chorak" value={String(selectedQuarter)} />
-        <Button type="submit" size="sm">
+        <Button type="submit" size="touch">
           {t("show")}
         </Button>
       </form>
@@ -217,8 +217,8 @@ export default async function RejamPage({
                 aria-current={quarter.number === selectedQuarter ? "page" : undefined}
                 className={
                   quarter.number === selectedQuarter
-                    ? "rounded-full border border-transparent bg-accent px-3.5 py-2 text-sm font-medium text-on-accent"
-                    : "rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink hover:bg-muted"
+                    ? "inline-flex min-h-11 items-center rounded-full border border-transparent bg-accent px-4 py-2 text-sm font-medium text-on-accent"
+                    : "inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-muted"
                 }
               >
                 {t("quarterLabel", { number: quarter.number })}

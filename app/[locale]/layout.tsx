@@ -4,6 +4,7 @@ import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
@@ -55,13 +56,29 @@ export default async function LocaleLayout({ children, params }: Props) {
   // har bir til uchun oldindan tayyorlanadi.
   setRequestLocale(locale);
 
+  // `suppressHydrationWarning` MAJBURIY, kosmetik emas: next-themes ilk
+  // bo'yoqdan oldin ishlaydigan inline skript bilan `<html>` ning `class`
+  // va `style` ini o'zgartiradi, ya'ni server yuborgan markup React
+  // hidratsiya qilganda allaqachon boshqa. Usiz har yuklanishda konsolda
+  // hidratsiya xatosi chiqadi.
   return (
-    <html lang={locale} className={`${inter.variable} ${manrope.variable}`}>
+    <html
+      lang={locale}
+      className={`${inter.variable} ${manrope.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-screen antialiased">
-        <NextIntlClientProvider>
-          {children}
-          <Toaster />
-        </NextIntlClientProvider>
+        {/* ThemeProvider NextIntlClientProvider ni O'RAB OLADI: shunda
+            `components/ui/sonner.tsx` dagi `useTheme()` (hozirgacha provider
+            bo'lmagani uchun ishlamayotgan) ham, ThemeToggle ham ikkala
+            kontekst ichida bo'ladi. `<body>` ichida — server render qilgan
+            `<html>` markup'iga tegmaslik uchun. */}
+        <ThemeProvider>
+          <NextIntlClientProvider>
+            {children}
+            <Toaster />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
