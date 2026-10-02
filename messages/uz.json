@@ -11,23 +11,32 @@
     "features": {
       "lessonPlan": {
         "title": "Dars ishlanma",
-        "description": "Mavzu bo'yicha to'liq dars rejasi bir necha soniyada."
+        "description": "Kurikulum mavzusiga bog'langan to'liq ishlanma: maqsadlar, dars bosqichlari, uy vazifasi."
       },
       "test": {
         "title": "Test va topshiriqlar",
-        "description": "Sinf darajasiga mos savollar, javob kaliti bilan."
+        "description": "Savol turlari va qiyinligini o'zingiz tanlaysiz — javoblar kaliti bilan."
       },
       "game": {
         "title": "Sinf o'yinlari",
         "description": "Mavzuni mustahkamlash uchun interaktiv o'yinlar."
+      },
+      "plan": {
+        "title": "Haftalik reja",
+        "description": "Sinflaringiz va dars jadvalingizga qarab qaysi mavzu qachon — o'zi hisoblanadi."
       }
-    }
+    },
+    "cta": "Boshlash",
+    "ctaNote": "Telegram orqali, bir bosishda"
   },
   "LocaleSwitcher": {
     "label": "Til",
     "uz": "O'zbekcha",
     "uz-Cyrl": "Ўзбекча",
     "ru": "Русский"
+  },
+  "Theme": {
+    "toggle": "Tungi/kunduzgi rejim"
   },
   "NotFound": {
     "title": "Sahifa topilmadi",
@@ -107,7 +116,12 @@
       "title": "Nimadir xato ketdi",
       "description": "Sahifani qayta yuklang. Muammo takrorlansa, birozdan keyin urinib ko'ring.",
       "retry": "Qaytadan urinish"
-    }
+    },
+    "nav": {
+      "week": "Hafta",
+      "documents": "Hujjatlar"
+    },
+    "loading": "Yuklanmoqda…"
   },
   "Bot": {
     "welcome": "Assalomu alaykum! EduDast — o'qituvchi uchun AI ish o'rni.\n\nKirish uchun saytdagi “Telegram bot orqali kirish” tugmasini bosing: {url}",
@@ -186,7 +200,47 @@
       "easy": "Oson",
       "mixed": "Aralash",
       "hard": "Murakkab"
-    }
+    },
+    "step": {
+      "tur": "Tur",
+      "mavzu": "Mavzu",
+      "param": "Parametrlar",
+      "tasdiq": "Tasdiqlash"
+    },
+    "stepOf": "{current}/{total}-qadam",
+    "next": "Davom etish",
+    "back": "Orqaga",
+    "chooseType": "Nima tayyorlaymiz?",
+    "chooseTopic": "Qaysi mavzu bo'yicha?",
+    "typeLessonHint": "Maqsadlar, dars bosqichlari, uy vazifasi va baholash mezonlari.",
+    "typeTestHint": "Savollar, javoblar kaliti va baholash mezonlari.",
+    "search": "Mavzu qidirish",
+    "searchAction": "Qidirish",
+    "clearSearch": "Qidiruvni tozalash",
+    "noSearchResults": "Bu so'rov bo'yicha mavzu topilmadi.",
+    "allQuarters": "Barcha choraklar",
+    "summaryType": "Tur",
+    "summaryTopic": "Mavzu",
+    "summaryParams": "Parametrlar",
+    "balance": "Mavjud balans: {count} kredit",
+    "notEnough": "Kredit yetarli emas. To'ldirib, qaytadan urinib ko'ring.",
+    "done": "Hujjat tayyor.",
+    "stages": {
+      "LESSON_PLAN": {
+        "skeleton": "Reja va maqsadlar",
+        "content": "Dars bosqichlari",
+        "closing": "Uy vazifasi va baholash"
+      },
+      "TEST": {
+        "skeleton": "Test rejasi",
+        "content": "Savollar",
+        "closing": "Baholash mezonlari"
+      }
+    },
+    "stagePart": "{label} ({index}/{count})",
+    "stageDone": "bajarildi",
+    "stageCurrent": "bajarilmoqda",
+    "stagePending": "navbatda"
   },
   "Documents": {
     "notFound": "Hujjat topilmadi.",
@@ -211,7 +265,27 @@
     "minutes": "{count} daqiqa",
     "points": "{count} ball",
     "answer": "Javob",
-    "estimatedMinutes": "Taxminiy vaqt: {count} daqiqa"
+    "estimatedMinutes": "Taxminiy vaqt: {count} daqiqa",
+    "listTitle": "Hujjatlarim",
+    "listDescription": "Tayyorlagan dars ishlanma va testlaringiz.",
+    "empty": "Hali hujjat yo'q. Birinchi ishlanmani tayyorlang.",
+    "emptyFiltered": "Bu filtr bo'yicha hujjat topilmadi.",
+    "create": "Yaratish",
+    "search": "Sarlavha bo'yicha qidirish",
+    "searchAction": "Qidirish",
+    "clearFilters": "Filtrni tozalash",
+    "filterType": "Tur",
+    "filterStatus": "Holat",
+    "filterAll": "Hammasi",
+    "type": {
+      "LESSON_PLAN": "Dars ishlanma",
+      "TEST": "Test"
+    },
+    "qualityOk": "Sifat yaxshi",
+    "qualityCheck": "Ko'zdan kechirish kerak",
+    "prev": "Oldingi",
+    "next": "Keyingi",
+    "page": "{page}-sahifa"
   },
   "Classes": {
     "title": "Sinflarim",
