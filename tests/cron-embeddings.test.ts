@@ -55,15 +55,39 @@ beforeEach(() => {
 });
 
 describe("qorovul", () => {
-  it("CRON_SECRET sozlanmagan bo'lsa 503 — endpoint BUTUNLAY yopiq", async () => {
-    vi.stubEnv("CRON_SECRET", "");
-    const { GET } = await import("@/app/api/cron/embeddings/route");
+  /**
+   * BU TESTGA ALOHIDA TIMEOUT — fayldagi boshqalari 5 s da qoladi.
+   *
+   * Sabab: `await import(...)` test TANASI ichida, ya'ni marshrut modulining
+   * butun daraxtini transform qilish vaqti aynan shu testning byudjetiga
+   * tushadi. Fayldagi qolgan sakkiz test o'sha modulni keshdan oladi,
+   * shuning uchun sovuq keshda FAQAT birinchisi 5 s ga urilib yiqiladi.
+   *
+   * 20 s — transform narxi uchun keng zaxira; test o'zi millisekundlarda
+   * bajariladi, ya'ni bu son haqiqiy osilishni baribir tutadi.
+   *
+   * ESLATMA — bu tuzatish sababni emas, OQIBATNI bekitadi. Dinamik import
+   * bu yerda MAJBURIY EMAS: endpoint `CRON_SECRET` ni modul darajasida
+   * emas, `GET` ning ichida o'qiydi (`route.ts:46`), ya'ni `vi.stubEnv`
+   * statik import bilan ham ishlaydi (`vi.mock` importlardan yuqoriga
+   * ko'tariladi). Importni fayl boshiga chiqarish transform narxini
+   * yig'ish fazasiga o'tkazardi — u `testTimeout` ga bo'ysunmaydi va
+   * timeout umuman kerak bo'lmasdi. Bu alohida refaktoring sifatida
+   * qoldirildi: u fayldagi to'qqizta testning hammasiga tegadi.
+   */
+  it(
+    "CRON_SECRET sozlanmagan bo'lsa 503 — endpoint BUTUNLAY yopiq",
+    async () => {
+      vi.stubEnv("CRON_SECRET", "");
+      const { GET } = await import("@/app/api/cron/embeddings/route");
 
-    const res = await GET(request(`Bearer ${SECRET}`) as never);
+      const res = await GET(request(`Bearer ${SECRET}`) as never);
 
-    expect(res.status).toBe(503);
-    expect(mocks.findStaleTopics).not.toHaveBeenCalled();
-  });
+      expect(res.status).toBe(503);
+      expect(mocks.findStaleTopics).not.toHaveBeenCalled();
+    },
+    20_000,
+  );
 
   it.each([
     ["sarlavha yo'q", undefined],
