@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { BalanceChip } from "@/components/credits/balance-chip";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { requireOnboarded } from "@/lib/auth";
 import { logout } from "@/server/auth-actions";
@@ -23,6 +24,7 @@ export default async function IshLayout({ children }: { children: ReactNode }) {
         </div>
         <div className="flex items-center gap-2">
           <BalanceChip />
+          <ThemeToggle />
           <LocaleSwitcher />
           <form action={logout}>
             <Button type="submit" variant="ghost" size="sm">

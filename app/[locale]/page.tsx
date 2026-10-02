@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const featureIcons = {
   lessonPlan: NotebookPen,
@@ -27,7 +28,10 @@ export default async function HomePage() {
             {t("title")}
           </span>
         </div>
-        <LocaleSwitcher />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LocaleSwitcher />
+        </div>
       </header>
 
       <main className="flex flex-1 flex-col items-start gap-6">
