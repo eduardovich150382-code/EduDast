@@ -12,6 +12,7 @@ import { EMBEDDING_DIM, findSimilarTopics, searchTopics } from "@/lib/curriculum
 import { setEmbeddingProvider } from "@/lib/llm/embeddings";
 import { PrismaClient } from "@/lib/generated/prisma/client";
 import type { EmbeddingProvider } from "@/lib/llm/types";
+import { assertTestSchemaCurrent } from "./schema-guard";
 
 /**
  * lib/curriculum/embed.ts — HAQIQIY Postgres kerak (pgvector, `::vector`,
@@ -90,16 +91,11 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
 
     db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: TEST_URL }) });
 
-    const columns = await db.$queryRaw<Array<{ column_name: string }>>`
-      SELECT "column_name"::text FROM information_schema.columns
-      WHERE "table_name" = 'Topic' AND "column_name" IN ('embeddedAt', 'embeddingModel', 'updatedAt')
-    `;
-    if (columns.length < 3) {
-      throw new Error(
-        "Test bazasida embedding provenance ustunlari yo'q. Test branch'ga migratsiyalarni " +
-          'qo\'llang: DATABASE_URL="<branch URL>" pnpm prisma migrate deploy',
-      );
-    }
+    // SXEMA DARVOZASI — migratsiya nomlari bo'yicha. Ilgari bu yerda ham
+    // qo'lda yozilgan ustun ro'yxati turardi (`embeddedAt`,
+    // `embeddingModel`, `updatedAt`) va u keyingi migratsiyani
+    // ko'rmasdi — sabab `credits-race.test.ts` dagi izohda.
+    await assertTestSchemaCurrent(db);
 
     await purge(db);
     const subject = await db.subject.create({
@@ -418,6 +414,11 @@ describe.skipIf(!TEST_URL)("embedding yozuvchisi (pgvector)", () => {
 describe.skipIf(!TEST_URL)("qidiruv degradatsiyasi", () => {
   beforeAll(async () => {
     db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: TEST_URL }) });
+
+    // Sxema darvozasi: bu `describe` o'z `beforeAll` iga ega, ya'ni
+    // yuqoridagi tekshiruv unga tegishli emas.
+    await assertTestSchemaCurrent(db);
+
     await purge(db);
     const subject = await db.subject.create({
       data: {

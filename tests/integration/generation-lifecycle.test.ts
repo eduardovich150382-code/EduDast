@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Block } from "@/lib/documents/blocks";
 import { claimStage, commitStage, findStaleDocuments } from "@/lib/documents/lifecycle";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import { assertTestSchemaCurrent } from "./schema-guard";
 
 /**
  * lib/documents/lifecycle.ts — HAQIQIY Postgres kerak.
@@ -101,6 +102,12 @@ describe.skipIf(!TEST_URL)("generatsiya bosqichlari (Postgres qator qulfi)", () 
     }
 
     db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: TEST_URL }) });
+
+    // Sxema darvozasi: baza migratsiyalardan orqada bo'lsa tushunarsiz
+    // "column does not exist" emas, aniq xabar va qilinadigan buyruq.
+    // 12-sessiyada AYNAN shu faylning `beforeAll` i yiqilgan va vitest
+    // uning 19 testini "skipped" deb ko'rsatgan edi.
+    await assertTestSchemaCurrent(db);
     await purge(db);
 
     const subject = await db.subject.create({
