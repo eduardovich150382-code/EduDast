@@ -29,6 +29,24 @@ export default defineConfig({
     // vaqtning 17%i, issiqda 3%i. Har `vitest run` alohida protsess, ya'ni
     // bu tushish faqat diskdagi keshdan keladi.
     fsModuleCache: true,
+    // Vitest'ning standart 5 s i bu repoda YETARLI EMAS.
+    //
+    // Uchta test o'z tabiati bo'yicha sekin: `proxy-matcher` Next'ning
+    // o'z matcher hisoblagichini yuklaydi, `generation-stage-route` va
+    // `generation-lifecycle` esa Neon'ga boradi (sovuq startda bir
+    // necha soniya). 5 s da ular MASHINA BAND BO'LGANDA yiqiladi —
+    // masalan `git rebase --exec "pnpm test"` ketma-ket o'n marta
+    // yugurganda yoki sekinroq CI ishchisida.
+    //
+    // NEGA SOZLAMADA, BUYRUQ QATORIDA EMAS: `--testTimeout` bilan
+    // yugurib repoda 5 s qoldirish yashirin xato bo'lardi — darvoza
+    // tekshirilgan narsadan boshqa bo'lib qolardi va yiqilish sababi
+    // assertion emas, sozlama bo'lardi.
+    //
+    // Bu chegara "sekin test yozish mumkin" degani EMAS: u faqat
+    // mavjud sekin testlar yuklama ostida ham ishonchli bo'lsin degani.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     // `.env.local` ni o'qiydi — usiz `tests/integration/*` jimgina skip
     // bo'ladi. Sababi setup faylining o'zida yozilgan.
     setupFiles: ["tests/setup-env.ts"],
