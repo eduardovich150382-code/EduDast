@@ -20,6 +20,13 @@ const envSchema = z.object({
   // Sozlanmagan bo'lsa /api/telegram/webhook butunlay yopiq turadi.
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
+  // Ilovaning OMMAVIY manzili, oxirida "/" BO'LMASIN.
+  // Nega kerak: cron va bot kontekstida `request.nextUrl.origin` YO'Q, lekin
+  // Telegram xabaridagi havola absolyut bo'lishi SHART. Sozlanmasa
+  // `lib/app-url.ts` `VERCEL_PROJECT_PRODUCTION_URL` ga tushadi, u ham
+  // bo'lmasa havola xabardan butunlay tushib qoladi (xato tashlanmaydi).
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+
   // Sessiya JWT'sini imzolash kaliti. Kamida 32 bayt — qat'iy tekshiruv
   // instrumentation.ts (ishga tushish) va lib/auth/session.ts (chaqirilganda)
   // da, bu yerda emas: bu sxema build'ni yiqitmasligi kerak.

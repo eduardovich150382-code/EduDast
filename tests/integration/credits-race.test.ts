@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DocumentNotRunning, InsufficientCredits, isCreditError } from "@/lib/credits/errors";
 import { charge, hold, release } from "@/lib/credits/ledger";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import { assertTestSchemaCurrent } from "./schema-guard";
 
 /**
  * lib/credits/ledger.ts — HAQIQIY Postgres kerak.
@@ -104,17 +105,16 @@ describe.skipIf(!TEST_URL)("kredit daftari (Postgres qator qulfi)", () => {
 
     db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: TEST_URL }) });
 
-    const columns = await db.$queryRaw<Array<{ column_name: string }>>`
-      SELECT "column_name"::text FROM information_schema.columns
-      WHERE ("table_name" = 'User' AND "column_name" = 'creditsHeld')
-         OR ("table_name" = 'Document' AND "column_name" IN ('startedAt', 'failReason', 'creditsHeldFor'))
-    `;
-    if (columns.length < 4) {
-      throw new Error(
-        "Test bazasida credits_hold ustunlari yo'q. Test branch'ga migratsiyalarni qo'llang: " +
-          'DIRECT_URL="<branch direct URL>" pnpm prisma migrate deploy (migrate dev EMAS)',
-      );
-    }
+    // SXEMA DARVOZASI — migratsiya nomlari bo'yicha.
+    //
+    // Ilgari bu yerda qo'lda yozilgan USTUN RO'YXATI turardi
+    // (`creditsHeld`, `startedAt`, `failReason`, `creditsHeldFor`). U o'z
+    // paytida ishlagan, lekin keyingi migratsiyani KO'RMASDI: 12-sessiyada
+    // `User` ga uch ustun qo'shilganda test bazasi to'rtta migratsiyadan
+    // orqada qoldi va bu qorovul uni jimgina o'tkazib yubordi. Migratsiya
+    // nomlarini solishtirish esa har kelgusi migratsiyani avtomatik
+    // qamraydi (`tests/integration/schema-guard.ts`).
+    await assertTestSchemaCurrent(db);
 
     await purge(db);
     const subject = await db.subject.create({

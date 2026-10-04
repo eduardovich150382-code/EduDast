@@ -158,6 +158,26 @@ model User {
   /// foydalanuvchining barcha qurilmalaridagi sessiyani darhol uzadi.
   sessionVersion Int @default(0)
 
+  /// Eslatmalar umuman yoqilganmi (12-sessiya). `false` — kunlik ham,
+  /// haftalik xulosa ham yuborilmaydi. Bot `/eslatma` buyrug'i va
+  /// sozlamalar sahifasi aynan shuni o'giradi. Bot bloklangani aniqlansa
+  /// (Telegram `403`) cron ham buni `false` qo'yadi.
+  remindersEnabled Boolean @default(true)
+
+  /// Yakshanba kechqurungi haftalik xulosa ALOHIDA o'girgich: o'qituvchi
+  /// kunlik eslatmani qoldirib, xulosani o'chirishi (yoki teskarisi)
+  /// mumkin. `remindersEnabled = false` bo'lsa bu qiymat ahamiyatsiz —
+  /// umumiy o'girgich ustun turadi (lib/reminders/plan.ts, 1-2 darvoza).
+  weeklyDigestEnabled Boolean @default(true)
+
+  /// Oxirgi eslatma YUBORILGAN payt. "Bir kunda bitta xabar" qoidasi shu
+  /// ustunga tayanadi va solishtirish TOSHKENT kuni bo'yicha bo'ladi
+  /// (UTC kuni bilan solishtirish 04:00 Toshkent holatini xato hal
+  /// qiladi). Faqat `sendMessage` muvaffaqiyatli bo'lgandan keyin
+  /// yoziladi — aks holda Telegram nosozligi kunning yagona slotini
+  /// yeb qo'yardi.
+  lastReminderAt DateTime?
+
   documents         Document[]
   llmCalls          LlmCall[]
   creditTxs         CreditTx[]
@@ -169,6 +189,13 @@ model User {
   gamePlayers       GamePlayer[]
   loginTokens       LoginToken[]
   teachingClasses   TeachingClass[]
+
+  /// SABAB: cron har yugurishda "eslatmasi yoqilgan, eng uzoq xabar
+  /// olmagan N kishi" ni oladi — `where remindersEnabled` +
+  /// `order by lastReminderAt asc`. Shu indekssiz u to'liq jadval skani
+  /// + saralash bo'lardi. Ustunlar tartibi muhim: tenglik sharti
+  /// (`remindersEnabled`) oldinda, diapazon/saralash keyin.
+  @@index([remindersEnabled, lastReminderAt])
 }
 
 /// Telegram bot deep-link login uchun bir martalik token.

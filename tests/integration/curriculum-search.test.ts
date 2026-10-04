@@ -2,6 +2,7 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { EMBEDDING_DIM, findSimilarChunks, findSimilarTopics } from "@/lib/curriculum/search";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import { assertTestSchemaCurrent } from "./schema-guard";
 
 /**
  * lib/curriculum/search.ts — HAQIQIY Postgres kerak (pgvector, HNSW).
@@ -80,6 +81,10 @@ describe.skipIf(!TEST_URL)("kurikulum qidiruvi (pgvector)", () => {
     }
 
     db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: TEST_URL }) });
+
+    // Sxema darvozasi: baza migratsiyalardan orqada bo'lsa tushunarsiz
+    // "column does not exist" emas, aniq xabar va qilinadigan buyruq.
+    await assertTestSchemaCurrent(db);
 
     const columns = await db.$queryRaw<Array<{ column_name: string }>>`
       SELECT "column_name"::text FROM information_schema.columns
