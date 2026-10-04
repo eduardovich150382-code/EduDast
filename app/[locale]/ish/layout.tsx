@@ -52,6 +52,12 @@ export default async function IshLayout({ children }: { children: ReactNode }) {
         >
           {t("nav.documents")}
         </Link>
+        <Link
+          href="/ish/sozlamalar"
+          className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-ink-2 transition-colors hover:bg-muted hover:text-ink"
+        >
+          {t("nav.settings")}
+        </Link>
       </nav>
 
       <main className="flex-1">{children}</main>
