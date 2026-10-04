@@ -6,6 +6,8 @@ import { schoolDay } from "@/lib/calendar/placement";
 import { loadTeacherWeek, type TeachingClassRow } from "@/lib/calendar/week-data";
 import { getAppLocale } from "@/lib/i18n/get-app-locale";
 import { Link } from "@/lib/i18n/navigation";
+import { lessonQuery, type LinkableLesson } from "@/lib/reminders/link";
+import { summarizeWeek } from "@/lib/reminders/plan";
 
 /**
  * Haftalik bosh sahifa (09-sessiya, 5-band).
@@ -75,36 +77,66 @@ export default async function IshPage() {
     timeZone: "UTC",
   });
 
-  const lessonCount = positions.reduce(
-    (total, { position }) => total + position.days.reduce((sum, day) => sum + day.topicIds.length, 0),
-    0,
-  );
-  const readyCount = positions.reduce(
-    (total, { position }) =>
-      total +
-      position.days.reduce(
-        (sum, day) => sum + day.topicIds.filter((id) => docsByTopic.has(id)).length,
-        0,
-      ),
-    0,
-  );
+  // Hisob `lib/reminders/plan.ts` da — eslatma bilan BITTA manbadan.
+  //
+  // DIQQAT, XATTI-HARAKAT O'ZGARDI: ilgari "tayyor" ISTALGAN `DONE`
+  // hujjat edi (`docsByTopic.has(id)`), endi `FULLY_READY_TYPES`
+  // (hozircha `LESSON_PLAN`). Ikki ta'rif bo'lsa o'qituvchi shu
+  // sahifada darsni "tayyor" deb ko'rib, keyin o'sha dars uchun eslatma
+  // olib chalkashardi — pastdagi `nextGap` qatori bilan esa bu
+  // qarama-qarshilik ekranning o'zida ko'rinib qolardi.
+  const summary = summarizeWeek({
+    anchorDay: week.anchorDay,
+    inTeachingPeriod: period !== null,
+    quarter: period?.quarter ?? null,
+    classes: positions.map((entry) => ({
+      classId: entry.row.id,
+      grade: entry.row.grade,
+      label: entry.row.label,
+      subjectName: entry.row.subjectName,
+      subjectSlug: entry.row.subjectSlug,
+      position: entry.position,
+      topicTitleById: entry.titleById,
+    })),
+    docsByTopic,
+  });
+
+  const { lessonCount, readyCount } = summary;
+
+  // Birinchi TAYYOR BO'LMAGAN dars — "Chorshanbadagi 7-A fizika darsiga
+  // hali hech narsa yo'q." `summarizeWeek` darvozasiz, ya'ni bu qator
+  // `remindersEnabled = false` da ham, bugun xabar ketgandan keyin ham
+  // ko'rinadi (`planReminders` ishlatilsa matn cron vaqtiga qarab
+  // o'zgarib turardi).
+  const gap = summary.lessons.find((lesson) => lesson.ready !== "full");
 
   /** Sinf nomi: "Fizika 7-A" yoki harfsiz "Fizika 7". */
-  function className(row: TeachingClassRow): string {
+  function className(row: { subjectName: string; grade: number; label: string }): string {
     return row.label
       ? t("classLabel", { subject: row.subjectName, grade: row.grade, letter: row.label })
       : t("classLabelNoLetter", { subject: row.subjectName, grade: row.grade });
   }
 
-  function prepareHref(row: TeachingClassRow, topicId: string) {
+  /**
+   * Query `lib/reminders/link.ts` dagi `lessonQuery` bilan AYNI
+   * manbadan: sahifa va Telegram xabaridagi havola bir-biridan ajralib
+   * ketsa, botdan bosilgan havola sehrgarni bo'sh holatda ochib
+   * qo'yardi.
+   */
+  function prepareHref(lesson: LinkableLesson) {
     return {
       pathname: "/ish/yarat" as const,
-      query: {
-        fan: row.subjectSlug,
-        sinf: String(row.grade),
-        ...(period ? { chorak: String(period.quarter) } : {}),
-        mavzu: topicId,
-      },
+      query: Object.fromEntries(lessonQuery(lesson)),
+    };
+  }
+
+  /** `TeachingClassRow` + mavzu -> havola uchun minimal shakl. */
+  function linkable(row: TeachingClassRow, topicId: string): LinkableLesson {
+    return {
+      subjectSlug: row.subjectSlug,
+      grade: row.grade,
+      quarter: period?.quarter ?? null,
+      topicId,
     };
   }
 
@@ -152,7 +184,7 @@ export default async function IshPage() {
               {t(`materials.${doc.type}`)}
             </Link>
           ))}
-          <Link href={prepareHref(entry.row, topicId)} className={PREPARE_BUTTON}>
+          <Link href={prepareHref(linkable(entry.row, topicId))} className={PREPARE_BUTTON}>
             {t("prepare")}
           </Link>
         </div>
@@ -201,6 +233,23 @@ export default async function IshPage() {
             ? t("summaryNone")
             : t("summary", { lessons: lessonCount, ready: readyCount })}
         </p>
+
+        {/* Eng muhim bitta ish — bosilsa to'g'ridan o'sha darsga olib
+            boradi. Kuni yo'q sinf (jadval kiritilmagan) uchun kunsiz
+            variant: "Chorshanbadagi" deyish mumkin emas, kun aniq emas. */}
+        {gap && (
+          <Link
+            href={prepareHref(gap)}
+            className="text-sm text-accent underline-offset-4 hover:underline"
+          >
+            {gap.weekday === null
+              ? t("nextGapNoDay", { class: className(gap) })
+              : t("nextGap", {
+                  day: t(`weekday.${gap.weekday}`),
+                  class: className(gap),
+                })}
+          </Link>
+        )}
       </div>
 
       {quarters.length === 0 && <Empty text={t("noCalendar")} />}
