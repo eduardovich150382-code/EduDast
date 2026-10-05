@@ -645,6 +645,23 @@ describe("TEST turi", () => {
     expect(mocks.charge).not.toHaveBeenCalled();
   });
 
+  it("blueprintsiz mazmun bosqichi release qiladi, qotib qolmaydi", async () => {
+    // `testStageInstruction` bu holatda `throw` qiladi. Ilgari prompt
+    // `try` dan TASHQARIDA qurilar edi, ya'ni xato ushlanmay chiqib ketar,
+    // kredit `release` qilinmas va hujjat `RUNNING` da qolardi.
+    wireTest({
+      status: "RUNNING",
+      inputParams: testParams({ progress: { stage: 1, total: 3, attempts: 0 } }),
+    });
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("failed");
+    expect(mocks.runLlm).not.toHaveBeenCalled();
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("blueprint"));
+    expect(mocks.charge).not.toHaveBeenCalled();
+  });
+
   it("qo'llab-quvvatlanmagan tur JIM O'TMAYDI", async () => {
     // `GUIDE` ni hozircha hech kim yaratmaydi, lekin yaratilib qolsa
     // uni dars ishlanma sifatida ishlash o'qituvchiga mutlaqo boshqa
@@ -664,5 +681,211 @@ describe("TEST turi", () => {
     expect(mocks.runLlm).not.toHaveBeenCalled();
     expect(mocks.claimStage).not.toHaveBeenCalled();
     expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("GUIDE"));
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* SLIDES turi (14-sessiya)                                           */
+/* ------------------------------------------------------------------ */
+
+describe("SLIDES turi", () => {
+  const OUTLINE = {
+    title: "Tezlanish",
+    slides: [
+      { title: "Tezlanish", layout: "title", purpose: "Mavzuni ochadi" },
+      { title: "Maqsadlar", layout: "bullets", purpose: "Maqsadlarni aytadi" },
+      { title: "Ta'rif", layout: "bullets", purpose: "Ta'rifni beradi" },
+      { title: "Namuna", layout: "bullets", purpose: "Masala yechadi" },
+      { title: "Mashq", layout: "question", purpose: "Savol beradi" },
+      { title: "Xulosa", layout: "bullets", purpose: "Yakunlaydi" },
+    ],
+  };
+
+  /** Modeldan kelgan mazmun — `title`/`layout` SO'RALMAYDI. */
+  function content(count: number) {
+    return {
+      slides: Array.from({ length: count }, (_, i) => ({
+        bullets: [`punkt ${String(i + 1)}`],
+        notes: "Doskaga formulani yozib ko'rsating.",
+      })),
+    };
+  }
+
+  function slidesParams(overrides: Record<string, unknown> = {}) {
+    return {
+      slideCount: 6,
+      contextChunkIds: ["c-1"],
+      progress: { stage: 0, total: 3, attempts: 0 },
+      ...overrides,
+    };
+  }
+
+  function wireSlides(overrides: Record<string, unknown> = {}) {
+    mocks.documentFindFirst.mockResolvedValue({
+      status: "QUEUED",
+      type: "SLIDES",
+      topicId: "t-1",
+      inputParams: slidesParams(),
+      creditsHeldFor: 5,
+      topic: TOPIC,
+      ...overrides,
+    });
+    wireClaim();
+  }
+
+  it("struktura bosqichi bitta runLlm chaqiradi va rejani inputParams ga yozadi", async () => {
+    wireSlides();
+    mocks.runLlm.mockResolvedValue(llmResult(OUTLINE));
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    const outcome = await runStage(ARGS);
+
+    expect(mocks.runLlm).toHaveBeenCalledTimes(1);
+    expect(outcome).toEqual({ kind: "advanced", stage: 1, total: 3 });
+
+    const commit = mocks.commitStage.mock.calls[0]?.[1] as {
+      paramsPatch?: { outline?: { slides: { layout: string }[] } };
+      progressPatch?: unknown;
+    };
+    expect(commit.paramsPatch?.outline?.slides.length).toBe(6);
+    // `total` QAYTARILMAYDI: slayd soni boshidan ma'lum (TEST naqshi).
+    expect(commit.progressPatch).toBeUndefined();
+  });
+
+  it("struktura bosqichida ko'rinishlar TUZATILADI, yiqitilmaydi", async () => {
+    wireSlides();
+    // Model birinchi slaydni `bullets`, o'rtadagisini `title` qilib yubordi.
+    mocks.runLlm.mockResolvedValue(
+      llmResult({
+        ...OUTLINE,
+        slides: OUTLINE.slides.map((slide, i) => ({
+          ...slide,
+          layout: i === 0 ? "bullets" : i === 3 ? "title" : slide.layout,
+        })),
+      }),
+    );
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("advanced");
+
+    const commit = mocks.commitStage.mock.calls[0]?.[1] as {
+      paramsPatch?: { outline?: { slides: { layout: string }[] } };
+    };
+    const layouts = commit.paramsPatch?.outline?.slides.map((s) => s.layout);
+    expect(layouts?.[0]).toBe("title");
+    expect(layouts?.[3]).toBe("section");
+    expect(mocks.release).not.toHaveBeenCalled();
+  });
+
+  it("slayd soni mos kelmasa release — yarim taqdimot saqlanmaydi", async () => {
+    wireSlides();
+    mocks.runLlm.mockResolvedValue(llmResult({ ...OUTLINE, slides: OUTLINE.slides.slice(0, 4) }));
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("failed");
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith(
+      "u-1",
+      5,
+      "d-1",
+      expect.stringContaining("struktura"),
+    );
+    expect(mocks.charge).not.toHaveBeenCalled();
+  });
+
+  it("mazmun bosqichida nom va ko'rinish REJADAN olinadi", async () => {
+    wireSlides({
+      status: "RUNNING",
+      inputParams: slidesParams({
+        progress: { stage: 1, total: 3, attempts: 0 },
+        outline: OUTLINE,
+      }),
+    });
+    mocks.runLlm.mockResolvedValue(llmResult(content(3)));
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("advanced");
+
+    const blocks = (mocks.commitStage.mock.calls[0]?.[1] as { blocks: unknown[] }).blocks as {
+      id: string;
+      type: string;
+      title: string;
+      layout: string;
+      notes?: string;
+    }[];
+    expect(blocks.length).toBe(3);
+    expect(blocks[0]).toMatchObject({
+      id: "s2a-slide-0",
+      type: "slide",
+      title: "Tezlanish",
+      layout: "title",
+    });
+    expect(blocks[2]).toMatchObject({ title: "Ta'rif", layout: "bullets" });
+  });
+
+  it("strukturasiz mazmun bosqichi release qiladi", async () => {
+    // Bu holat faqat `inputParams` buzilganda yuz beradi, lekin jim o'tsa
+    // o'qituvchi nomsiz slaydlar oladi.
+    wireSlides({
+      status: "RUNNING",
+      inputParams: slidesParams({ progress: { stage: 1, total: 3, attempts: 0 } }),
+    });
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("failed");
+    expect(mocks.runLlm).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith(
+      "u-1",
+      5,
+      "d-1",
+      expect.stringContaining("struktura yo'q"),
+    );
+  });
+
+  it("slayd yetmasa release qiladi", async () => {
+    wireSlides({
+      status: "RUNNING",
+      inputParams: slidesParams({
+        progress: { stage: 1, total: 3, attempts: 0 },
+        outline: OUTLINE,
+      }),
+    });
+    // 3 ta kerak, model 1 ta qaytardi.
+    mocks.runLlm.mockResolvedValue(llmResult(content(1)));
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    expect((await runStage(ARGS)).kind).toBe("failed");
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 5, "d-1", expect.stringContaining("slaydlar"));
+  });
+
+  it("purpose kaliti slides: prefiksi bilan yoziladi", async () => {
+    wireSlides();
+    mocks.runLlm.mockResolvedValue(llmResult(OUTLINE));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    const request = mocks.runLlm.mock.calls[0]?.[0] as { purpose: string };
+    expect(request.purpose).toBe("slides:stage-1");
+  });
+
+  it("kesh tartibi saqlanadi — kontekst taqdimot qo'llanmasidan OLDIN", async () => {
+    wireSlides();
+    mocks.runLlm.mockResolvedValue(llmResult(OUTLINE));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    const request = mocks.runLlm.mock.calls[0]?.[0] as {
+      system: { text: string; cacheable?: boolean }[];
+    };
+    // Dars ishlanma bilan AYNI tartib: shuning uchun bir mavzudan ikki xil
+    // hujjat yaratgan o'qituvchi prefiksni keshdan o'qiydi.
+    expect(request.system[1]?.text).toBe("## Kurikulum konteksti");
+    expect(request.system[1]?.cacheable).toBe(true);
+    expect(request.system[2]?.cacheable).toBe(true);
+    expect(request.system[2]?.text).toContain("Taqdimot slaydlari");
+    // Slayd soni keshdan TASHQARIDA — oxirgi bo'lakda.
+    expect(request.system[3]?.text).toContain("Slayd soni: 6");
+    expect(request.system[3]?.cacheable).toBeUndefined();
   });
 });
