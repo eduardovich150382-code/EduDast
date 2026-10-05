@@ -1,0 +1,208 @@
+/*
+ * Taqdimot pleyerining stillari (14-sessiya).
+ *
+ * NEGA ALOHIDA FAYL, `globals.css` EMAS: bu yerdagi qoidalar faqat
+ * taqdimot marshrutiga tegishli — `@media print` da "bitta slayd bitta
+ * sahifa" qoidasi boshqa sahifada ma'nosiz, `100dvh` balandlikdagi freym
+ * esa hujjat ro'yxatini buzardi. Fayl `taqdimot/page.tsx` dan import
+ * qilinadi va App Router uni shu marshrutga bog'laydi.
+ *
+ * RANGLAR FAQAT TOKENLARDAN (`styles/tokens.css`) — 2-qoida bu yerda ham
+ * kuchda. `tests/tokens-guard.test.ts` `styles/` ni ham skanerlaydi, ya'ni
+ * hex yozilsa test yiqiladi.
+ *
+ * SHRIFT `clamp()` BILAN: bitta taqdimot telefonda ham, proyektorda ham,
+ * 75 dyuymli smart doskada ham o'qilishi kerak. Media query bilan uch
+ * nuqtaga bo'lish o'rtadagi o'lchamlarni tashlab ketardi, `vw` yolg'iz
+ * o'zi esa telefonda matnni o'qilmas kichik qilardi — `clamp()` ikkisining
+ * o'rtasi: pastki chegara telefonni, yuqorisi doskani ushlaydi.
+ */
+
+.slide-deck {
+  /* Gorizontal snap — SURISH SHU YERDA NATIV BO'LADI.
+     Smart doskada barmoq bilan surish uchun touch handler ham, paket ham
+     kerak emas: brauzerning o'zi snap qiladi. JS karusel o'rniga shuni
+     tanlashning asosiy sababi — JavaScript yuklanmasa ham ishlaydi. */
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* Taqdimot chetida surishni davom ettirish brauzerda "orqaga" navigatsiya
+     berardi (iOS/Android) — dars o'rtasida sahifadan chiqib ketish. */
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  background: var(--paper);
+  /* Skrollbar yashiriladi: taqdimotda u chalg'ituvchi, surish esa baribir
+     barmoq va klaviatura bilan ishlaydi. */
+  scrollbar-width: none;
+}
+
+.slide-deck::-webkit-scrollbar {
+  display: none;
+}
+
+.slide-frame {
+  /* `100%` — konteyner kengligi, `vw` EMAS: `vw` skrollbar kengligini ham
+     qo'shib, har freymni bir necha piksel kengaytirib yuborardi. */
+  flex: 0 0 100%;
+  width: 100%;
+  scroll-snap-align: start;
+  /* `100dvh`, `100vh` EMAS: telefon brauzerida manzil satri yashirinib
+     ochilganda `vh` o'zgarmaydi va slaydning pastki qismi kesilib qolardi. */
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0.75rem, 1.5vw, 2rem);
+  padding: clamp(1.5rem, 5vw, 5rem);
+  color: var(--ink);
+}
+
+/* Sarlavha va punkt o'lchamlari — hamma ko'rinish shu ikkisidan foydalanadi. */
+.slide-title {
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.75rem, 5vw, 4.5rem);
+  line-height: 1.1;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.slide-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.2vw, 1.5rem);
+  font-size: clamp(1.125rem, 2.4vw, 2.25rem);
+  line-height: 1.35;
+}
+
+.slide-bullet {
+  display: flex;
+  gap: 0.6em;
+}
+
+/* Ro'yxat belgisi — `list-style` EMAS: belgi o'lchami shrift bilan birga
+   o'sishi kerak, brauzer markeri esa ortda qolib mayda nuqta bo'lib qoladi. */
+.slide-bullet::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.3em;
+  height: 0.3em;
+  margin-top: 0.55em;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* --- Ko'rinishlar --- */
+
+/* `title` va `section` — markazda, boshqa ko'rinishlardan farqi shunda. */
+.slide-frame[data-layout="title"],
+.slide-frame[data-layout="section"],
+.slide-frame[data-layout="quote"] {
+  align-items: center;
+  text-align: center;
+}
+
+.slide-subtitle {
+  font-size: clamp(1rem, 2vw, 1.75rem);
+  color: var(--ink-2);
+}
+
+.slide-quote {
+  font-size: clamp(1.5rem, 4vw, 3.5rem);
+  line-height: 1.2;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.slide-quote-source {
+  font-size: clamp(0.875rem, 1.6vw, 1.5rem);
+  color: var(--ink-2);
+}
+
+.slide-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1rem, 3vw, 3rem);
+}
+
+/* Ikki ustun FAQAT keng ekranda: telefonda ular ketma-ket o'qiladi va
+   bu to'g'ri — `twoColumns` tartibi aynan shunga qurilgan. */
+@media (min-width: 640px) {
+  .slide-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.slide-question .slide-title {
+  font-size: clamp(2rem, 5.5vw, 5rem);
+}
+
+/* Slayd raqami — har freymning o'z burchagida. */
+.slide-number {
+  position: absolute;
+  right: clamp(1rem, 3vw, 3rem);
+  bottom: clamp(1rem, 3vw, 3rem);
+  font-size: clamp(0.75rem, 1.2vw, 1.125rem);
+  color: var(--ink-2);
+}
+
+.slide-frame {
+  position: relative;
+}
+
+/* --- Chop etish --- */
+
+@page {
+  size: landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* Snap konteyner CHOP ETILMAYDI: `overflow` ichidagi kontentni brauzer
+     bir sahifaga siqib, qolganini kesib tashlardi. */
+  .slide-deck {
+    display: block;
+    overflow: visible;
+    background: none;
+  }
+
+  .slide-frame {
+    /* `100dvh` chop etishda ma'nosiz — sahifa balandligini `@page` beradi. */
+    min-height: 0;
+    height: auto;
+    width: 100%;
+    padding: 0;
+    break-after: page;
+    break-inside: avoid;
+    /* Ekranda markazda turgan slayd qog'ozda yuqoridan boshlanishi kerak. */
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  /* Oxirgi slayddan keyin bo'sh sahifa chiqmasin. */
+  .slide-frame:last-child {
+    break-after: auto;
+  }
+
+  .slide-notes {
+    break-inside: avoid;
+  }
+
+  /* Boshqaruv, havola va slayd raqami qog'ozda kerak emas. */
+  .slide-chrome {
+    display: none !important;
+  }
+
+  /* Proyektor uchun tanlangan katta o'lchamlar A4 ga sig'maydi. */
+  .slide-title {
+    font-size: 20pt;
+  }
+
+  .slide-bullets {
+    font-size: 12pt;
+  }
+
+  .slide-quote {
+    font-size: 16pt;
+  }
+}
