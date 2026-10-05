@@ -205,10 +205,15 @@
     "docType": "Hujjat turi",
     "typeLesson": "Dars ishlanma",
     "typeTest": "Test",
+    "typeSlides": "Taqdimot",
     "titleTest": "Test yaratish",
     "descriptionTest": "Mavzuni tanlang — kurikulumga bog'langan test tayyorlanadi.",
+    "titleSlides": "Taqdimot yaratish",
+    "descriptionSlides": "Mavzuni tanlang — kurikulumga bog'langan taqdimot tayyorlanadi.",
     "questionCount": "Savol soni",
     "questionCountLabel": "{count} savol",
+    "slideCount": "Slayd soni",
+    "slideCountLabel": "{count} slayd",
     "kindsLabel": "Savol turlari",
     "kind": {
       "mcq": "Variantli",
@@ -235,6 +240,7 @@
     "chooseTopic": "Qaysi mavzu bo'yicha?",
     "typeLessonHint": "Maqsadlar, dars bosqichlari, uy vazifasi va baholash mezonlari.",
     "typeTestHint": "Savollar, javoblar kaliti va baholash mezonlari.",
+    "typeSlidesHint": "Sinfda ekranga chiqariladigan slaydlar va o'qituvchi izohlari.",
     "search": "Mavzu qidirish",
     "searchAction": "Qidirish",
     "clearSearch": "Qidiruvni tozalash",
@@ -256,6 +262,10 @@
         "skeleton": "Test rejasi",
         "content": "Savollar",
         "closing": "Baholash mezonlari"
+      },
+      "SLIDES": {
+        "skeleton": "Taqdimot rejasi",
+        "content": "Slaydlar"
       }
     },
     "stagePart": "{label} ({index}/{count})",
@@ -281,6 +291,9 @@
     "rubric": "Baholash mezonlari",
     "answerKey": "Javoblar kaliti",
     "questions": "Savollar",
+    "slide": "Slayd",
+    "slideNotes": "O'qituvchi izohi",
+    "slideLayout": "Ko'rinish",
     "teacher": "O'qituvchi",
     "student": "O'quvchi",
     "minutes": "{count} daqiqa",
@@ -300,7 +313,8 @@
     "filterAll": "Hammasi",
     "type": {
       "LESSON_PLAN": "Dars ishlanma",
-      "TEST": "Test"
+      "TEST": "Test",
+      "SLIDES": "Taqdimot"
     },
     "qualityOk": "Sifat yaxshi",
     "qualityCheck": "Ko'zdan kechirish kerak",
@@ -357,7 +371,8 @@
       "answerKey": "Javoblar kaliti",
       "rubric": "Baholash mezonlari",
       "homework": "Uyga vazifa",
-      "note": "Izoh"
+      "note": "Izoh",
+      "slide": "Slayd"
     },
     "field": {
       "level": "Daraja",
@@ -386,6 +401,9 @@
       "descriptors": "Ta'riflar",
       "estimatedMinutes": "Taxminiy daqiqa",
       "tone": "Ohang",
+      "layout": "Ko'rinish",
+      "bullets": "Punktlar",
+      "notes": "O'qituvchi izohi",
       "addItem": "Band qo'shish",
       "removeItem": "Bandni o'chirish",
       "addRow": "Satr qo'shish",
@@ -423,6 +441,14 @@
         "analyze": "Tahlil qilish",
         "evaluate": "Baholash",
         "create": "Yaratish"
+      },
+      "layout": {
+        "title": "Sarlavha",
+        "section": "Bo'lim",
+        "bullets": "Punktlar",
+        "two-column": "Ikki ustun",
+        "quote": "Iqtibos",
+        "question": "Savol"
       }
     },
     "defaults": {
@@ -444,6 +470,29 @@
       "generic": "Saqlanmadi. Internetni tekshirib qaytadan urinib ko'ring.",
       "mcqRules": "Variantli savolda kamida 3 ta turli variant bo'lishi va to'g'ri javob ular ichidan tanlanishi kerak."
     }
+  },
+  "Slides": {
+    "open": "Taqdimot rejimi",
+    "title": "Taqdimot",
+    "back": "Hujjatga qaytish",
+    "empty": "Bu hujjatda slayd yo'q.",
+    "slideOf": "{index}/{total}",
+    "prev": "Oldingi slayd",
+    "next": "Keyingi slayd",
+    "first": "Birinchi slayd",
+    "last": "Oxirgi slayd",
+    "fullscreen": "To'liq ekran",
+    "fullscreenExit": "To'liq ekrandan chiqish",
+    "print": "Chop etish",
+    "printHint": "Brauzerning chop etish oynasida «PDF sifatida saqlash» ni tanlang.",
+    "notesShow": "Izohlarni ko'rsatish",
+    "notesHide": "Izohlarni yashirish",
+    "notes": "O'qituvchi izohi",
+    "noNotes": "Bu slaydga izoh yozilmagan.",
+    "presenter": "Notiq ko'rinishi",
+    "presenterExit": "Oddiy ko'rinish",
+    "nextSlide": "Keyingi",
+    "deckHint": "Slaydlarni o'q tugmalari yoki barmoq bilan suring."
   },
   "Classes": {
     "title": "Sinflarim",
