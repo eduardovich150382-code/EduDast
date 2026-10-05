@@ -32,7 +32,6 @@ const SUBSCRIBE_NEVER = () => () => undefined;
 export function SlidePlayer({
   total,
   labels,
-  printHref,
   notesHref,
   backHref,
   presenterHref,
@@ -45,6 +44,7 @@ export function SlidePlayer({
     fullscreen: string;
     fullscreenExit: string;
     print: string;
+    printHint: string;
     notesShow: string;
     notesHide: string;
     notesOn: boolean;
@@ -52,7 +52,6 @@ export function SlidePlayer({
     back: string;
     deckHint: string;
   };
-  printHref: string;
   notesHref: string;
   backHref: string;
   presenterHref: string;
@@ -207,7 +206,6 @@ export function SlidePlayer({
         fullscreen={fullscreen}
         canFullscreen={canFullscreen}
         labels={labels}
-        printHref={printHref}
         notesHref={notesHref}
         backHref={backHref}
         presenterHref={presenterHref}

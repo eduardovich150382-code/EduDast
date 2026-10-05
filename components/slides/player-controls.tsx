@@ -33,7 +33,6 @@ export function PlayerControls({
   fullscreen,
   canFullscreen,
   labels,
-  printHref,
   notesHref,
   backHref,
   presenterHref,
@@ -49,6 +48,7 @@ export function PlayerControls({
     fullscreen: string;
     fullscreenExit: string;
     print: string;
+    printHint: string;
     notesShow: string;
     notesHide: string;
     notesOn: boolean;
@@ -56,7 +56,6 @@ export function PlayerControls({
     back: string;
     deckHint: string;
   };
-  printHref: string;
   notesHref: string;
   backHref: string;
   presenterHref: string;
@@ -117,16 +116,23 @@ export function PlayerControls({
               <StickyNote className="size-5" strokeWidth={1.5} />
             </Link>
 
-            <Link
-              href={printHref}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "icon-touch" }),
-                "bg-surface",
-              )}
+            {/* Chop etish — TUGMA, havola emas: u brauzerning chop etish
+                oynasini ochadi. Nima chop etilishini URL hal qiladi
+                (`?izoh=`), ya'ni o'qituvchi EKRANDA ko'rayotgan narsa
+                qog'ozga tushadi. Yonidagi izoh almashtirgichi esa havola. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-touch"
+              className="bg-surface"
               aria-label={labels.print}
+              title={labels.printHint}
+              onClick={() => {
+                window.print();
+              }}
             >
               <Printer className="size-5" strokeWidth={1.5} />
-            </Link>
+            </Button>
           </>
         )}
       </div>

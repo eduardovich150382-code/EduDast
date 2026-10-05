@@ -58,7 +58,13 @@ describe("/onboarding", () => {
 });
 
 describe("/ish", () => {
-  it.each(["/ish", "/ish/abc", "/ish/hujjat/123"])("%s — anonim → /kirish", (pathname) => {
+  it.each([
+    "/ish",
+    "/ish/abc",
+    "/ish/hujjat/123",
+    // Taqdimot rejimi (14-sessiya) — chuqur yo'l ham qamrab olinadi.
+    "/ish/hujjat/123/taqdimot",
+  ])("%s — anonim → /kirish", (pathname) => {
     expect(decideRouteAccess({ pathname, ...ANON })).toEqual(toKirish);
   });
 

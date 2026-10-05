@@ -126,15 +126,13 @@ export default async function TaqdimotPage({
         pathname,
         playerQuery(view, { [NOTES_PARAM]: view.notes ? "yoq" : "bor" }),
       )}
-      // Chop etish uchun izohlar OCHIQ holatdagi havola: qog'ozdagi nusxada
-      // o'qituvchi izohlari eng foydali narsa.
-      printHref={hrefFor(pathname, playerQuery(view, { [NOTES_PARAM]: "bor" }))}
       labels={{
         prev: tS("prev"),
         next: tS("next"),
         fullscreen: tS("fullscreen"),
         fullscreenExit: tS("fullscreenExit"),
         print: tS("print"),
+        printHint: tS("printHint"),
         notesShow: tS("notesShow"),
         notesHide: tS("notesHide"),
         notesOn: view.notes,
