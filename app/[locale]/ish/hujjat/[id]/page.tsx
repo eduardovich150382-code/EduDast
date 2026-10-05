@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Pencil, RefreshCw } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -21,7 +21,11 @@ import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 /**
- * Hujjat ko'ruvchi — TAHRIRSIZ (13-sessiya).
+ * Hujjat ko'ruvchi — O'ZI TAHRIRLAMAYDI.
+ *
+ * Tahrirlash alohida marshrutda (`./tahrir`, 13-sessiya): shu sahifa server
+ * komponent bo'lib qoladi — tez, ulashiladi va JavaScript'siz ochiladi.
+ * Bu yerda faqat havola bor, u ham hujjat tayyor bo'lgandan keyin.
  *
  * `RUNNING` bo'lsa tayyor bloklar ko'rsatiladi va `GenerationProgress`
  * qolgan bosqichlarni haydaydi. Progress bazada, shuning uchun brauzerni
@@ -33,6 +37,9 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
   const user = (await auth())!;
   const t = await getTranslations("Documents");
   const tg = await getTranslations("Generator");
+  // Nomi ataylab `tE` — pastdagi `buildStageNames` izohida yozilgan sabab:
+  // skaner nomfazani o'zgaruvchi NOMI bo'yicha bog'laydi.
+  const tE = await getTranslations("Editor");
   const { id } = await params;
 
   const doc = await prisma.document.findFirst({
@@ -102,6 +109,20 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
         <h1 className="font-heading text-xl font-semibold text-ink">{doc.title}</h1>
         <span className="text-xs text-ink-2">{t(`status.${doc.status}`)}</span>
       </div>
+
+      {/* Tahrirlash faqat tugagan hujjatda: generatsiya ketayotganda
+          muharrirning butun `contentJson` ni almashtirishi `commitStage`
+          ning append'i bilan poyga qilardi. `FAILED` ataylab kiritilgan —
+          yarim bitgan hujjatni o'qituvchi qo'lda tugatishi mumkin. */}
+      {!running && (
+        <Link
+          href={`/ish/hujjat/${id}/tahrir`}
+          className={cn(buttonVariants({ variant: "outline", size: "touch" }), "self-start")}
+        >
+          <Pencil className="size-4" strokeWidth={1.5} />
+          {tE("open")}
+        </Link>
+      )}
 
       {running && (
         <GenerationProgress
