@@ -28,15 +28,18 @@ export function TextField({
   value,
   maxLength,
   multiline = false,
+  optional = false,
   onChange,
 }: {
   label: string;
   value: string;
   maxLength: number;
   multiline?: boolean;
+  /** `caption` va `explanation` kabi `.optional()` maydonlar uchun. */
+  optional?: boolean;
   onChange: (value: string) => void;
 }) {
-  const invalid = value.trim().length === 0;
+  const invalid = !optional && value.trim().length === 0;
 
   return (
     <label className="flex flex-col gap-1">

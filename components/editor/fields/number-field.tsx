@@ -13,9 +13,19 @@ import { Input } from "@/components/ui/input";
  * tushardi. Shuning uchun matn erkin yoziladi, yuqoriga esa faqat
  * CHEGARA ICHIDAGI butun son uzatiladi.
  *
- * `useEffect` bilan tashqi qiymatga moslashtirish KERAK EMAS: `value` ni
- * faqat shu maydonning o'zi o'zgartiradi, nusxalash esa `block.id` kaliti
- * orqali yangi komponent yasaydi va holat o'zi toza boshlanadi.
+ * TASHQI QIYMAT O'ZGARSA MAHALLIY MATN QAYTA TIKLANADI (`seen` qiyoslovi,
+ * React'ning "prop o'zgarganda holatni moslashtirish" naqshi). Bu
+ * `useEffect` emas — render paytida bajariladi, ya'ni ekranda eski qiymat
+ * bir kadr ham ko'rinmaydi.
+ *
+ * NEGA KERAK: `stages.items` da ID YO'Q, shuning uchun bosqichlar INDEKS
+ * bo'yicha kalitlanadi. Birinchi bosqich o'chirilsa ikkinchisi uning
+ * o'rniga suriladi va React ayni komponent nusxasini qayta ishlatadi —
+ * moslashtirish bo'lmasa maydonda o'chirilgan bosqichning daqiqasi
+ * qolib ketardi.
+ *
+ * Yozish bilan URUSHMAYDI: yozish davomida `value` faqat shu maydon
+ * yuborgan qiymatga o'zgaradi, ya'ni `String(value)` matnning o'ziga teng.
  *
  * Fokusdan chiqqanda nosog'lom matn oxirgi QABUL QILINGAN qiymatga
  * qaytadi — ekranda saqlanmagan son qolib ketmasin.
@@ -34,6 +44,12 @@ export function NumberField({
   onChange: (value: number) => void;
 }) {
   const [text, setText] = useState(() => String(value));
+  const [seen, setSeen] = useState(value);
+
+  if (seen !== value) {
+    setSeen(value);
+    setText(String(value));
+  }
 
   function handleChange(raw: string) {
     setText(raw);

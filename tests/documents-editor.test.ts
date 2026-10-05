@@ -7,6 +7,7 @@ import {
   appendBlock,
   duplicateBlock,
   moveBlock,
+  omitKey,
   removeBlock,
   replaceBlock,
 } from "@/lib/documents/editor-ops";
@@ -233,6 +234,26 @@ describe("blok amallari", () => {
     moveBlock(base, 0, 1);
     appendBlock(base, { id: "x", type: "paragraph", text: "X" });
     expect(base.blocks.map((b) => b.id)).toEqual(["b1", "b2", "b3"]);
+  });
+
+  it("omitKey ixtiyoriy kalitni BUTUNLAY tashlaydi", () => {
+    // `undefined` qilib qo'yish yetarli EMAS: `strictObject` uchun mavjud
+    // kalit `undefined` bilan ham "berilgan" hisoblanadi.
+    const table = newBlock("table", "t1", LABELS, []);
+    if (table?.type !== "table") throw new Error("table emas");
+    const withCaption = { ...table, caption: "Nom" };
+
+    const without = omitKey(withCaption, "caption");
+    expect("caption" in without).toBe(false);
+    expect(Block.safeParse(without).success).toBe(true);
+    // Asl obyekt tegilmaydi.
+    expect(withCaption.caption).toBe("Nom");
+  });
+
+  it("omitKey savol `pairs` ini tashlaganda sxema o'tadi", () => {
+    const match = withQuestionKind(question("q1"), "match", LABELS);
+    const dropped = { ...omitKey(match, "pairs"), kind: "short" as const, options: [] };
+    expect(Block.safeParse(dropped).success).toBe(true);
   });
 
   it("chegaradan chiqqan indeks jim qaytaradi", () => {

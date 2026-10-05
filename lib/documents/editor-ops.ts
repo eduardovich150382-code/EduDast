@@ -94,3 +94,25 @@ export function duplicateBlock(
 export function appendBlock(content: DocumentContent, block: Block): DocumentContent {
   return withBlocks(content, [...content.blocks, block]);
 }
+
+/**
+ * Ixtiyoriy kalitni BUTUNLAY tashlaydi.
+ *
+ * NEGA KERAK: `blocks.ts` dagi hamma blok `z.strictObject`, unda esa mavjud
+ * kalit `undefined` qiymat bilan ham "BERILGAN" hisoblanadi. Ya'ni
+ * `caption: undefined` yoki `pairs: undefined` sxemadan O'TMAYDI —
+ * `table.caption` bo'sh qolganda yoki savol `match` dan chiqqanda kalitning
+ * o'zi yo'qolishi kerak.
+ *
+ * `{ caption: _omit, ...rest }` destrukturizatsiyasi ayni ishni qiladi,
+ * lekin har joyda ishlatilmagan o'zgaruvchi qoldiradi (eslint
+ * ogohlantirishi). Shuning uchun bitta yordamchi, uch nusxa emas.
+ *
+ * `delete` — OBYEKT NUSXASIDA. CLAUDE.md ning "hech qachon `delete`"
+ * qoidasi BAZAGA tegishli (soft delete), JS obyektiga emas.
+ */
+export function omitKey<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {
+  const next = { ...value };
+  delete next[key];
+  return next;
+}
