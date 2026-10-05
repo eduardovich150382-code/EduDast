@@ -29,8 +29,15 @@ export const MAX_ATTEMPTS = 3;
 /** Yetim `RUNNING` hujjat shu muddatdan keyin FAILED qilinadi. */
 export const STALE_MINUTES = 15;
 
-/** Bitta `commitStage` ga sig'adigan eng katta payload (belgi). */
-const MAX_PAYLOAD_CHARS = 200_000;
+/**
+ * Bitta `commitStage` ga sig'adigan eng katta payload (belgi).
+ *
+ * Shu chegara muharrirning `saveDocument` action'ida ham ishlatiladi
+ * (13-sessiya): u butun `contentJson` ni almashtiradi, demak unga ham
+ * ayni shift kerak. ATAYLAB bitta son — ikki joyda ikki chegara bo'lsa
+ * konveyer sig'dirgan hujjatni muharrir qaytara olmaydigan holat chiqardi.
+ */
+export const MAX_PAYLOAD_CHARS = 200_000;
 
 export type ClaimedStage = {
   topicId: string;
