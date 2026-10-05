@@ -1,4 +1,4 @@
-import { AlertTriangle, Pencil, RefreshCw } from "lucide-react";
+import { AlertTriangle, Pencil, Presentation, RefreshCw } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -40,6 +40,7 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
   // Nomi ataylab `tE` — pastdagi `buildStageNames` izohida yozilgan sabab:
   // skaner nomfazani o'zgaruvchi NOMI bo'yicha bog'laydi.
   const tE = await getTranslations("Editor");
+  const tS = await getTranslations("Slides");
   const { id } = await params;
 
   const doc = await prisma.document.findFirst({
@@ -114,13 +115,27 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
           ning append'i bilan poyga qilardi. `FAILED` ataylab kiritilgan —
           yarim bitgan hujjatni o'qituvchi qo'lda tugatishi mumkin. */}
       {!running && (
-        <Link
-          href={`/ish/hujjat/${id}/tahrir`}
-          className={cn(buttonVariants({ variant: "outline", size: "touch" }), "self-start")}
-        >
-          <Pencil className="size-4" strokeWidth={1.5} />
-          {tE("open")}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/ish/hujjat/${id}/tahrir`}
+            className={cn(buttonVariants({ variant: "outline", size: "touch" }))}
+          >
+            <Pencil className="size-4" strokeWidth={1.5} />
+            {tE("open")}
+          </Link>
+
+          {/* Taqdimot rejimi FAQAT taqdimot hujjatida: dars ishlanmada
+              slayd bloki yo'q va havola bo'sh ekranga olib borardi. */}
+          {doc.type === "SLIDES" && (
+            <Link
+              href={`/ish/hujjat/${id}/taqdimot`}
+              className={cn(buttonVariants({ size: "touch" }))}
+            >
+              <Presentation className="size-4" strokeWidth={1.5} />
+              {tS("open")}
+            </Link>
+          )}
+        </div>
       )}
 
       {running && (
