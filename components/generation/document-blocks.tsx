@@ -36,6 +36,12 @@ function Bullets({ items }: { items: string[] }) {
 
 export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
   const t = await getTranslations("Documents");
+  // `tE` NOMI MUHIM: i18n skaneri nomfazani O'ZGARUVCHI NOMI bo'yicha
+  // bog'laydi, ikkala translator ham `t` bo'lsa kalit noto'g'ri nomfazada
+  // tekshirilib, jimgina o'tib ketardi (CLAUDE.md "Tekshirish tuzoqlari").
+  // Slayd ko'rinishi nomlari muharrir lug'atida — ularni `Documents` ga
+  // nusxalash ikki manba yasardi.
+  const tE = await getTranslations("Editor");
 
   return (
     <div className="flex flex-col gap-6">
@@ -231,6 +237,31 @@ export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
               >
                 {block.text}
               </p>
+            );
+
+          // Ko'ruvchida slayd KARTA sifatida chiqadi, taqdimot sifatida emas:
+          // bu sahifa telefonda o'qish uchun. Haqiqiy taqdimot rejimi —
+          // `/ish/hujjat/[id]/taqdimot` (14-sessiya, ikkinchi PR).
+          case "slide":
+            return (
+              <Section key={block.id} title={t("slide")}>
+                <div className="flex flex-col gap-2 rounded-xl border border-line px-3 py-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-heading text-sm font-semibold text-ink">
+                      {block.title}
+                    </span>
+                    <span className="text-xs text-ink-2">
+                      {t("slideLayout")}: {tE(`enum.layout.${block.layout}`)}
+                    </span>
+                  </div>
+                  {block.bullets.length > 0 && <Bullets items={block.bullets} />}
+                  {block.notes !== undefined && (
+                    <p className="text-xs text-ink-2">
+                      {t("slideNotes")}: {block.notes}
+                    </p>
+                  )}
+                </div>
+              </Section>
             );
         }
       })}

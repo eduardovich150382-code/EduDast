@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { SupportedDocumentType } from "@/lib/documents/type-param";
 import { buildPlan, type StageKind, type StageSpec } from "@/lib/generation/plans";
+import { buildSlidesPlan } from "@/lib/generation/plans-slides";
 import { buildTestPlan } from "@/lib/generation/plans-test";
 
 /**
@@ -26,13 +27,19 @@ import { buildTestPlan } from "@/lib/generation/plans-test";
 
 export type StageLabelInput =
   | { type: "LESSON_PLAN"; skeletonStageCount: number | null }
-  | { type: "TEST"; questionCount: number };
+  | { type: "TEST"; questionCount: number }
+  | { type: "SLIDES"; slideCount: number };
 
 /** Turga mos rejani quradi va bosqich ro'yxatini qaytaradi. */
 export function stageLabels(input: StageLabelInput): StageSpec[] {
-  return input.type === "TEST"
-    ? buildTestPlan(input.questionCount).stages
-    : buildPlan(input.skeletonStageCount).stages;
+  switch (input.type) {
+    case "TEST":
+      return buildTestPlan(input.questionCount).stages;
+    case "SLIDES":
+      return buildSlidesPlan(input.slideCount).stages;
+    case "LESSON_PLAN":
+      return buildPlan(input.skeletonStageCount).stages;
+  }
 }
 
 /**
@@ -76,6 +83,7 @@ export function stageRows(stages: readonly StageSpec[]): StageRow[] {
  */
 const LabelParams = z.object({
   questionCount: z.number().int().optional(),
+  slideCount: z.number().int().optional(),
   skeleton: z.object({ stages: z.array(z.unknown()) }).optional(),
 });
 
@@ -86,15 +94,21 @@ export function stageLabelInputFromDocument(
   const parsed = LabelParams.safeParse(inputParams);
   if (!parsed.success) return null;
 
-  if (type === "TEST") {
-    const count = parsed.data.questionCount;
-    return count === undefined ? null : { type: "TEST", questionCount: count };
+  switch (type) {
+    case "TEST": {
+      const count = parsed.data.questionCount;
+      return count === undefined ? null : { type: "TEST", questionCount: count };
+    }
+    case "SLIDES": {
+      const count = parsed.data.slideCount;
+      return count === undefined ? null : { type: "SLIDES", slideCount: count };
+    }
+    case "LESSON_PLAN":
+      return {
+        type: "LESSON_PLAN",
+        // `undefined` -> `null`: skelet hali yo'q, ya'ni 3 qatorlik dastlabki
+        // reja. `buildPlan(null)` aynan shuni qaytaradi.
+        skeletonStageCount: parsed.data.skeleton?.stages.length ?? null,
+      };
   }
-
-  return {
-    type: "LESSON_PLAN",
-    // `undefined` -> `null`: skelet hali yo'q, ya'ni 3 qatorlik dastlabki
-    // reja. `buildPlan(null)` aynan shuni qaytaradi.
-    skeletonStageCount: parsed.data.skeleton?.stages.length ?? null,
-  };
 }

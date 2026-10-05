@@ -32,11 +32,24 @@ import {
   TestQuestionsOut,
 } from "./plans-test";
 import {
+  buildSlidesPlan,
+  checkSlideContent,
+  checkSlidesOutline,
+  normalizeLayouts,
+  slideBlocks,
+  slidesOutlineBlocks,
+  slidesStageInstruction,
+  SlidesContentOut,
+  SlidesOutlineOut,
+} from "./plans-slides";
+import {
   DIFFICULTIES,
   LESSON_GUIDE,
   lessonTail,
   QUESTION_KINDS,
   SHARED_GUIDE,
+  SLIDES_GUIDE,
+  slidesTail,
   teacherParams,
   TEST_GUIDE,
   testTail,
@@ -103,6 +116,11 @@ const TestParams = BaseParams.extend({
   blueprint: TestBlueprintOut.optional(),
 });
 
+const SlidesParams = BaseParams.extend({
+  slideCount: z.number().int().min(1),
+  outline: SlidesOutlineOut.optional(),
+});
+
 /**
  * Bitta generatsiya ishi — tur va uning parametrlari BIRGA.
  *
@@ -113,7 +131,8 @@ const TestParams = BaseParams.extend({
  */
 type Job =
   | { type: "LESSON_PLAN"; params: z.infer<typeof LessonParams> }
-  | { type: "TEST"; params: z.infer<typeof TestParams> };
+  | { type: "TEST"; params: z.infer<typeof TestParams> }
+  | { type: "SLIDES"; params: z.infer<typeof SlidesParams> };
 
 function readJob(type: string, inputParams: unknown): Job | null {
   if (type === "LESSON_PLAN") {
@@ -122,30 +141,56 @@ function readJob(type: string, inputParams: unknown): Job | null {
   if (type === "TEST") {
     return { type: "TEST", params: TestParams.parse(inputParams) };
   }
+  if (type === "SLIDES") {
+    return { type: "SLIDES", params: SlidesParams.parse(inputParams) };
+  }
   return null;
 }
 
 const FEATURE: Record<Job["type"], GenerationFeature> = {
   LESSON_PLAN: "lesson-plan",
   TEST: "test",
+  SLIDES: "slides",
 };
+
+/**
+ * Turga xos qo'llanma — `Record`, ternar EMAS.
+ *
+ * Uch tomonli ternar o'qilmas bo'lardi, `Record<Job["type"], string>` esa
+ * yangi tur qo'shilganda TypeScript bilan yiqiladi: qo'llanmasiz tur
+ * jimgina dars ishlanma ohangida generatsiya qilinmaydi.
+ */
+const GUIDES: Record<Job["type"], string> = {
+  LESSON_PLAN: LESSON_GUIDE,
+  TEST: TEST_GUIDE,
+  SLIDES: SLIDES_GUIDE,
+};
+
+/** Turga xos parametr quyrug'i — KESHDAN TASHQARI qism. */
+function tailFor(job: Job): string {
+  switch (job.type) {
+    case "TEST":
+      return testTail({
+        questionCount: job.params.questionCount,
+        kinds: job.params.kinds,
+        difficulty: job.params.difficulty,
+      });
+    case "SLIDES":
+      return slidesTail(job.params.slideCount);
+    case "LESSON_PLAN":
+      return lessonTail(job.params.durationMinutes);
+  }
+}
 
 /** Turga xos qo'llanma va parametr quyrug'i — kesh tartibini saqlaydi. */
 function systemParts(job: Job, context: string, topic: { grade: number; subjectName: string }) {
-  const guide = job.type === "TEST" ? TEST_GUIDE : LESSON_GUIDE;
-  const tail =
-    job.type === "TEST"
-      ? testTail({
-          questionCount: job.params.questionCount,
-          kinds: job.params.kinds,
-          difficulty: job.params.difficulty,
-        })
-      : lessonTail(job.params.durationMinutes);
+  const guide = GUIDES[job.type];
+  const tail = tailFor(job);
 
   // KESH TARTIBI: umumiy qo'llanma -> kontekst -> turga xos qo'llanma ->
-  // o'qituvchi parametrlari. Birinchi IKKITASI ikkala tur uchun aynan bir
+  // o'qituvchi parametrlari. Birinchi IKKITASI HAMMA tur uchun aynan bir
   // xil, shuning uchun bir mavzudan dars ishlanma yaratgan o'qituvchi test
-  // yaratganda prefiks keshdan o'qiladi.
+  // yoki taqdimot yaratganda prefiks keshdan o'qiladi.
   //
   // `SHARED_GUIDE` ga `cacheable` QO'YILMAYDI: u yolg'iz o'zi Anthropic'ning
   // minimal token chegarasidan qisqa chiqishi mumkin, chegara esa kontekstdan
@@ -158,31 +203,59 @@ function systemParts(job: Job, context: string, topic: { grade: number; subjectN
   ] satisfies SystemPart[];
 }
 
-/** Bosqichga xos ko'rsatma — `messages` ga boradi, `system` ga EMAS. */
+/**
+ * Bosqichga xos ko'rsatma — `messages` ga boradi, `system` ga EMAS.
+ *
+ * `default` TARMOG'I YO'Q (pastdagi `scoreSpecFor` va `planFor` da ham):
+ * yangi hujjat turi qo'shilganda TypeScript shu uch joyda yiqiladi.
+ */
 function instructionFor(job: Job, spec: StageSpec): string {
-  if (job.type === "TEST") {
-    return testStageInstruction(spec, {
-      questionCount: job.params.questionCount,
-      kinds: job.params.kinds,
-      blueprint: job.params.blueprint ?? null,
-    });
+  switch (job.type) {
+    case "TEST":
+      return testStageInstruction(spec, {
+        questionCount: job.params.questionCount,
+        kinds: job.params.kinds,
+        blueprint: job.params.blueprint ?? null,
+      });
+    case "SLIDES":
+      return slidesStageInstruction(spec, {
+        slideCount: job.params.slideCount,
+        outline: job.params.outline ?? null,
+      });
+    case "LESSON_PLAN":
+      return stageInstruction(spec, {
+        durationMinutes: job.params.durationMinutes,
+        skeleton: job.params.skeleton ?? null,
+      });
   }
-  return stageInstruction(spec, {
-    durationMinutes: job.params.durationMinutes,
-    skeleton: job.params.skeleton ?? null,
-  });
 }
 
 /** Yakuniy baho parametrlari. */
 function scoreSpecFor(job: Job): ScoreSpec {
-  if (job.type === "TEST") {
-    return {
-      type: "TEST",
-      questionCount: job.params.questionCount,
-      bloomTargets: bloomTargets(job.params.blueprint?.items ?? []),
-    };
+  switch (job.type) {
+    case "TEST":
+      return {
+        type: "TEST",
+        questionCount: job.params.questionCount,
+        bloomTargets: bloomTargets(job.params.blueprint?.items ?? []),
+      };
+    case "SLIDES":
+      return { type: "SLIDES", slideCount: job.params.slideCount };
+    case "LESSON_PLAN":
+      return { type: "LESSON_PLAN", durationMinutes: job.params.durationMinutes };
   }
-  return { type: "LESSON_PLAN", durationMinutes: job.params.durationMinutes };
+}
+
+/** Turga xos bosqich rejasi. */
+function planFor(job: Job) {
+  switch (job.type) {
+    case "TEST":
+      return buildTestPlan(job.params.questionCount);
+    case "SLIDES":
+      return buildSlidesPlan(job.params.slideCount);
+    case "LESSON_PLAN":
+      return buildPlan(job.params.skeleton?.stages.length ?? null);
+  }
 }
 
 /**
@@ -230,9 +303,9 @@ export async function runStage(args: {
   if (doc.status === "DONE") return { kind: "complete" };
   if (doc.status === "FAILED") return { kind: "failed", reason: "hujjat allaqachon bekor qilingan" };
 
-  // Qo'llab-quvvatlanmagan tur (`GUIDE`/`SLIDES`/`CROSSWORD` — hozircha
-  // hech kim yaratmaydi). JIM O'TIB KETMAYMIZ: dars ishlanma sifatida
-  // ishlashga urinish o'qituvchiga mutlaqo boshqa hujjatni berardi.
+  // Qo'llab-quvvatlanmagan tur (`GUIDE`/`CROSSWORD` — hozircha hech kim
+  // yaratmaydi). JIM O'TIB KETMAYMIZ: dars ishlanma sifatida ishlashga
+  // urinish o'qituvchiga mutlaqo boshqa hujjatni berardi.
   const job = readJob(doc.type, doc.inputParams);
   if (!job) {
     const reason = `qo'llab-quvvatlanmagan hujjat turi: ${doc.type}`;
@@ -241,10 +314,7 @@ export async function runStage(args: {
   }
 
   const { params } = job;
-  const plan =
-    job.type === "TEST"
-      ? buildTestPlan(job.params.questionCount)
-      : buildPlan(job.params.skeleton?.stages.length ?? null);
+  const plan = planFor(job);
   const stageIndex = params.progress.stage;
   const spec = plan.stages[stageIndex];
 
@@ -268,14 +338,20 @@ export async function runStage(args: {
 
   const context = await buildTopicContext(doc.topicId, params.contextChunkIds);
 
-  const system = systemParts(job, context, {
-    grade: doc.topic.grade,
-    subjectName: doc.topic.subject.nameUz,
-  });
-
-  const instruction = instructionFor(job, spec);
-
+  // PROMPT QURISH `try` ICHIDA — bu ataylab. `*StageInstruction` lar skelet
+  // yoki struktura yo'q bo'lsa `throw` qiladi (`inputParams` buzilgan holat).
+  // Ilgari ular `try` dan TASHQARIDA chaqirilardi, ya'ni o'sha xato
+  // ushlanmay chiqib ketar, kredit `release` QILINMAS va hujjat `RUNNING`
+  // da qotib qolardi — ijara tugagach qayta urinib, faqat `MAX_ATTEMPTS`
+  // dan keyin bo'shardi. Endi har qanday prompt xatosi oddiy `failed` ga
+  // aylanadi va kredit darhol qaytadi.
   try {
+    const system = systemParts(job, context, {
+      grade: doc.topic.grade,
+      subjectName: doc.topic.subject.nameUz,
+    });
+    const instruction = instructionFor(job, spec);
+
     const produced = await produceBlocks({ spec, system, instruction, documentId, userId, job });
 
     if (!produced.ok) {
@@ -366,9 +442,14 @@ async function produceBlocks(args: {
     messages: [{ role: "user", content: instruction }],
   };
 
-  return job.type === "TEST"
-    ? produceTestBlocks(spec, base, job.params)
-    : produceLessonBlocks(spec, base, job.params);
+  switch (job.type) {
+    case "TEST":
+      return produceTestBlocks(spec, base, job.params);
+    case "SLIDES":
+      return produceSlidesBlocks(spec, base, job.params);
+    case "LESSON_PLAN":
+      return produceLessonBlocks(spec, base, job.params);
+  }
 }
 
 async function produceLessonBlocks(
@@ -468,6 +549,52 @@ async function produceTestBlocks(
 
   const result = await runLlm({ ...base, schema: TestClosingOut });
   return { ok: true, blocks: testClosingBlocks(spec, result.data) };
+}
+
+/**
+ * Taqdimot bosqichlari.
+ *
+ * Testdan farqi YO'Q DEYARLI: `total` bu yerda ham qaytarilmaydi (slayd soni
+ * boshidan ma'lum), lekin `closing` tarmog'i umuman yo'q — reja har doim
+ * `[struktura, 2a, 2b]` (`plans-slides.ts` izohi).
+ */
+async function produceSlidesBlocks(
+  spec: StageSpec,
+  base: LlmBase,
+  params: z.infer<typeof SlidesParams>,
+): Promise<Produced> {
+  if (spec.kind === "skeleton") {
+    const result = await runLlm({ ...base, schema: SlidesOutlineOut });
+    const gate = checkSlidesOutline(result.data, params.slideCount);
+    if (!gate.ok) return { ok: false, reason: gate.reason };
+
+    // Ko'rinishlar TUZATILADI, darvozada yiqitilmaydi: birinchi slayd
+    // `title`, o'rtadagi `title` esa `section` — bu bizning qoidamiz va
+    // to'g'ri javob bitta.
+    const outline = { ...result.data, slides: normalizeLayouts(result.data.slides) };
+
+    return {
+      ok: true,
+      blocks: slidesOutlineBlocks(spec, outline),
+      // Struktura o'qituvchiga ko'rsatiladigan mazmun emas, keyingi
+      // bosqichlar uchun ko'rsatma — `skeleton`/`blueprint` bilan bir xil yo'l.
+      paramsPatch: { outline },
+    };
+  }
+
+  const outline = params.outline;
+  if (!outline) return { ok: false, reason: "slayd bosqichi uchun struktura yo'q" };
+
+  const range = spec.range ?? { from: 0, to: params.slideCount };
+  const planned = outline.slides.slice(range.from, range.to);
+
+  const result = await runLlm({ ...base, schema: SlidesContentOut });
+  const gate = checkSlideContent(result.data, planned.length);
+  if (!gate.ok) return { ok: false, reason: `bosqich ${spec.id}: ${gate.reason}` };
+
+  // NOM va KO'RINISH rejadan olinadi, model javobidan EMAS — dars
+  // ishlanmadagi "NOM va DAQIQA skeletdan" qarorining aynan o'zi.
+  return { ok: true, blocks: slideBlocks(spec, planned, result.data) };
 }
 
 /**

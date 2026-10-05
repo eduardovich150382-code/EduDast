@@ -66,6 +66,7 @@ export const WIZARD_PARAM_NAMES = [
   "savol",
   "turlar",
   "qiyin",
+  "slayd",
 ] as const;
 export type WizardParamName = (typeof WIZARD_PARAM_NAMES)[number];
 export type WizardOverrides = Partial<Record<WizardParamName, QueryValue>>;
@@ -89,6 +90,22 @@ export const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30, 40].filter(
   (count) => count >= UNIT_LIMITS.TEST.min && count <= UNIT_LIMITS.TEST.max,
 );
 export const DEFAULT_QUESTION_COUNT = 10;
+
+/**
+ * Slayd soni variantlari.
+ *
+ * `UNIT_LIMITS.SLIDES` 6-20 ga ruxsat beradi, forma esa ATAYLAB torroq:
+ * spetsifikatsiya bir dars uchun 8-14 slaydni ko'zlaydi. Ro'yxatga son
+ * qo'shish bir qatorlik ish, OLIB TASHLASH esa qiyin — kimdir 20 slaydli
+ * taqdimot yaratgandan keyin uni ro'yxatdan chiqarish g'alati bo'ladi.
+ * Shuning uchun haqiqiy foydalanish ko'rilgandan keyin kengaytiriladi.
+ *
+ * URL orqali 6-20 baribir ochiq (`startSchema`), ya'ni qattiq to'siq yo'q.
+ */
+export const SLIDE_COUNTS = [8, 10, 12, 14].filter(
+  (count) => count >= UNIT_LIMITS.SLIDES.min && count <= UNIT_LIMITS.SLIDES.max,
+);
+export const DEFAULT_SLIDE_COUNT = 12;
 
 /**
  * Standart savol turlari — `match` ATAYLAB yo'q.
@@ -136,6 +153,7 @@ export type WizardParams = {
   questionCount: number | null;
   kinds: readonly QuestionKind[] | null;
   difficulty: Difficulty | null;
+  slideCount: number | null;
 };
 
 const GRADE_MIN = 1;
@@ -179,6 +197,10 @@ export function parseWizardParams(raw: RawSearchParams): WizardParams {
     min: UNIT_LIMITS.TEST.min,
     max: UNIT_LIMITS.TEST.max,
   });
+  const slideCount = readInt(raw.slayd, {
+    min: UNIT_LIMITS.SLIDES.min,
+    max: UNIT_LIMITS.SLIDES.max,
+  });
 
   return {
     step: readStep(readOne(raw.qadam)),
@@ -199,6 +221,8 @@ export function parseWizardParams(raw: RawSearchParams): WizardParams {
         : null,
     kinds: readKinds(raw.turlar),
     difficulty: readDifficulty(readOne(raw.qiyin)),
+    slideCount:
+      slideCount !== null && SLIDE_COUNTS.includes(slideCount) ? slideCount : null,
   };
 }
 
@@ -206,18 +230,33 @@ export function parseWizardParams(raw: RawSearchParams): WizardParams {
 /* Qadam mashinasi                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Turga qarab parametrlar to'liq tanlanganmi. */
+/**
+ * Turga qarab parametrlar to'liq tanlanganmi.
+ *
+ * `switch`, `if/else` EMAS — va bu butun faylda shunday (`resolveParams`,
+ * `startInputFor`, `confirmQuery`, `wizardQueryFromDocument`). Sabab: ilgari
+ * bu funksiyalar `if (TEST) ... else LESSON_PLAN` shaklida edi, ya'ni
+ * `TYPE_PARAM` ga uchinchi tur qo'shilganda TypeScript YIQILMASDI va yangi
+ * tur jimgina dars ishlanma tarmog'iga tushib ketardi — o'qituvchi taqdimot
+ * so'rab dars davomiyligi ekranini ko'rardi. `default` siz `switch` esa aynan
+ * shu yerda yiqiladi.
+ */
 export function paramsCompleteForType(params: WizardParams): boolean {
   if (params.type === null) return false;
-  if (documentTypeFor(params.type) === "TEST") {
-    return (
-      params.questionCount !== null &&
-      params.kinds !== null &&
-      params.kinds.length > 0 &&
-      params.difficulty !== null
-    );
+
+  switch (documentTypeFor(params.type)) {
+    case "TEST":
+      return (
+        params.questionCount !== null &&
+        params.kinds !== null &&
+        params.kinds.length > 0 &&
+        params.difficulty !== null
+      );
+    case "SLIDES":
+      return params.slideCount !== null;
+    case "LESSON_PLAN":
+      return params.duration !== null;
   }
-  return params.duration !== null;
 }
 
 /**
@@ -277,7 +316,8 @@ export type ResolvedParams =
       questionCount: number;
       kinds: readonly QuestionKind[];
       difficulty: Difficulty;
-    };
+    }
+  | { type: "SLIDES"; slideCount: number };
 
 /**
  * Ko'rsatish va narx uchun default bilan to'ldirilgan qiymatlar.
@@ -289,15 +329,19 @@ export function resolveParams(params: WizardParams): ResolvedParams {
   const type: SupportedDocumentType =
     params.type === null ? "LESSON_PLAN" : documentTypeFor(params.type);
 
-  if (type === "TEST") {
-    return {
-      type: "TEST",
-      questionCount: params.questionCount ?? DEFAULT_QUESTION_COUNT,
-      kinds: params.kinds ?? DEFAULT_KINDS,
-      difficulty: params.difficulty ?? DEFAULT_DIFFICULTY,
-    };
+  switch (type) {
+    case "TEST":
+      return {
+        type: "TEST",
+        questionCount: params.questionCount ?? DEFAULT_QUESTION_COUNT,
+        kinds: params.kinds ?? DEFAULT_KINDS,
+        difficulty: params.difficulty ?? DEFAULT_DIFFICULTY,
+      };
+    case "SLIDES":
+      return { type: "SLIDES", slideCount: params.slideCount ?? DEFAULT_SLIDE_COUNT };
+    case "LESSON_PLAN":
+      return { type: "LESSON_PLAN", durationMinutes: params.duration ?? DEFAULT_DURATION };
   }
-  return { type: "LESSON_PLAN", durationMinutes: params.duration ?? DEFAULT_DURATION };
 }
 
 /**
@@ -311,20 +355,21 @@ export function startInputFor(
   topicId: string,
 ): StartInput {
   const resolved = resolveParams(params);
-  if (resolved.type === "TEST") {
-    return {
-      type: "TEST",
-      topicId,
-      questionCount: resolved.questionCount,
-      kinds: [...resolved.kinds],
-      difficulty: resolved.difficulty,
-    };
+
+  switch (resolved.type) {
+    case "TEST":
+      return {
+        type: "TEST",
+        topicId,
+        questionCount: resolved.questionCount,
+        kinds: [...resolved.kinds],
+        difficulty: resolved.difficulty,
+      };
+    case "SLIDES":
+      return { type: "SLIDES", topicId, slideCount: resolved.slideCount };
+    case "LESSON_PLAN":
+      return { type: "LESSON_PLAN", topicId, durationMinutes: resolved.durationMinutes };
   }
-  return {
-    type: "LESSON_PLAN",
-    topicId,
-    durationMinutes: resolved.durationMinutes,
-  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -353,6 +398,7 @@ export function wizardQuery(
     savol: params.questionCount,
     turlar: params.kinds,
     qiyin: params.difficulty,
+    slayd: params.slideCount,
   };
   return buildQuery({ ...base, ...overrides });
 }
@@ -367,22 +413,39 @@ export function wizardQuery(
  */
 export function confirmQuery(params: WizardParams): Record<string, string> {
   const resolved = resolveParams(params);
-  if (resolved.type === "TEST") {
-    return wizardQuery(params, {
-      qadam: "tasdiq",
-      savol: resolved.questionCount,
-      turlar: resolved.kinds,
-      qiyin: resolved.difficulty,
-      daqiqa: null,
-    });
+
+  // Har tarmoq BOSHQA turning parametrlarini `null` qiladi: ulashilgan
+  // havolada eski tanlov qolib ketsa, `parseWizardParams` uni qaytib o'qib
+  // qadamni noto'g'ri hisoblardi.
+  switch (resolved.type) {
+    case "TEST":
+      return wizardQuery(params, {
+        qadam: "tasdiq",
+        savol: resolved.questionCount,
+        turlar: resolved.kinds,
+        qiyin: resolved.difficulty,
+        daqiqa: null,
+        slayd: null,
+      });
+    case "SLIDES":
+      return wizardQuery(params, {
+        qadam: "tasdiq",
+        slayd: resolved.slideCount,
+        daqiqa: null,
+        savol: null,
+        turlar: null,
+        qiyin: null,
+      });
+    case "LESSON_PLAN":
+      return wizardQuery(params, {
+        qadam: "tasdiq",
+        daqiqa: resolved.durationMinutes,
+        savol: null,
+        turlar: null,
+        qiyin: null,
+        slayd: null,
+      });
   }
-  return wizardQuery(params, {
-    qadam: "tasdiq",
-    daqiqa: resolved.durationMinutes,
-    savol: null,
-    turlar: null,
-    qiyin: null,
-  });
 }
 
 /**
@@ -422,6 +485,7 @@ const RetryParams = z.object({
   questionCount: z.number().int().optional(),
   kinds: z.array(z.enum(QUESTION_KINDS)).optional(),
   difficulty: z.enum(DIFFICULTIES).optional(),
+  slideCount: z.number().int().optional(),
 });
 
 /**
@@ -458,24 +522,34 @@ export function wizardQueryFromDocument(doc: {
     savol: null,
     turlar: null,
     qiyin: null,
+    slayd: null,
   };
 
-  if (doc.type === "TEST") {
-    // Variant ro'yxatida bo'lmagan son tashlanadi — `parseWizardParams`
-    // uni baribir rad etardi, va u holda qadam `param` ga tushadi.
-    base.savol =
-      saved.questionCount !== undefined &&
-      QUESTION_COUNTS.includes(saved.questionCount)
-        ? saved.questionCount
-        : null;
-    base.turlar = saved.kinds ?? null;
-    base.qiyin = saved.difficulty ?? null;
-  } else {
-    base.daqiqa =
-      saved.durationMinutes !== undefined &&
-      DURATIONS.includes(saved.durationMinutes)
-        ? saved.durationMinutes
-        : null;
+  switch (doc.type) {
+    case "TEST":
+      // Variant ro'yxatida bo'lmagan son tashlanadi — `parseWizardParams`
+      // uni baribir rad etardi, va u holda qadam `param` ga tushadi.
+      base.savol =
+        saved.questionCount !== undefined &&
+        QUESTION_COUNTS.includes(saved.questionCount)
+          ? saved.questionCount
+          : null;
+      base.turlar = saved.kinds ?? null;
+      base.qiyin = saved.difficulty ?? null;
+      break;
+    case "SLIDES":
+      base.slayd =
+        saved.slideCount !== undefined && SLIDE_COUNTS.includes(saved.slideCount)
+          ? saved.slideCount
+          : null;
+      break;
+    case "LESSON_PLAN":
+      base.daqiqa =
+        saved.durationMinutes !== undefined &&
+        DURATIONS.includes(saved.durationMinutes)
+          ? saved.durationMinutes
+          : null;
+      break;
   }
 
   return buildQuery(base);

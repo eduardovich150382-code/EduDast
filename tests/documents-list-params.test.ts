@@ -41,7 +41,7 @@ describe("parseListParams", () => {
   });
 
   it.each([
-    ["noma'lum tur", { tur: "taqdimot" }, "type"],
+    ["noma'lum tur", { tur: "krossvord" }, "type"],
     ["noma'lum holat", { holat: "qandaydir" }, "status"],
     ["enum nomining o'zi tur sifatida", { tur: "LESSON_PLAN" }, "type"],
     ["enum nomining o'zi holat sifatida", { holat: "DONE" }, "status"],

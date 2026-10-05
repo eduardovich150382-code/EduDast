@@ -14,6 +14,7 @@ import type { DocumentType } from "@/lib/generated/prisma/client";
 export const TYPE_PARAM = {
   dars: "LESSON_PLAN",
   test: "TEST",
+  taqdimot: "SLIDES",
 } as const;
 
 export type TypeParam = keyof typeof TYPE_PARAM;
@@ -21,8 +22,8 @@ export type TypeParam = keyof typeof TYPE_PARAM;
 /**
  * Sehrgar qo'llab-quvvatlaydigan hujjat turlari.
  *
- * `DocumentType` ning O'ZI emas: sxemada `CROSSWORD`, `SLIDES`, `GUIDE` ham
- * bor, lekin ular uchun konveyer yo'q (`lib/generation/run-stage.ts` ularni
+ * `DocumentType` ning O'ZI emas: sxemada `CROSSWORD` va `GUIDE` ham bor,
+ * lekin ular uchun konveyer yo'q (`lib/generation/run-stage.ts` ularni
  * ataylab yiqitadi). Shu tur TypeScript darajasida sehrgarga faqat
  * ishlaydigan turlarni kiritadi.
  */
@@ -37,6 +38,7 @@ void _typeCheck;
 const PARAM_BY_TYPE: Record<SupportedDocumentType, TypeParam> = {
   LESSON_PLAN: "dars",
   TEST: "test",
+  SLIDES: "taqdimot",
 };
 
 /** `"dars"` -> `"dars"`, boshqa hamma narsa -> `null` (default chaqiruvchida). */
@@ -53,4 +55,17 @@ export function typeParamFor(type: SupportedDocumentType): TypeParam {
 /** `"test"` -> `"TEST"`. */
 export function documentTypeFor(param: TypeParam): SupportedDocumentType {
   return TYPE_PARAM[param];
+}
+
+/**
+ * `DocumentType` -> konveyer qo'llab-quvvatlaydigan tur, yoki `null`.
+ *
+ * `PARAM_BY_TYPE` kalitlari bo'yicha tekshiradi, ya'ni yangi tur qo'shilganda
+ * bu funksiya o'zi moslashadi. Ilgari chaqiruvchida ternar zanjiri turardi
+ * (`type === "TEST" ? ... : type === "LESSON_PLAN" ? ... : null`) va u har
+ * yangi tur bilan uzayardi — qo'shish esdan chiqsa tur jimgina
+ * "qo'llab-quvvatlanmagan" bo'lib qolardi.
+ */
+export function readSupportedType(type: DocumentType): SupportedDocumentType | null {
+  return type in PARAM_BY_TYPE ? (type as SupportedDocumentType) : null;
 }

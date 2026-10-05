@@ -109,5 +109,10 @@ export function newBlock(
 
     case "note":
       return { id, type, tone: "info", text: labels.text };
+
+    // `notes` BERILMAYDI: u ixtiyoriy va `txt` `min(1)` talab qiladi, ya'ni
+    // bo'sh satr bilan tug'ilgan blok butun hujjat saqlanishini bloklardi.
+    case "slide":
+      return { id, type, layout: "bullets", title: labels.heading, bullets: [labels.item] };
   }
 }

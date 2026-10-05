@@ -364,3 +364,89 @@ describe("TEST turi", () => {
     expect(mocks.hold).not.toHaveBeenCalled();
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* SLIDES turi (14-sessiya)                                           */
+/* ------------------------------------------------------------------ */
+
+describe("SLIDES turi", () => {
+  beforeEach(wireHappyPath);
+
+  const SLIDES_INPUT = { type: "SLIDES", topicId: "t-1", slideCount: 12 };
+
+  type CreateData = {
+    type: string;
+    title: string;
+    creditsHeldFor: number;
+    inputParams: {
+      progress: { stage: number; total: number; attempts: number };
+      slideCount: number;
+      durationMinutes?: number;
+      questionCount?: number;
+    };
+  };
+
+  async function create(input: unknown): Promise<CreateData> {
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    const result = await boshlaGeneratsiya(input);
+    expect(result.ok).toBe(true);
+    return mocks.documentCreate.mock.calls[0]?.[0]?.data as CreateData;
+  }
+
+  it("SLIDES hujjati o'z turi va nomi bilan yaratiladi", async () => {
+    const data = await create(SLIDES_INPUT);
+    expect(data.type).toBe("SLIDES");
+    expect(data.title).toContain("taqdimot");
+  });
+
+  it("inputParams da faqat slayd soni — davomiylik va savol soni YO'Q", async () => {
+    // Ikkisi ham taqdimotda ma'nosiz; `SlidesParams` ularni talab qilmaydi.
+    const data = await create(SLIDES_INPUT);
+    expect(data.inputParams.slideCount).toBe(12);
+    expect(data.inputParams.durationMinutes).toBeUndefined();
+    expect(data.inputParams.questionCount).toBeUndefined();
+  });
+
+  it("narx slayd soniga qarab band qilinadi", async () => {
+    const { creditCost } = await import("@/lib/credits/cost-table");
+    const data = await create({ ...SLIDES_INPUT, slideCount: 20 });
+    const expected = creditCost({ type: "SLIDES", slideCount: 20 });
+
+    expect(data.creditsHeldFor).toBe(expected);
+    expect(mocks.hold).toHaveBeenCalledWith("u-1", expected, expect.any(String), expect.anything());
+    expect(expected).toBeGreaterThan(creditCost({ type: "SLIDES", slideCount: 6 }));
+  });
+
+  it("progress.total HAR DOIM 3 — reja shartsiz bo'linadi", async () => {
+    const kichik = await create(SLIDES_INPUT);
+    expect(kichik.inputParams.progress).toEqual({ stage: 0, total: 3, attempts: 0 });
+
+    mocks.documentCreate.mockClear();
+    const katta = await create({ ...SLIDES_INPUT, slideCount: 20 });
+    expect(katta.inputParams.progress.total).toBe(3);
+  });
+
+  it.each([
+    ["slayd soni juda kam", { ...SLIDES_INPUT, slideCount: 5 }],
+    ["slayd soni juda ko'p", { ...SLIDES_INPUT, slideCount: 21 }],
+    ["slayd soni kasr", { ...SLIDES_INPUT, slideCount: 12.5 }],
+    ["slayd soni yo'q", { type: "SLIDES", topicId: "t-1" }],
+  ])("%s rad etiladi", async (_label, input) => {
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    expect(await boshlaGeneratsiya(input)).toEqual({ ok: false, error: "invalid" });
+    expect(mocks.hold).not.toHaveBeenCalled();
+  });
+
+  it("ruxsat tekshiruvi SLIDES uchun ham ishlaydi — kredit band qilinmaydi", async () => {
+    mocks.topicFindFirst.mockResolvedValue({
+      id: "t-1",
+      grade: 11,
+      titleUz: "Tezlanish",
+      subject: { slug: "fizika" },
+    });
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+
+    expect(await boshlaGeneratsiya(SLIDES_INPUT)).toEqual({ ok: false, error: "ruxsat" });
+    expect(mocks.hold).not.toHaveBeenCalled();
+  });
+});

@@ -1,4 +1,4 @@
-import { ListChecks, NotebookPen } from "lucide-react";
+import { ListChecks, NotebookPen, Presentation } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import {
   wizardQuery,
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 const OPTIONS = [
   { param: "dars", icon: NotebookPen, titleKey: "typeLesson", hintKey: "typeLessonHint" },
   { param: "test", icon: ListChecks, titleKey: "typeTest", hintKey: "typeTestHint" },
+  { param: "taqdimot", icon: Presentation, titleKey: "typeSlides", hintKey: "typeSlidesHint" },
 ] as const;
 
 export async function StepType({ params }: { params: WizardParams }) {

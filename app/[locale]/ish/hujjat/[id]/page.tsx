@@ -7,7 +7,7 @@ import { GenerationProgress } from "@/components/generation/generation-progress"
 import { buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { DocumentContent } from "@/lib/documents/blocks";
-import type { SupportedDocumentType } from "@/lib/documents/type-param";
+import { readSupportedType, type SupportedDocumentType } from "@/lib/documents/type-param";
 import { prisma } from "@/lib/db";
 import { reapStaleDocuments } from "@/lib/generation/reap";
 import { SCORE_WARN } from "@/lib/generation/quality";
@@ -74,12 +74,11 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
   const lowQuality =
     doc.status === "DONE" && doc.qualityScore !== null && doc.qualityScore < SCORE_WARN;
 
-  // Konveyer faqat ikki tur uchun bor (`lib/generation/run-stage.ts`
-  // qolganlarini ataylab yiqitadi), shuning uchun turni shu ikkisiga
-  // qisamiz — aks holda bosqich nomlari va qayta urinish havolasi
-  // mavjud bo'lmagan reja uchun qurilardi.
-  const supportedType: SupportedDocumentType | null =
-    doc.type === "TEST" ? "TEST" : doc.type === "LESSON_PLAN" ? "LESSON_PLAN" : null;
+  // Konveyer hamma tur uchun emas (`lib/generation/run-stage.ts`
+  // qolganlarini ataylab yiqitadi), shuning uchun turni qo'llab-quvvatlanganga
+  // qisamiz — aks holda bosqich nomlari va qayta urinish havolasi mavjud
+  // bo'lmagan reja uchun qurilardi.
+  const supportedType: SupportedDocumentType | null = readSupportedType(doc.type);
 
   const stageNames =
     supportedType === null

@@ -9,6 +9,7 @@ import { NoteBlock } from "@/components/editor/blocks/note-block";
 import { ParagraphBlock } from "@/components/editor/blocks/paragraph-block";
 import { QuestionBlock } from "@/components/editor/blocks/question-block";
 import { RubricBlock } from "@/components/editor/blocks/rubric-block";
+import { SlideBlock } from "@/components/editor/blocks/slide-block";
 import { StagesBlock } from "@/components/editor/blocks/stages-block";
 import { TableBlock } from "@/components/editor/blocks/table-block";
 import type { Block } from "@/lib/documents/blocks";
@@ -56,5 +57,7 @@ export function BlockEditor({
       return <HomeworkBlock block={block} onChange={onChange} />;
     case "note":
       return <NoteBlock block={block} onChange={onChange} />;
+    case "slide":
+      return <SlideBlock block={block} onChange={onChange} />;
   }
 }

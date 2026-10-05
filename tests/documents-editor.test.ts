@@ -250,6 +250,20 @@ describe("blok amallari", () => {
     expect(withCaption.caption).toBe("Nom");
   });
 
+  it("omitKey slayd izohini tashlaydi, bo'sh satr esa hujjatni bloklaydi", () => {
+    // MUHARRIRDAGI ANIQ TUZOQ: izoh maydoni bo'shatilganda `""` yozilsa
+    // (`txt` esa `min(1)`), avtosaqlash BUTUN hujjatni rad etardi — o'qituvchi
+    // boshqa joyda yozgan matni ham saqlanmay qolardi.
+    const slide = newBlock("slide", "s1", LABELS, []);
+    if (slide?.type !== "slide") throw new Error("slide emas");
+    const withNotes = { ...slide, notes: "Doskaga yozing." };
+
+    const without = omitKey(withNotes, "notes");
+    expect("notes" in without).toBe(false);
+    expect(Block.safeParse(without).success).toBe(true);
+    expect(Block.safeParse({ ...withNotes, notes: "" }).success).toBe(false);
+  });
+
   it("omitKey savol `pairs` ini tashlaganda sxema o'tadi", () => {
     const match = withQuestionKind(question("q1"), "match", LABELS);
     const dropped = { ...omitKey(match, "pairs"), kind: "short" as const, options: [] };
