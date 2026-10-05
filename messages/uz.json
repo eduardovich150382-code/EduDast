@@ -308,6 +308,143 @@
     "next": "Keyingi",
     "page": "{page}-sahifa"
   },
+  "Editor": {
+    "open": "Tahrirlash",
+    "back": "Hujjatga qaytish",
+    "brokenContent": "Bu hujjatning kontenti buzilgan, shuning uchun muharrir ochilmadi. Hujjatni qaytadan yaratib ko'ring.",
+    "generating": "Hujjat hali tayyorlanmoqda — tugagach tahrirlash mumkin bo'ladi.",
+    "blockInvalid": "Bu blokda to'ldirilmagan yoki noto'g'ri maydon bor.",
+    "documentInvalid": "Hujjatda tuzatilishi kerak joy bor, shuning uchun saqlanmadi.",
+    "empty": "Hujjat bo'sh. Pastdagi tugma bilan birinchi blokni qo'shing.",
+    "save": {
+      "dirty": "Saqlanmagan",
+      "saving": "Saqlanmoqda",
+      "saved": "Saqlandi",
+      "invalid": "Saqlanmadi",
+      "error": "Saqlanmadi"
+    },
+    "rename": {
+      "label": "Hujjat nomi"
+    },
+    "delete": {
+      "action": "O'chirish",
+      "confirm": "Tasdiqlaysizmi?",
+      "cancel": "Bekor qilish"
+    },
+    "add": {
+      "action": "Blok qo'shish",
+      "sheetTitle": "Qanday blok qo'shamiz?",
+      "needsQuestion": "Avval savol bloki kerak"
+    },
+    "actions": {
+      "moveUp": "Yuqoriga",
+      "moveDown": "Pastga",
+      "duplicate": "Nusxalash",
+      "delete": "O'chirish",
+      "more": "Blok amallari",
+      "sheetTitle": "Blok amallari",
+      "close": "Yopish"
+    },
+    "block": {
+      "heading": "Sarlavha",
+      "paragraph": "Matn",
+      "list": "Ro'yxat",
+      "table": "Jadval",
+      "objectives": "Maqsadlar",
+      "materials": "Kerakli jihozlar",
+      "stages": "Dars bosqichlari",
+      "question": "Savol",
+      "answerKey": "Javoblar kaliti",
+      "rubric": "Baholash mezonlari",
+      "homework": "Uyga vazifa",
+      "note": "Izoh"
+    },
+    "field": {
+      "level": "Daraja",
+      "text": "Matn",
+      "style": "Ko'rinishi",
+      "caption": "Jadval nomi",
+      "items": "Bandlar",
+      "headers": "Ustunlar",
+      "rows": "Satrlar",
+      "title": "Nomi",
+      "minutes": "Daqiqa",
+      "teacherActions": "O'qituvchi harakatlari",
+      "studentActions": "O'quvchi harakatlari",
+      "kind": "Savol turi",
+      "options": "Variantlar",
+      "pairs": "Juftliklar",
+      "pairLeft": "Chap",
+      "pairRight": "O'ng",
+      "answer": "To'g'ri javob",
+      "points": "Ball",
+      "bloom": "Bloom darajasi",
+      "questionId": "Savol",
+      "explanation": "Izoh",
+      "name": "Mezon nomi",
+      "maxPoints": "Eng ko'p ball",
+      "descriptors": "Ta'riflar",
+      "estimatedMinutes": "Taxminiy daqiqa",
+      "tone": "Ohang",
+      "addItem": "Band qo'shish",
+      "removeItem": "Bandni o'chirish",
+      "addRow": "Satr qo'shish",
+      "removeRow": "Satrni o'chirish",
+      "addColumn": "Ustun qo'shish",
+      "removeColumn": "Ustunni o'chirish",
+      "addStage": "Bosqich qo'shish",
+      "removeStage": "Bosqichni o'chirish"
+    },
+    "enum": {
+      "level": {
+        "1": "Katta",
+        "2": "O'rta",
+        "3": "Kichik"
+      },
+      "style": {
+        "ordered": "Raqamli",
+        "bullet": "Belgili"
+      },
+      "kind": {
+        "mcq": "Variantli",
+        "short": "Qisqa javob",
+        "truefalse": "To'g'ri / noto'g'ri",
+        "match": "Moslashtirish"
+      },
+      "tone": {
+        "info": "Ma'lumot",
+        "warning": "Ogohlantirish",
+        "tip": "Maslahat"
+      },
+      "bloom": {
+        "remember": "Eslab qolish",
+        "understand": "Tushunish",
+        "apply": "Qo'llash",
+        "analyze": "Tahlil qilish",
+        "evaluate": "Baholash",
+        "create": "Yaratish"
+      }
+    },
+    "defaults": {
+      "heading": "Yangi sarlavha",
+      "text": "Yangi matn",
+      "item": "Yangi band",
+      "question": "Yangi savol",
+      "answer": "Javob",
+      "option": "Variant",
+      "column": "Ustun",
+      "stage": "Bosqich",
+      "criterion": "Mezon",
+      "pairLeft": "Chap",
+      "pairRight": "O'ng"
+    },
+    "errors": {
+      "invalid": "Ma'lumot to'g'ri emas.",
+      "topilmadi": "Hujjat topilmadi.",
+      "generic": "Saqlanmadi. Internetni tekshirib qaytadan urinib ko'ring.",
+      "mcqRules": "Variantli savolda kamida 3 ta turli variant bo'lishi va to'g'ri javob ular ichidan tanlanishi kerak."
+    }
+  },
   "Classes": {
     "title": "Sinflarim",
     "description": "Qaysi fandan qaysi sinflarga dars berasiz?",
