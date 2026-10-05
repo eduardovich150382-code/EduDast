@@ -1,0 +1,147 @@
+{
+  "v": 1,
+  "blocks": [
+    {
+      "id": "s1-heading-0",
+      "type": "heading",
+      "level": 1,
+      "text": "Tezlanish va tekis tezlanuvchan harakat"
+    },
+    {
+      "id": "s2a-slide-0",
+      "type": "slide",
+      "layout": "title",
+      "title": "Tezlanish va tekis tezlanuvchan harakat",
+      "bullets": [
+        "Fizika, 7-sinf"
+      ],
+      "notes": "Darsni avtobusning jadal yurishi bilan boshla, keyin mavzu nomini o'qib ber."
+    },
+    {
+      "id": "s2a-slide-1",
+      "type": "slide",
+      "layout": "section",
+      "title": "Bugun nimani o'rganamiz",
+      "bullets": [],
+      "notes": "Sinfni jim o'tirishga chaqir, keyingi slaydda maqsadlarni birma-bir o'qib ber."
+    },
+    {
+      "id": "s2a-slide-2",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Dars maqsadlari",
+      "bullets": [
+        "Tezlanish ta'rifini aytadi",
+        "Formulani qo'llaydi",
+        "Harakat grafigini o'qiydi"
+      ],
+      "notes": "Har maqsadni o'qib bo'lgach, o'quvchilardan qaysi biri qiyin tuyulganini so'ra."
+    },
+    {
+      "id": "s2a-slide-3",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Tezlanish nima?",
+      "bullets": [
+        "Tezlik o'zgarishining tezligi",
+        "Vektor kattalik",
+        "Birligi metr bo'linsin sekund kvadrat",
+        "Yo'nalishi tezlik o'zgarishi bilan bir xil",
+        "Manfiy bo'lsa sekinlashish",
+        "Nol bo'lsa tekis harakat",
+        "Grafikda to'g'ri chiziq"
+      ],
+      "notes": "Doskaga tezlanish formulasini yoz va har harfni nima ekanini ovoz chiqarib ayt."
+    },
+    {
+      "id": "s2a-slide-4",
+      "type": "slide",
+      "layout": "quote",
+      "title": "Asosiy formula",
+      "bullets": [
+        "Tezlanish teng tezlik o'zgarishi bo'lingan vaqt",
+        "Nyuton mexanikasi"
+      ],
+      "notes": "Formulani doskada qoldirib ket, butun dars davomida unga qaytib murojaat qil."
+    },
+    {
+      "id": "s2a-slide-5",
+      "type": "slide",
+      "layout": "two-column",
+      "title": "Tezlik va tezlanish",
+      "bullets": [
+        "Tezlik joy o'zgarishini ko'rsatadi",
+        "Metr bo'linsin sekund",
+        "Tezlanish tezlik o'zgarishini ko'rsatadi",
+        "Metr bo'linsin sekund kvadrat"
+      ],
+      "notes": "Chap va o'ng ustunni solishtirib, farqni o'quvchining o'zidan aytishni so'ra."
+    },
+    {
+      "id": "s2b-slide-0",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Ishlangan namuna",
+      "bullets": [
+        "Avtobus to'xtab turgan holatdan boshlab o'n sekund ichida yigirma metr bo'linsin sekund tezlikka chiqdi va harakati tekis tezlanuvchan bo'ldi",
+        "Vaqt o'n sekund",
+        "Tezlanish ikki birlik"
+      ],
+      "notes": "Yechimni doskada qadam-baqadam yoz, oxirgi qadamni o'quvchilarga qoldir."
+    },
+    {
+      "id": "s2b-slide-1",
+      "type": "slide",
+      "layout": "question",
+      "title": "Nega bu harakat tekis tezlanuvchan?",
+      "bullets": [
+        "Tezlanish o'zgarmasligi uchun",
+        "Tezlik chiziqli o'sgani uchun"
+      ],
+      "notes": "Savolni ekranda qoldir va kamida o'n sekund jim kutib javobni o'ylashga vaqt ber."
+    },
+    {
+      "id": "s2b-slide-2",
+      "type": "slide",
+      "layout": "title",
+      "title": "Mashq vaqti",
+      "bullets": [],
+      "notes": "Daftarlarni ochishni ayt, mashq uchun besh daqiqa vaqt belgila."
+    },
+    {
+      "id": "s2b-slide-3",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Mustaqil mashq",
+      "bullets": [
+        "Velosiped uch sekundda o'n ikkiga chiqdi",
+        "Tezlanishini toping",
+        "Birligini yozishni unutmang"
+      ],
+      "notes": "Partalar orasida yurib, birligini yozmaganlarga eslatma ber — tipik xato shu."
+    },
+    {
+      "id": "s2b-slide-4",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Bugun nimani o'rgandik",
+      "bullets": [
+        "Tezlanish tezlik o'zgarishi tezligi",
+        "Formula va birligi",
+        "Tekis tezlanuvchan harakat belgisi"
+      ],
+      "notes": "Har bandni o'quvchilardan so'rab takrorla, o'zing aytib bermaslikka harakat qil."
+    },
+    {
+      "id": "s2b-slide-5",
+      "type": "slide",
+      "layout": "bullets",
+      "title": "Uyga vazifa",
+      "bullets": [
+        "O'n ikkinchi mashq",
+        "Harakat grafigini chizish"
+      ],
+      "notes": "Vazifani daftarga yozdirib ol, grafik uchun o'qlar nomini yozishni eslatib qo'y."
+    }
+  ]
+}

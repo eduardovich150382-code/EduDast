@@ -132,7 +132,12 @@ type RuleId =
   | "mcq_tell"
   | "mcq_duplicate_option"
   | "truefalse_skew"
-  | "bloom_drift";
+  | "bloom_drift"
+  // 14-sessiya — `SLIDES` turiga xos qoidalar.
+  | "slide_count"
+  | "slide_bullets"
+  | "slide_bullet_long"
+  | "slide_layout_title";
 
 export type Severity = "error" | "warn";
 
@@ -188,6 +193,19 @@ export const RULES: Record<RuleId, { severity: Severity; why: string }> = {
    * bir daraja yuqori yozgani uchun pul qaytarish haddan ziyod.
    */
   bloom_drift: { severity: "warn", why: "Bloom taqsimoti blueprint'dan chetlashgan." },
+
+  /**
+   * Kredit AYNAN slayd soniga qarab yechiladi
+   * (`lib/credits/cost-table.ts`) — `question_count` bilan ayni mantiq:
+   * 14 slaydga to'lab 9 ta olish pul masalasi, shuning uchun `error`.
+   */
+  slide_count: { severity: "error", why: "Slayd soni so'ralganiga teng emas." },
+  /** O'qituvchi ortiqcha punktni o'zi o'chiradi, taqdimot ishlab turadi. */
+  slide_bullets: { severity: "warn", why: "Slaydda 6 tadan ko'p punkt." },
+  /** Orqa partadan o'qilmaydi, lekin matnni qisqartirish bir daqiqalik ish. */
+  slide_bullet_long: { severity: "warn", why: "Punkt proyektorda o'qish uchun uzun." },
+  /** Taqdimot o'rtasidagi bosh slayd xatoga o'xshaydi, halokat emas. */
+  slide_layout_title: { severity: "warn", why: "Bosh slayd ko'rinishi birinchi slaydda emas." },
 };
 
 export type QualityNote = {
@@ -300,7 +318,8 @@ function note(notes: QualityNote[], rule: RuleId, code: string, message: string)
  */
 export type ScoreSpec =
   | { type: "LESSON_PLAN"; durationMinutes: number }
-  | { type: "TEST"; questionCount: number; bloomTargets: BloomTargets };
+  | { type: "TEST"; questionCount: number; bloomTargets: BloomTargets }
+  | { type: "SLIDES"; slideCount: number };
 
 /**
  * Sxema KAFOLATLAGAN bloklar.
@@ -329,6 +348,15 @@ const TEST_BLOCKS = [
   "rubric",
 ] as const satisfies readonly BlockType[];
 
+/**
+ * Taqdimotning majburiy bloklari.
+ *
+ * Qisqa ro'yxat: `slidesOutlineBlocks` sarlavha qo'yadi, `slideBlocks` esa
+ * slaydlarni. Ikkisidan biri yo'q bo'lsa bosqich commit bo'lmagan — aynan
+ * veto ushlaydigan holat.
+ */
+const SLIDES_BLOCKS = ["heading", "slide"] as const satisfies readonly BlockType[];
+
 function requireBlocks(
   present: ReadonlySet<BlockType>,
   required: readonly BlockType[],
@@ -341,15 +369,26 @@ function requireBlocks(
   }
 }
 
-/** Turga qarab tarmoqlanadi — tana `measure*Structure` larda. */
+/**
+ * Turga qarab tarmoqlanadi — tana `measure*Structure` larda.
+ *
+ * `default` TARMOG'I ATAYLAB YO'Q: `ScoreSpec` ga to'rtinchi tur qo'shilsa
+ * TypeScript aynan shu yerda yiqiladi va yangi tur jimgina dars ishlanma
+ * qoidalari bilan baholanib ketmaydi.
+ */
 function measureStructure(
   content: DocumentContent,
   spec: ScoreSpec,
   notes: QualityNote[],
 ): Measure {
-  return spec.type === "TEST"
-    ? measureTestStructure(content, spec, notes)
-    : measureLessonStructure(content, spec.durationMinutes, notes);
+  switch (spec.type) {
+    case "TEST":
+      return measureTestStructure(content, spec, notes);
+    case "SLIDES":
+      return measureSlidesStructure(content, spec, notes);
+    case "LESSON_PLAN":
+      return measureLessonStructure(content, spec.durationMinutes, notes);
+  }
 }
 
 function measureLessonStructure(
@@ -721,6 +760,119 @@ function measureTestStructure(
   return { raw: points / total };
 }
 
+/* ------------------------------------------------------------------ */
+/* Taqdimot strukturasi (14-sessiya)                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Slayd sonining ruxsat etilgan chetlanishi.
+ *
+ * Spetsifikatsiya ±2 deydi. Nega aniq son talab qilinmaydi: struktura
+ * bosqichi `checkSlidesOutline` darvozasidan aniq son bilan o'tadi, ya'ni
+ * generatsiyada chetlanish bo'lmaydi. Bu shift MUHARRIRDAN kelgan kontent
+ * uchun: o'qituvchi ikki slaydni o'chirsa hujjati yiqilmasligi kerak.
+ */
+const SLIDE_COUNT_TOLERANCE = 2;
+
+/** 6x6 qoidasining birinchi yarmi — ettinchi punkt shriftni kichraytiradi. */
+const SLIDE_BULLETS_MAX = 6;
+
+/**
+ * Punkt uzunligi shifti.
+ *
+ * 90 belgi — proyektorda bir qarashda o'qiladigan chegara. Sxemadagi 200
+ * belgidan ancha past va bu ATAYLAB: sxema saqlanishga ruxsat beradi, baho
+ * esa o'qilmaydigan slaydni jazolaydi.
+ */
+const SLIDE_BULLET_CHARS = 90;
+
+/** Shundan qisqa izoh o'qituvchiga hech narsa bermaydi. */
+const SLIDE_NOTES_MIN = 40;
+
+type SlideBlock = Extract<DocumentContent["blocks"][number], { type: "slide" }>;
+
+function measureSlidesStructure(
+  content: DocumentContent,
+  spec: Extract<ScoreSpec, { type: "SLIDES" }>,
+  notes: QualityNote[],
+): Measure {
+  const present = new Set(content.blocks.map((block) => block.type));
+  requireBlocks(present, SLIDES_BLOCKS, notes);
+
+  const slides = content.blocks.filter((block): block is SlideBlock => block.type === "slide");
+
+  // Slayd soni — o'lchamning O'ZAGI: kredit aynan shunga qarab yechiladi.
+  let points = 0;
+  let total = 2;
+  if (Math.abs(slides.length - spec.slideCount) <= SLIDE_COUNT_TOLERANCE) {
+    points += 2;
+  } else {
+    note(
+      notes,
+      "slide_count",
+      "slide_count:mismatch",
+      `Slaydlar soni ${String(slides.length)}, so'ralgani ${String(spec.slideCount)}`,
+    );
+  }
+
+  // Punkt soni — 6x6 qoidasi.
+  total += 1;
+  const crowded = slides.filter((slide) => slide.bullets.length > SLIDE_BULLETS_MAX);
+  if (crowded.length === 0) {
+    points += 1;
+  } else {
+    note(
+      notes,
+      "slide_bullets",
+      "slide_bullets:too_many",
+      `${String(crowded.length)} ta slaydda ${String(SLIDE_BULLETS_MAX)} dan ko'p punkt`,
+    );
+  }
+
+  // Punkt uzunligi — proyektorda o'qilishi.
+  total += 1;
+  const long = slides
+    .flatMap((slide) => slide.bullets)
+    .filter((bullet) => bullet.length > SLIDE_BULLET_CHARS);
+  if (long.length === 0) {
+    points += 1;
+  } else {
+    note(
+      notes,
+      "slide_bullet_long",
+      "slide_bullet:long",
+      `${String(long.length)} ta punkt ${String(SLIDE_BULLET_CHARS)} belgidan uzun`,
+    );
+  }
+
+  // Bosh slayd ko'rinishi faqat birinchi slaydda.
+  total += 1;
+  const misplaced = slides.filter((slide, index) => slide.layout === "title" && index !== 0);
+  if (misplaced.length === 0) {
+    points += 1;
+  } else {
+    note(
+      notes,
+      "slide_layout_title",
+      "slide_layout:title_not_first",
+      `${String(misplaced.length)} ta slaydda bosh slayd ko'rinishi o'rtada`,
+    );
+  }
+
+  // "HAR SLAYDDA SARLAVHA BOR" QOIDASI BU YERDA YO'Q — ataylab.
+  //
+  // Spetsifikatsiya uni sifat tekshiruvi deb sanaydi, lekin blok sxemasidagi
+  // `txt(120)` (`.trim().min(1)`) uni KUCHLIROQ qavatda kafolatlaydi:
+  // sarlavhasiz slayd `DocumentContent.parse` dan o'tmaydi, ya'ni na
+  // generatsiyadan, na muharrirdan (avtosaqlash ham shu sxemadan o'tadi)
+  // bazaga yetib bormaydi. Bu yerga qoida yozish `LESSON_BLOCKS` izohidagi
+  // "biz yozgan kodni biz tekshirdik" holatini yasardi — hech qachon
+  // ishlamaydigan `if` va hech qachon chiqmaydigan izoh.
+  // `tests/slides-blocks.test.ts` kafolatning o'zini qadab turadi.
+
+  return { raw: points / total };
+}
+
 /**
  * Kurikulum qamrovi — rasmiy maqsad va kalit so'zlarning matnda uchrashi.
  *
@@ -862,6 +1014,17 @@ function measureLength(content: DocumentContent, notes: QualityNote[]): Measure 
       case "question":
         total += 1;
         if (block.text.length < 25) short += 1;
+        break;
+      // SLAYD PUNKTLARI O'LCHANMAYDI: qisqa punkt bu yerda MAQSAD, nuqson
+      // emas — uzunligini `measureSlidesStructure` teskari yo'nalishda
+      // jazolaydi, ikkisi birga qo'shilsa model qisqartirsa ham, uzaytirsa
+      // ham ball yo'qotardi. O'lchanadigan narsa `notes`: o'qituvchi sinfda
+      // aynan shuni o'qiydi.
+      case "slide":
+        if (block.notes !== undefined) {
+          total += 1;
+          if (block.notes.length < SLIDE_NOTES_MIN) short += 1;
+        }
         break;
       default:
         break;

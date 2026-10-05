@@ -478,3 +478,143 @@ describe("test — izohlarning shakli", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* SLIDES turi (14-sessiya)                                           */
+/* ------------------------------------------------------------------ */
+
+const SLIDE_COUNT = 12;
+
+function slidesScore(name: string, slideCount = SLIDE_COUNT) {
+  return scoreDocument({
+    content: load(name),
+    spec: { type: "SLIDES", slideCount },
+    curriculumTerms: TERMS,
+    hasContext: true,
+  });
+}
+
+function slidesCodes(name: string, slideCount = SLIDE_COUNT): string[] {
+  return slidesScore(name, slideCount).notes.map((note) => note.code);
+}
+
+/** Inline qurilgan taqdimot — fixture'ga sig'maydigan holatlar uchun. */
+function inlineDeck(slides: { layout: string; title: string; bullets: string[] }[]) {
+  return DocumentContent.parse({
+    v: 1,
+    blocks: [
+      { id: "s1-heading-0", type: "heading", level: 1, text: "Tezlanish" },
+      ...slides.map((slide, i) => ({
+        id: `s2a-slide-${String(i)}`,
+        type: "slide",
+        ...slide,
+      })),
+    ],
+  });
+}
+
+describe("taqdimot — yaxshi namuna", () => {
+  it("toza taqdimot ogohlantirish chegarasidan yuqori ball oladi", () => {
+    const report = slidesScore("taqdimot-yaxshi.json");
+    expect(report.notes).toEqual([]);
+    expect(report.cappedByError).toBe(false);
+    expect(report.score).toBeGreaterThanOrEqual(SCORE_WARN);
+  });
+
+  it("dars ishlanma va test qoidalari QO'LLANMAYDI", () => {
+    // Taqdimotda `stages`, `objectives` yoki `answerKey` bo'lmasligi NORMAL.
+    // Bu kodlar chiqsa `measureStructure` noto'g'ri tarmoqqa tushgan bo'lardi.
+    const codes = slidesCodes("taqdimot-yaxshi.json");
+    expect(codes).not.toContain("minutes:no_stages");
+    expect(codes).not.toContain("missing_block:stages");
+    expect(codes).not.toContain("missing_block:objectives");
+    expect(codes).not.toContain("question_count:mismatch");
+  });
+});
+
+describe("taqdimot — slayd soni", () => {
+  it("chetlanish shift ichida bo'lsa o'tadi", () => {
+    // 14 so'ralgan, 12 bor — ±2 ichida. O'qituvchi ikki slaydni o'chirsa
+    // hujjati yiqilmasligi kerak.
+    const report = slidesScore("taqdimot-yaxshi.json", 14);
+    expect(report.notes).toEqual([]);
+  });
+
+  it("shiftdan oshsa XATO va hujjat yiqiladi", () => {
+    // Kredit slayd soniga yechiladi: 20 ga to'lab 12 ta olish pul masalasi.
+    const report = slidesScore("taqdimot-yaxshi.json", 20);
+    expect(report.notes.map((note) => note.code)).toContain("slide_count:mismatch");
+    expect(report.cappedByError).toBe(true);
+    expect(report.score).toBeLessThan(SCORE_FAIL);
+  });
+});
+
+describe("taqdimot — o'qilish qoidalari", () => {
+  it("uchta nuqson OGOHLANTIRISH beradi, xato bermaydi", () => {
+    const report = slidesScore("taqdimot-kop-punkt.json");
+    const codes = report.notes.map((note) => note.code);
+
+    expect(codes).toContain("slide_bullets:too_many");
+    expect(codes).toContain("slide_bullet:long");
+    expect(codes).toContain("slide_layout:title_not_first");
+
+    // Hammasi `warn`: o'qituvchi punktni o'chiradi, matnni qisqartiradi.
+    for (const note of report.notes) {
+      expect(note.severity).toBe("warn");
+    }
+    expect(report.cappedByError).toBe(false);
+    expect(report.score).toBeGreaterThanOrEqual(SCORE_FAIL);
+  });
+
+  it("olti punkt o'tadi, yettitasi ogohlantiradi", () => {
+    const six = Array.from({ length: 6 }, (_, i) => `punkt ${String(i + 1)}`);
+    const okReport = scoreDocument({
+      content: inlineDeck([{ layout: "title", title: "Bosh", bullets: six }]),
+      spec: { type: "SLIDES", slideCount: 1 },
+      curriculumTerms: TERMS,
+      hasContext: false,
+    });
+    expect(okReport.notes.map((n) => n.code)).not.toContain("slide_bullets:too_many");
+
+    const badReport = scoreDocument({
+      content: inlineDeck([{ layout: "title", title: "Bosh", bullets: [...six, "yetti"] }]),
+      spec: { type: "SLIDES", slideCount: 1 },
+      curriculumTerms: TERMS,
+      hasContext: false,
+    });
+    expect(badReport.notes.map((n) => n.code)).toContain("slide_bullets:too_many");
+  });
+});
+
+describe("taqdimot — sarlavha kafolati", () => {
+  it("sarlavhasiz slayd SXEMADAN o'tmaydi, ya'ni bahoga yetib kelmaydi", () => {
+    // Spetsifikatsiya "har slaydda sarlavha bor" ni sifat tekshiruvi deb
+    // sanaydi, lekin `txt(120)` (`.trim().min(1)`) uni KUCHLIROQ qavatda
+    // kafolatlaydi — shuning uchun `quality.ts` da bu qoida YO'Q. Test
+    // kafolatning o'zini qadaydi: u yo'qolsa bahoda ham tekshiruv yo'qligi
+    // jimgina nuqsonga aylanardi.
+    expect(() =>
+      inlineDeck([
+        { layout: "title", title: "Bosh", bullets: [] },
+        { layout: "bullets", title: " ", bullets: ["punkt"] },
+      ]),
+    ).toThrow();
+  });
+});
+
+describe("taqdimot — izohlarning shakli", () => {
+  it("yangi qoidalar ham RULES jadvalida va kod naqshiga mos", () => {
+    const reports = [
+      slidesScore("taqdimot-kop-punkt.json"),
+      slidesScore("taqdimot-yaxshi.json", 20),
+    ];
+    for (const report of reports) {
+      expect(report.notes.length).toBeGreaterThan(0);
+      for (const note of report.notes) {
+        expect(note.code).toMatch(/^[a-z_]+(:[A-Za-z_]+)?$/);
+        expect(RULES[note.rule]).toBeDefined();
+        expect(note.severity).toBe(RULES[note.rule].severity);
+      }
+    }
+  });
+});
