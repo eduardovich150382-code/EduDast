@@ -97,6 +97,15 @@ function lines(block: Block): string[] {
 
     case "note":
       return [block.text];
+
+    case "slide": {
+      const out = [block.title, ...block.bullets.map((bullet) => `${BULLET}${bullet}`)];
+      // `notes` SHART chiqarilsin: u o'qituvchi SINFDA O'QIYDIGAN matn, ya'ni
+      // undagi kirill yoki markdown artefakti sifat tekshiruvidan jimgina
+      // o'tib ketmasligi kerak.
+      if (block.notes !== undefined) out.push(`Izoh: ${block.notes}`);
+      return out;
+    }
   }
 }
 

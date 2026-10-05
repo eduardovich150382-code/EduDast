@@ -245,6 +245,52 @@ const Note = z.strictObject({
 });
 
 /**
+ * Slayd ko'rinishlari — OLTITA.
+ *
+ * `image` ATAYLAB YO'Q: mahsulotda rasm generatsiyasi yo'q, ya'ni model bu
+ * ko'rinishni tanlaganda o'qituvchi bo'sh freym ko'rardi. Bu enum
+ * `contentJson` da SAQLANADI — keyin a'zo chiqarish eski hujjatlarni
+ * validatsiyadan yiqitadi, shuning uchun kengaytirish oson, qisqartirish
+ * qimmat. Rasm qo'llab-quvvatlanganda qo'shiladi.
+ *
+ * MA'LUMOT SHAKLI HAMMA KO'RINISH UCHUN BITTA (`title` + `bullets[]`), farq
+ * faqat renderda — `components/slides/layouts/` va `SLIDES_GUIDE` shu
+ * qoidalarga tayanadi:
+ *   title       `title` markazda katta, `bullets[0]` ost sarlavha. Faqat 0-indeks.
+ *   section     `title` markazda, punktlar KO'RSATILMAYDI (bo'lim ajratgichi).
+ *   bullets     `title` yuqorida, punktlar ro'yxat.
+ *   two-column  punktlar KETMA-KET yarmiga bo'linadi: `slice(0, ceil(n/2))`
+ *               chap ustun, qolgani o'ng. Juft-toq navbatlashtirish EMAS —
+ *               u ro'yxatning o'qilish tartibini buzadi.
+ *   quote       `bullets[0]` iqtibosning O'ZI (katta, markazda),
+ *               `bullets[1]` muallif/manba, `title` ustida kichik sarlavha.
+ *   question    `title` savol (katta), punktlar variant yoki yo'naltiruvchi fikr.
+ */
+export const SLIDE_LAYOUTS = [
+  "title",
+  "section",
+  "bullets",
+  "two-column",
+  "quote",
+  "question",
+] as const;
+export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
+
+const Slide = z.strictObject({
+  id: Id,
+  type: z.literal("slide"),
+  layout: z.enum(SLIDE_LAYOUTS),
+  // `txt(120)` — `StageItem.title` bilan bir xil shift.
+  title: txt(120),
+  // `.max(8)`, 6 EMAS, va `.min()` YO'Q: `title`/`section` ko'rinishida punkt
+  // bo'lmasligi normal hol. 6 dan oshgani SXEMADA emas, `quality.ts` da ball
+  // yo'qotadi — markdown bilan ayni intizom (sxema "o'qilmaydigan" kontentni
+  // rad etmaydi, baho uni jazolaydi va o'qituvchi tahrirlaydi).
+  bullets: z.array(txt(200)).max(8).default([]),
+  notes: txt(1_000).optional(),
+});
+
+/**
  * Zod 4 da refinement sxema ICHIDA yashaydi, ya'ni `.refine()` /
  * `.superRefine()` `ZodObject` ni saqlaydi va `discriminatedUnion` uni qabul
  * qiladi (Zod 3 da bu `ZodEffects` bo'lib, union'ni buzardi).
@@ -262,6 +308,7 @@ export const Block = z.discriminatedUnion("type", [
   Rubric,
   Homework,
   Note,
+  Slide,
 ]);
 export type Block = z.infer<typeof Block>;
 export type BlockType = Block["type"];
@@ -283,6 +330,7 @@ export const BLOCK_TYPES = [
   "rubric",
   "homework",
   "note",
+  "slide",
 ] as const satisfies readonly BlockType[];
 
 /**

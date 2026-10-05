@@ -142,4 +142,35 @@ describe("renderBlock", () => {
     expect(out).toContain("m/s^2");
     expect(out).toContain("Tezlik");
   });
+
+  it("slayd sarlavha, punkt va izoh bilan chiqadi", () => {
+    // SHART: `notes` ham chiqadi — u o'qituvchi SINFDA O'QIYDIGAN matn, ya'ni
+    // undagi kirill yoki markdown artefakti sifat tekshiruvidan o'tib
+    // ketmasligi kerak.
+    const block: Block = {
+      id: "s2a-slide-0",
+      type: "slide",
+      layout: "bullets",
+      title: "Tezlanish nima?",
+      bullets: ["Tezlikning o'zgarish tezligi", "Birligi m/s^2"],
+      notes: "Doskaga formulani yozing.",
+    };
+    expect(renderBlock(block).split("\n")).toEqual([
+      "Tezlanish nima?",
+      "• Tezlikning o'zgarish tezligi",
+      "• Birligi m/s^2",
+      "Izoh: Doskaga formulani yozing.",
+    ]);
+  });
+
+  it("izohsiz slaydda Izoh qatori yo'q", () => {
+    const block: Block = {
+      id: "s1-slide-0",
+      type: "slide",
+      layout: "section",
+      title: "Mashq vaqti",
+      bullets: [],
+    };
+    expect(renderBlock(block)).toBe("Mashq vaqti");
+  });
 });

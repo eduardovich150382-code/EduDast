@@ -36,7 +36,7 @@ describe("blok sxemasi", () => {
     // `satisfies` tipda tekshiradi, bu esa RO'YXAT to'liqligini: union'ga
     // blok qo'shilib ro'yxat unutilsa, bu yerda son farq qiladi.
     expect(new Set(BLOCK_TYPES).size).toBe(BLOCK_TYPES.length);
-    expect(BLOCK_TYPES.length).toBe(12);
+    expect(BLOCK_TYPES.length).toBe(13);
   });
 
   it("har blok turi round-trip dan o'tadi", () => {
@@ -72,6 +72,14 @@ describe("blok sxemasi", () => {
       },
       { id: "b11", type: "homework", items: ["12-mashqni yeching"], estimatedMinutes: 20 },
       { id: "b12", type: "note", tone: "tip", text: "Kuchsiz o'quvchiga yordam bering." },
+      {
+        id: "b13",
+        type: "slide",
+        layout: "bullets",
+        title: "Tezlanish nima?",
+        bullets: ["Tezlikning o'zgarish tezligi"],
+        notes: "Doskaga formulani yozib ko'rsating.",
+      },
     ];
 
     for (const block of blocks) {
@@ -80,7 +88,7 @@ describe("blok sxemasi", () => {
     }
 
     const content = { v: 1, blocks };
-    expect(DocumentContent.parse(content).blocks.length).toBe(12);
+    expect(DocumentContent.parse(content).blocks.length).toBe(13);
   });
 
   it("noma'lum blok turi rad etiladi", () => {
