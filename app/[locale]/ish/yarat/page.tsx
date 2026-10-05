@@ -18,6 +18,7 @@ import {
   parseWizardParams,
   previousStep,
   QUESTION_COUNTS,
+  SLIDE_COUNTS,
   resolveParams,
   resolveStep,
   startInputFor,
@@ -118,9 +119,28 @@ export default async function YaratPage({
 
   const docType: SupportedDocumentType =
     params.type === null ? "LESSON_PLAN" : documentTypeFor(params.type);
-  const isTest = docType === "TEST";
-  const title = isTest ? t("titleTest") : t("title");
-  const description = isTest ? t("descriptionTest") : t("description");
+
+  // Sarlavha, tavsif va "Turi" qatori — `Record`, ternar EMAS: uchinchi tur
+  // qo'shilganda ternar zanjiri uzayardi va unutilgan tur jimgina dars
+  // ishlanma matnini ko'rsatardi.
+  const TITLE_KEY: Record<SupportedDocumentType, string> = {
+    LESSON_PLAN: "title",
+    TEST: "titleTest",
+    SLIDES: "titleSlides",
+  };
+  const DESCRIPTION_KEY: Record<SupportedDocumentType, string> = {
+    LESSON_PLAN: "description",
+    TEST: "descriptionTest",
+    SLIDES: "descriptionSlides",
+  };
+  const TYPE_KEY: Record<SupportedDocumentType, string> = {
+    LESSON_PLAN: "typeLesson",
+    TEST: "typeTest",
+    SLIDES: "typeSlides",
+  };
+
+  const title = t(TITLE_KEY[docType]);
+  const description = t(DESCRIPTION_KEY[docType]);
 
   const previous = previousStep(step);
   const backQuery =
@@ -133,7 +153,9 @@ export default async function YaratPage({
   const cost =
     resolved.type === "TEST"
       ? creditCost({ type: "TEST", questionCount: resolved.questionCount })
-      : creditCost({ type: "LESSON_PLAN" });
+      : resolved.type === "SLIDES"
+        ? creditCost({ type: "SLIDES", slideCount: resolved.slideCount })
+        : creditCost({ type: "LESSON_PLAN" });
 
   return (
     <Wizard
@@ -157,6 +179,10 @@ export default async function YaratPage({
             value,
             cost: creditCost({ type: "TEST", questionCount: value }),
           }))}
+          slideCosts={SLIDE_COUNTS.map((value) => ({
+            value,
+            cost: creditCost({ type: "SLIDES", slideCount: value }),
+          }))}
         />
       )}
 
@@ -164,7 +190,7 @@ export default async function YaratPage({
         <StepConfirm
           input={startInputFor(params, topic.id)}
           summary={[
-            { label: t("summaryType"), value: isTest ? t("typeTest") : t("typeLesson") },
+            { label: t("summaryType"), value: t(TYPE_KEY[docType]) },
             { label: t("summaryTopic"), value: topicTitle(topic, locale) },
             { label: t("summaryParams"), value: paramsSummary() },
           ]}
@@ -178,14 +204,18 @@ export default async function YaratPage({
 
   /** Tasdiqlash ekranidagi "Parametrlar" qatori. */
   function paramsSummary(): string {
-    if (resolved.type === "TEST") {
-      return [
-        t("questionCountLabel", { count: resolved.questionCount }),
-        resolved.kinds.map((kind) => t(`kind.${kind}`)).join(", "),
-        t(`difficulty.${resolved.difficulty}`),
-      ].join(" · ");
+    switch (resolved.type) {
+      case "TEST":
+        return [
+          t("questionCountLabel", { count: resolved.questionCount }),
+          resolved.kinds.map((kind) => t(`kind.${kind}`)).join(", "),
+          t(`difficulty.${resolved.difficulty}`),
+        ].join(" · ");
+      case "SLIDES":
+        return t("slideCountLabel", { count: resolved.slideCount });
+      case "LESSON_PLAN":
+        return t("durationLabel", { minutes: resolved.durationMinutes });
     }
-    return t("durationLabel", { minutes: resolved.durationMinutes });
   }
 }
 

@@ -15,6 +15,7 @@ import {
   DEFAULT_DURATION,
   DEFAULT_KINDS,
   DEFAULT_QUESTION_COUNT,
+  DEFAULT_SLIDE_COUNT,
   DURATIONS,
   inferStep,
   MAX_QUERY_LENGTH,
@@ -24,6 +25,7 @@ import {
   QUESTION_COUNTS,
   resolveParams,
   resolveStep,
+  SLIDE_COUNTS,
   startInputFor,
   toggleKind,
   WIZARD_STEPS,
@@ -55,6 +57,7 @@ const EMPTY: WizardParams = {
   questionCount: null,
   kinds: null,
   difficulty: null,
+  slideCount: null,
 };
 
 describe("parseWizardParams — har kirish uchun xavfsiz default", () => {
@@ -88,12 +91,13 @@ describe("parseWizardParams — har kirish uchun xavfsiz default", () => {
       questionCount: 10,
       kinds: ["mcq", "short"],
       difficulty: "hard",
+      slideCount: null,
     });
   });
 
   it.each([
     ["noma'lum qadam", { qadam: "boshqa" }, "step"],
-    ["noma'lum tur", { tur: "taqdimot" }, "type"],
+    ["noma'lum tur", { tur: "krossvord" }, "type"],
     ["sinf chegaradan tashqari", { sinf: "99" }, "grade"],
     ["sinf manfiy", { sinf: "-3" }, "grade"],
     ["sinf matn", { sinf: "abc" }, "grade"],
@@ -593,5 +597,128 @@ describe("wizardQueryFromDocument — yiqilgan hujjatdan qayta urinish", () => {
     expect(
       inferStep(parseWizardParams(query), { topicResolved: true }),
     ).toBe("param");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* SLIDES turi (14-sessiya)                                           */
+/* ------------------------------------------------------------------ */
+
+describe("taqdimot — sehrgar holati", () => {
+  it("?tur=taqdimot&slayd=12 round-trip dan o'tadi", () => {
+    const params = parseWizardParams({ tur: "taqdimot", slayd: "12" });
+    expect(params.type).toBe("taqdimot");
+    expect(params.slideCount).toBe(12);
+    expect(wizardQuery(params)).toEqual({ tur: "taqdimot", slayd: "12" });
+  });
+
+  it("ro'yxatda yo'q son TASHLANADI", () => {
+    // 11 — `UNIT_LIMITS.SLIDES` ichida, lekin formadagi variant emas.
+    // Narx faqat ro'yxatdagi sonlar uchun ko'rsatiladi, boshqasi
+    // "narxsiz" holat yasardi.
+    expect(parseWizardParams({ slayd: "11" }).slideCount).toBeNull();
+    expect(parseWizardParams({ slayd: "100" }).slideCount).toBeNull();
+    expect(parseWizardParams({ slayd: "salom" }).slideCount).toBeNull();
+  });
+
+  it("paramsCompleteForType: faqat slayd soni kerak", () => {
+    expect(paramsCompleteForType({ ...EMPTY, type: "taqdimot" })).toBe(false);
+    expect(
+      paramsCompleteForType({ ...EMPTY, type: "taqdimot", slideCount: 12 }),
+    ).toBe(true);
+  });
+
+  it("paramsCompleteForType taqdimotni DARS tarmog'iga tushirmaydi", () => {
+    // Jim nuqsonning aynan o'zi: `if (TEST) ... else LESSON_PLAN` shaklida
+    // bu holat `duration !== null` ni tekshirib, `true` qaytarardi va
+    // o'qituvchi slayd sonini umuman ko'rmasdan tasdiqlash ekraniga tushardi.
+    expect(
+      paramsCompleteForType({ ...EMPTY, type: "taqdimot", duration: 45 }),
+    ).toBe(false);
+  });
+
+  it("resolveParams default slayd sonini beradi", () => {
+    expect(resolveParams({ ...EMPTY, type: "taqdimot" })).toEqual({
+      type: "SLIDES",
+      slideCount: DEFAULT_SLIDE_COUNT,
+    });
+  });
+
+  it("startInputFor: default ham sxemadan o'tadi", () => {
+    const input = startInputFor({ ...EMPTY, type: "taqdimot" }, "topic-1");
+    expect(input).toEqual({
+      type: "SLIDES",
+      topicId: "topic-1",
+      slideCount: DEFAULT_SLIDE_COUNT,
+    });
+    expect(startSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("HAR BIR slayd soni varianti sxemadan o'tadi", () => {
+    for (const count of SLIDE_COUNTS) {
+      const input = startInputFor(
+        { ...EMPTY, type: "taqdimot", slideCount: count },
+        "topic-1",
+      );
+      expect(startSchema.safeParse(input).success, `slayd=${String(count)}`).toBe(true);
+    }
+  });
+
+  it("variant ro'yxati server chegaralari ichida", () => {
+    for (const count of SLIDE_COUNTS) {
+      expect(count).toBeGreaterThanOrEqual(UNIT_LIMITS.SLIDES.min);
+      expect(count).toBeLessThanOrEqual(UNIT_LIMITS.SLIDES.max);
+    }
+    expect(SLIDE_COUNTS.length).toBeGreaterThan(0);
+    expect(SLIDE_COUNTS).toContain(DEFAULT_SLIDE_COUNT);
+  });
+
+  it("confirmQuery slayd sonini yozadi va BOSHQA turning parametrlarini tozalaydi", () => {
+    const params = parseWizardParams({
+      tur: "taqdimot",
+      // Dars va test parametrlari eski havoladan qolib ketgan.
+      daqiqa: "45",
+      savol: "10",
+      turlar: "mcq",
+      qiyin: "mixed",
+    });
+    const query = confirmQuery(params);
+    expect(query.slayd).toBe(String(DEFAULT_SLIDE_COUNT));
+    expect(query.daqiqa).toBeUndefined();
+    expect(query.savol).toBeUndefined();
+    expect(query.turlar).toBeUndefined();
+    expect(query.qiyin).toBeUndefined();
+  });
+
+  it("dars va test confirmQuery si slayd sonini tozalaydi", () => {
+    const lesson = confirmQuery(parseWizardParams({ tur: "dars", slayd: "12" }));
+    expect(lesson.slayd).toBeUndefined();
+    const test = confirmQuery(parseWizardParams({ tur: "test", slayd: "12" }));
+    expect(test.slayd).toBeUndefined();
+  });
+
+  it("wizardQueryFromDocument saqlangan slayd sonini qaytaradi", () => {
+    const query = wizardQueryFromDocument({
+      type: "SLIDES",
+      topicId: "t-1",
+      inputParams: { slideCount: 14, contextChunkIds: [] },
+    });
+    expect(query).toEqual({
+      qadam: "tasdiq",
+      tur: "taqdimot",
+      mavzu: "t-1",
+      slayd: "14",
+    });
+  });
+
+  it("wizardQueryFromDocument ro'yxatda yo'q sonni tashlaydi", () => {
+    const query = wizardQueryFromDocument({
+      type: "SLIDES",
+      topicId: "t-1",
+      inputParams: { slideCount: 11 },
+    });
+    expect(query.slayd).toBeUndefined();
+    // Qolgani saqlanadi — qadam `param` ga tushadi va o'qituvchi qaytadan tanlaydi.
+    expect(query.tur).toBe("taqdimot");
   });
 });

@@ -8,9 +8,10 @@ import { hold } from "@/lib/credits/ledger";
 import { EMPTY_CONTENT } from "@/lib/documents/blocks";
 import { prisma } from "@/lib/db";
 import { buildPlan } from "@/lib/generation/plans";
+import { buildSlidesPlan } from "@/lib/generation/plans-slides";
 import { buildTestPlan } from "@/lib/generation/plans-test";
 import { resolveContextChunks } from "@/lib/generation/retrieval";
-import { startSchema } from "@/lib/generation/start-input";
+import { startSchema, type StartInput } from "@/lib/generation/start-input";
 
 /**
  * Generatsiya action'lari (docs/sessions/08 — dars ishlanma).
@@ -78,17 +79,8 @@ export async function boshlaGeneratsiya(input: unknown): Promise<GenerationResul
   // bajarilmagan. Prisma `@default(cuid())` bo'lsa ham `data.id` ni qo'lda
   // berish mumkin.
   const documentId = randomUUID();
-  const cost =
-    req.type === "TEST"
-      ? creditCost({ type: "TEST", questionCount: req.questionCount })
-      : creditCost({ type: "LESSON_PLAN" });
-
-  // Reja bosqichlari soni: testda SAVOL SONIDAN aniq hisoblanadi, dars
-  // ishlanmada esa 1-bosqich skeletidan keyin aniqlashadi.
-  const total =
-    req.type === "TEST"
-      ? buildTestPlan(req.questionCount).stages.length
-      : buildPlan(null).stages.length;
+  const cost = costFor(req);
+  const total = totalFor(req);
 
   const contextChunkIds = await resolveContextChunks(req.topicId);
 
@@ -108,7 +100,7 @@ export async function boshlaGeneratsiya(input: unknown): Promise<GenerationResul
           // `title` — MA'LUMOT, UI matni emas: hujjat ro'yxatida va
           // eksportda shu nom turadi, shuning uchun i18n qoidasiga
           // kirmaydi (`topic.titleUz` allaqachon shunday ishlatiladi).
-          title: req.type === "TEST" ? `${topic.titleUz} — test` : topic.titleUz,
+          title: titleFor(req, topic.titleUz),
           status: "QUEUED",
           creditsHeldFor: cost,
           // `{}` EMAS, `null` EMAS: `commitStage` dagi `jsonb` append
@@ -116,13 +108,7 @@ export async function boshlaGeneratsiya(input: unknown): Promise<GenerationResul
           // kontent versiyasini qayd etadi.
           contentJson: EMPTY_CONTENT,
           inputParams: {
-            ...(req.type === "TEST"
-              ? {
-                  questionCount: req.questionCount,
-                  kinds: req.kinds,
-                  difficulty: req.difficulty,
-                }
-              : { durationMinutes: req.durationMinutes }),
+            ...typeParamsFor(req),
             contextChunkIds,
             // `progress` obyekti SHU YERDA yaratilishi shart: `jsonb_set`
             // oxirgi kalitni yaratadi, ota obyektni emas. Dars ishlanmada
@@ -143,4 +129,80 @@ export async function boshlaGeneratsiya(input: unknown): Promise<GenerationResul
   }
 
   return { ok: true, documentId };
+}
+
+/* ------------------------------------------------------------------ */
+/* Turga xos qismlar                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * To'rtta kichik yordamchi — EKSPORT QILINMAYDI (`"use server"` fayl
+ * action'dan boshqa qiymat eksport qila olmaydi).
+ *
+ * Nega ajratilgan: uchinchi hujjat turi kelganda bu to'rt joy uch tomonli
+ * ternarga aylanardi va `inputParams` spread'i o'qilmas bo'lib qolardi.
+ * `default` siz `switch` esa to'rtinchi tur qo'shilganda TypeScript bilan
+ * yiqiladi — narxsiz yoki rejasiz tur jimgina paydo bo'lmaydi.
+ */
+function costFor(req: StartInput): number {
+  switch (req.type) {
+    case "TEST":
+      return creditCost({ type: "TEST", questionCount: req.questionCount });
+    case "SLIDES":
+      return creditCost({ type: "SLIDES", slideCount: req.slideCount });
+    case "LESSON_PLAN":
+      return creditCost({ type: "LESSON_PLAN" });
+  }
+}
+
+/**
+ * Reja bosqichlari soni.
+ *
+ * Testda SAVOL SONIDAN, taqdimotda SLAYD SONIDAN aniq hisoblanadi; dars
+ * ishlanmada esa bu dastlabki taxmin va 1-bosqich skeletidan keyin
+ * aniqlashadi (`lib/generation/plans.ts`).
+ */
+function totalFor(req: StartInput): number {
+  switch (req.type) {
+    case "TEST":
+      return buildTestPlan(req.questionCount).stages.length;
+    case "SLIDES":
+      return buildSlidesPlan(req.slideCount).stages.length;
+    case "LESSON_PLAN":
+      return buildPlan(null).stages.length;
+  }
+}
+
+/**
+ * Hujjat nomi.
+ *
+ * `title` — MA'LUMOT, UI matni emas: hujjat ro'yxatida va eksportda shu nom
+ * turadi, shuning uchun i18n qoidasiga kirmaydi (`topic.titleUz` allaqachon
+ * shunday ishlatiladi).
+ */
+function titleFor(req: StartInput, topicTitle: string): string {
+  switch (req.type) {
+    case "TEST":
+      return `${topicTitle} — test`;
+    case "SLIDES":
+      return `${topicTitle} — taqdimot`;
+    case "LESSON_PLAN":
+      return topicTitle;
+  }
+}
+
+/** `inputParams` ning turga xos qismi — `run-stage.ts` dagi sxemalar shuni kutadi. */
+function typeParamsFor(req: StartInput): Record<string, unknown> {
+  switch (req.type) {
+    case "TEST":
+      return {
+        questionCount: req.questionCount,
+        kinds: req.kinds,
+        difficulty: req.difficulty,
+      };
+    case "SLIDES":
+      return { slideCount: req.slideCount };
+    case "LESSON_PLAN":
+      return { durationMinutes: req.durationMinutes };
+  }
 }

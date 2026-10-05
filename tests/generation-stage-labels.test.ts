@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPlan, SPLIT_THRESHOLD } from "@/lib/generation/plans";
+import { buildSlidesPlan } from "@/lib/generation/plans-slides";
 import { buildTestPlan, TEST_SPLIT_THRESHOLD } from "@/lib/generation/plans-test";
 import {
   stageLabelInputFromDocument,
@@ -177,5 +178,60 @@ describe("stageLabelInputFromDocument — buzuq inputParams ga chidamli", () => 
       stageLabelInputFromDocument("LESSON_PLAN", input),
     ).not.toThrow();
     expect(stageLabelInputFromDocument("LESSON_PLAN", input)).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* SLIDES turi (14-sessiya)                                           */
+/* ------------------------------------------------------------------ */
+
+describe("stageLabels — SLIDES", () => {
+  it.each([8, 10, 12, 14, 20])("slideCount=%s uchun uch qator", (count) => {
+    expect(stageLabels({ type: "SLIDES", slideCount: count }).map((s) => s.id)).toEqual([
+      "1",
+      "2a",
+      "2b",
+    ]);
+  });
+
+  it("haqiqiy reja quruvchisi bilan mos", () => {
+    // UI reja bilan ajralib ketmasligi uchun: `buildSlidesPlan` o'zgarsa
+    // bosqich ro'yxati ham o'zgarishi kerak.
+    for (const count of [8, 12, 13, 20]) {
+      expect(stageLabels({ type: "SLIDES", slideCount: count })).toEqual(
+        buildSlidesPlan(count).stages,
+      );
+    }
+  });
+
+  it("ikki mazmun qatori (1/2) va (2/2) oladi, yakun qatori YO'Q", () => {
+    const rows = stageRows(stageLabels({ type: "SLIDES", slideCount: 12 }));
+    expect(rows).toEqual([
+      { id: "1", kind: "skeleton" },
+      { id: "2a", kind: "content", part: { index: 1, count: 2 } },
+      { id: "2b", kind: "content", part: { index: 2, count: 2 } },
+    ]);
+    expect(rows.some((row) => row.kind === "closing")).toBe(false);
+  });
+});
+
+describe("stageLabelInputFromDocument — SLIDES", () => {
+  it("slideCount o'qiladi", () => {
+    expect(
+      stageLabelInputFromDocument("SLIDES", {
+        slideCount: 14,
+        contextChunkIds: [],
+        progress: { stage: 0, total: 3, attempts: 0 },
+      }),
+    ).toEqual({ type: "SLIDES", slideCount: 14 });
+  });
+
+  it("slideCount yo'q -> null (nomsiz qatorlar ko'rsatiladi)", () => {
+    expect(stageLabelInputFromDocument("SLIDES", { contextChunkIds: [] })).toBeNull();
+  });
+
+  it("buzuq inputParams -> null, throw QILMAYDI", () => {
+    expect(stageLabelInputFromDocument("SLIDES", "buzuq")).toBeNull();
+    expect(stageLabelInputFromDocument("SLIDES", { slideCount: "o'n ikki" })).toBeNull();
   });
 });

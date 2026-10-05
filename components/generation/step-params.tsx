@@ -31,16 +31,17 @@ type Props = {
   lessonCost: number;
   /** Savol soni -> narx. Serverda hisoblangan. */
   questionCosts: { value: number; cost: number }[];
+  /** Slayd soni -> narx. Serverda hisoblangan. */
+  slideCosts: { value: number; cost: number }[];
 };
 
-export async function StepParams({ params, lessonCost, questionCosts }: Props) {
+export async function StepParams({ params, lessonCost, questionCosts, slideCosts }: Props) {
   const t = await getTranslations("Generator");
   const resolved = resolveParams(params);
-  const isTest = resolved.type === "TEST";
 
   return (
     <div className="flex flex-col gap-5">
-      {isTest ? (
+      {resolved.type === "TEST" && (
         <>
           <Group label={t("questionCount")}>
             {questionCosts.map((option) => (
@@ -82,22 +83,40 @@ export async function StepParams({ params, lessonCost, questionCosts }: Props) {
             ))}
           </Group>
         </>
-      ) : (
-        <Group label={t("duration")}>
-          {DURATIONS.map((minutes) => (
+      )}
+
+      {resolved.type === "SLIDES" && (
+        <Group label={t("slideCount")}>
+          {slideCosts.map((option) => (
             <OptionLink
-              key={minutes}
+              key={option.value}
               params={params}
-              overrides={{ daqiqa: minutes }}
-              selected={resolved.durationMinutes === minutes}
-              label={t("durationLabel", { minutes })}
+              overrides={{ slayd: option.value }}
+              selected={resolved.slideCount === option.value}
+              label={t("slideCountLabel", { count: option.value })}
+              hint={t("cost", { count: option.cost })}
             />
           ))}
         </Group>
       )}
 
-      {!isTest && (
-        <p className="text-sm text-ink-2">{t("cost", { count: lessonCost })}</p>
+      {resolved.type === "LESSON_PLAN" && (
+        <>
+          <Group label={t("duration")}>
+            {DURATIONS.map((minutes) => (
+              <OptionLink
+                key={minutes}
+                params={params}
+                overrides={{ daqiqa: minutes }}
+                selected={resolved.durationMinutes === minutes}
+                label={t("durationLabel", { minutes })}
+              />
+            ))}
+          </Group>
+          {/* Dars ishlanma narxi davomiylikka BOG'LIQ EMAS, shuning uchun
+              variant yonida emas, alohida qator bo'lib chiqadi. */}
+          <p className="text-sm text-ink-2">{t("cost", { count: lessonCost })}</p>
+        </>
       )}
 
       <div>

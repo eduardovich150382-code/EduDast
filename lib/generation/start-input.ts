@@ -53,6 +53,19 @@ export const startSchema = z.discriminatedUnion("type", [
     kinds: z.array(z.enum(QUESTION_KINDS)).min(1).max(QUESTION_KINDS.length),
     difficulty: z.enum(DIFFICULTIES),
   }),
+  z.object({
+    type: z.literal("SLIDES"),
+    topicId: topicIdSchema,
+    // Chegara `UNIT_LIMITS.SLIDES` dan (6-20), formadagi ro'yxatdan EMAS.
+    // Forma 8/10/12/14 ni ko'rsatadi (`SLIDE_COUNTS`), lekin URL'ni qo'lda
+    // tahrirlagan o'qituvchi narx jadvali to'laydigan har qanday sonni
+    // yuborishi mumkin va u ham to'g'ri narxlanadi.
+    slideCount: z
+      .number()
+      .int()
+      .min(UNIT_LIMITS.SLIDES.min)
+      .max(UNIT_LIMITS.SLIDES.max),
+  }),
 ]);
 
 export type StartInput = z.infer<typeof startSchema>;
