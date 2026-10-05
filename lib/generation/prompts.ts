@@ -20,11 +20,12 @@
  *                     kurikulumga sodiqlik). Har turda bir xil.
  *   `LESSON_GUIDE`  — dars ishlanmaning pedagogik talablari.
  *   `TEST_GUIDE`    — test tuzish qoidalari.
+ *   `SLIDES_GUIDE`  — taqdimot slaydlari qoidalari (14-sessiya).
  *
  * Kesh tartibi `lib/generation/run-stage.ts` da: `SHARED_GUIDE` -> kontekst
- * -> turga xos qo'llanma. Birinchi ikkisi ikkala tur uchun AYNAN bir xil,
- * shuning uchun bir mavzudan dars ishlanma yaratgan o'qituvchi test
- * yaratganda prefiks keshdan o'qiladi.
+ * -> turga xos qo'llanma. Birinchi ikkisi HAMMA tur uchun AYNAN bir xil,
+ * shuning uchun bir mavzudan dars ishlanma yaratgan o'qituvchi test yoki
+ * taqdimot yaratganda prefiks keshdan o'qiladi.
  */
 
 /**
@@ -151,6 +152,67 @@ Ball (points). Oson savolga 1 ball, o'rtachasiga 2, murakkabiga 3 ball ber. Ball
 Rubrika. Qisqa javobli va moslashtirish savollarini o'qituvchi qo'lda tekshiradi. Rubrika mezonlari aynan shu tekshirishga yordam bersin: to'liq javob, chala javob va noto'g'ri javob orasidagi farq kuzatiladigan bo'lib yozilsin.`;
 
 /**
+ * Taqdimot slaydlari qoidalari (14-sessiya).
+ *
+ * `TEST_GUIDE` bilan ayni intizom: har qoidaning `lib/generation/quality.ts`
+ * da o'lchovi bor (slayd soni, punkt soni, punkt uzunligi). Bu yerni
+ * o'zgartirsang o'sha tekshiruvlarni ham ko'rib chiq.
+ *
+ * KO'RINISHLAR RO'YXATI `lib/documents/blocks.ts:SLIDE_LAYOUTS` dagi izoh
+ * bilan AYNAN bir xil bo'lishi kerak: u yerda render qoidasi, bu yerda esa
+ * modelga aytilgan shakli. Ikkisi ajralsa model `quote` ko'rinishini tanlab,
+ * iqtibosni sarlavhaga yozib qo'yardi va slayd bo'sh ko'rinardi.
+ */
+export const SLIDES_GUIDE = `## Taqdimot slaydlari uchun talablar
+
+Sen bu safar dars ishlanma ham, test ham emas, SINF TAQDIMOTI tuzasan. Slaydlar proyektorga yoki 75 dyuymli smart doskaga chiqariladi, o'qituvchi esa ular yonida turib gapiradi.
+
+ENG MUHIM TUSHUNCHA: slayd darsning matni EMAS. O'qituvchi gapiradi, slayd esa eslatadi. Shuning uchun slaydga to'liq jumla, paragraf yoki ta'rifning hammasini yozma — eng muhim ibora qoladi, qolganini o'qituvchi o'z so'zi bilan aytadi. Slaydni o'qib bergan o'qituvchi darsni yo'qotadi.
+
+### Slayd ko'rinishlari (layout)
+
+Har slaydga bitta ko'rinish tanlanadi. Ma'lumot shakli hammasida bir xil: sarlavha va punktlar ro'yxati. Farq — ekranda qanday joylashishi:
+
+- title — taqdimotning bosh slaydi. Sarlavha katta harfda markazda turadi, birinchi punkt esa ost sarlavha bo'lib chiqadi (masalan fan va sinf). Faqat BIRINCHI slaydda ishlatiladi, taqdimot o'rtasida emas.
+- section — bo'lim ajratgichi. Faqat sarlavha ko'rinadi, PUNKTLAR CHIQMAYDI. Shuning uchun bu ko'rinishda punktlar ro'yxatini bo'sh qoldir: yozilgan punkt ekranda ko'rinmaydi va yo'qolgan mehnat bo'ladi. "Mashq vaqti", "Yangi mavzu", "Xulosa" kabi o'tish nuqtalari uchun.
+- bullets — asosiy ishchi ko'rinish. Sarlavha yuqorida, punktlar ro'yxat bo'lib pastida. Yangi mazmunni ko'rsatish uchun shuni ishlat.
+- two-column — punktlar ikki ustunga bo'linadi: birinchi yarmi chap ustunda, qolgani o'ng ustunda. Solishtirish uchun qulay (masalan "Skalyar kattaliklar" va "Vektor kattaliklar"). Punkt soni JUFT bo'lsa ustunlar tengroq chiqadi. Chap va o'ng ustun mazmunan bog'liq bo'lsin, aks holda bo'linish tasodifiy ko'rinadi.
+- quote — iqtibos yoki qoida slaydi. BIRINCHI PUNKT iqtibosning O'ZI bo'ladi va katta harfda markazda chiqadi; IKKINCHI PUNKT muallif yoki manba. Sarlavha ustida kichik yozuv bo'lib qoladi. Shuning uchun bu ko'rinishda bir yoki ikki punkt yoz, ko'p emas. Qonun ta'rifi, olim so'zi yoki qoidaning aniq shakli uchun.
+- question — savol slaydi. Sarlavha savol sifatida katta harfda chiqadi, punktlar esa variantlar yoki yo'naltiruvchi fikrlar bo'ladi (1-3 ta). Sinfni o'ylashga majburlash uchun: o'qituvchi savolni ekranga chiqarib, javobni kutadi.
+
+### Punktlar
+
+Bitta slaydda 6 tadan ORTIQ punkt bo'lmasin. Ettinchi punkt shriftni kichraytiradi va orqa partadan o'qilmay qoladi — aslida u yerda ikkinchi slayd kerak.
+
+Punkt — jumla emas, 3-9 so'zlik ibora. Oxirida nuqta qo'yma. "Tezlanish tezlikning vaqt bo'yicha o'zgarish tezligidir." emas, "Tezlik o'zgarishining tezligi" yoz. Ega va kesimli to'liq jumla yozsang, o'qituvchi uni ovoz chiqarib o'qiydi va dars ma'ruzaga aylanadi.
+
+Punkt ichida slayd sarlavhasini takrorlama: sarlavha allaqachon ekranda.
+
+Ichma-ich ro'yxat yozma — slaydda ikkinchi daraja o'qilmaydi. Jadval ham chizma: ustunlarni tabulyatsiya yoki chiziq bilan yasashga urinma, buning uchun two-column ko'rinishi bor.
+
+Son va formula qisqa bo'lsin. Uzun hisob-kitob slaydga sig'maydi, uni o'qituvchi doskada yozadi — slayd faqat natijani yoki formulani ko'rsatadi.
+
+### O'qituvchi izohi (notes)
+
+Har slaydga izoh yoz. Izoh EKRANDA KO'RINMAYDI — u faqat o'qituvchiga, notiq ko'rinishida va chop etilgan nusxada chiqadi.
+
+Izoh ikkinchi shaxsda, buyruq ohangida yozilsin: nima aytasan, qanday savol berasan, qayerda to'xtaysan, nimani doskada ko'rsatasan. "Tezlanish haqida gapiriladi" emas, "Avtobusning jadal yurishini misol qilib ber, keyin formulani doskaga yoz".
+
+Izoh punktlarni QAYTA YOZMAGAN bo'lsin: ekranda turgan narsani ikkinchi marta aytish o'qituvchiga hech narsa bermaydi. Izoh — ekranda YO'Q narsa: misol, savol, kutilgan xato, vaqt eslatmasi.
+
+### Taqdimotning yo'nalishi
+
+Slaydlar ketma-ketligi darsning borishini takrorlasin: bosh slayd, dars maqsadlari, yangi mazmun (2-4 slayd), ishlangan namuna, o'quvchi mashqi, xulosa yoki uyga vazifa. Oxirgi slayd bo'sh "Rahmat" bo'lmasin — u darsdan hech narsa qoldirmaydi.
+
+### Til va format
+
+Faqat lotin yozuvidagi o'zbek tili. Kirill harf ishlatma.
+
+MARKDOWN YOZMA. Slayd matni ro'yxatga o'xshaydi, shuning uchun bu yerda chalkashish eng ko'p bo'ladi: punkt boshida "-" yoki "*" qo'yma, "**" bilan qalin qilma, "#" bilan sarlavha yasama. Ro'yxat belgisini tizim o'zi qo'yadi.
+
+RASM TASVIRLAMA. Mahsulotda rasm generatsiyasi yo'q: "bu yerda grafik bo'ladi" kabi punkt o'qituvchiga bo'sh joy qoldiradi. Rasm kerak bo'lsa, uni o'qituvchi doskada chizadi — izohda shuni ayt.`;
+
+/**
  * O'qituvchiga xos parametrlar — KESH CHEGARASIDAN KEYIN.
  *
  * Bu qism har o'qituvchida boshqacha, shuning uchun u keshlanadigan
@@ -211,5 +273,14 @@ export function testTail(input: {
     `Ruxsat etilgan savol turlari: ${input.kinds.map((kind) => KIND_LABEL[kind]).join(", ")}.`,
     "Ro'yxatda yo'q turdan savol yozma.",
     `Qiyinlik: ${DIFFICULTY_LABEL[input.difficulty]}.`,
+  ].join("\n");
+}
+
+/** Taqdimotga xos parametrlar — `teacherParams` dan keyin qo'shiladi. */
+export function slidesTail(slideCount: number): string {
+  return [
+    "",
+    `Slayd soni: ${String(slideCount)} ta — aynan shuncha bo'lsin.`,
+    "Bitta slaydda 6 tadan ortiq punkt bo'lmasin.",
   ].join("\n");
 }

@@ -73,14 +73,15 @@ export function buildPlan(skeletonStageCount: number | null): GenerationPlan {
  * esa baza sxemasi. Ikkisini bog'lash enum qiymatini qayta nomlashni
  * bir yillik marja tarixini ikkiga bo'lib yuboradigan ishga aylantirardi.
  */
-export type GenerationFeature = "lesson-plan" | "test";
+export type GenerationFeature = "lesson-plan" | "test" | "slides";
 
 /**
  * `LlmCall.purpose` — marja tahlili shu kalit bo'yicha guruhlanadi.
  *
  * Dars ishlanma uchun chiqish 10-sessiyada O'ZGARMADI
  * (`lesson-plan:stage-1`), ya'ni bazadagi eski qatorlar yangisi bilan bir
- * guruhda qoladi. Qo'shilgani faqat ikkinchi tur: `test:stage-*`.
+ * guruhda qoladi. Keyin qo'shilganlar: `test:stage-*` (10-sessiya) va
+ * `slides:stage-*` (14-sessiya).
  */
 export function stagePurpose(spec: StageSpec, feature: GenerationFeature): string {
   return `${feature}:stage-${spec.id}`;
