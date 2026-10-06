@@ -1,4 +1,4 @@
-import { AlertTriangle, Pencil, Presentation, RefreshCw } from "lucide-react";
+import { AlertTriangle, Gamepad2, Pencil, Presentation, Printer, RefreshCw } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -7,6 +7,8 @@ import { GenerationProgress } from "@/components/generation/generation-progress"
 import { buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { DocumentContent } from "@/lib/documents/blocks";
+import { firstGameBlock } from "@/lib/games/document";
+import { GAMES } from "@/lib/games/registry";
 import { readSupportedType, type SupportedDocumentType } from "@/lib/documents/type-param";
 import { prisma } from "@/lib/db";
 import { reapStaleDocuments } from "@/lib/generation/reap";
@@ -41,6 +43,7 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
   // skaner nomfazani o'zgaruvchi NOMI bo'yicha bog'laydi.
   const tE = await getTranslations("Editor");
   const tS = await getTranslations("Slides");
+  const tG = await getTranslations("Games");
   const { id } = await params;
 
   const doc = await prisma.document.findFirst({
@@ -69,6 +72,10 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
   // bo'lmasa statusni va sababni ko'rsin.
   const parsed = DocumentContent.safeParse(doc.contentJson);
   const blocks = parsed.success ? parsed.data.blocks : [];
+  // O'yin TURINI blokdan o'qiymiz: varaq havolasini ko'rsatish/yashirish
+  // `hasSheet` ga bog'liq, u esa `kind` bo'yicha. Blok yo'q bo'lsa
+  // (buzuq kontent) havolalar umuman chiqmaydi.
+  const gameKind = parsed.success ? (firstGameBlock(parsed.data)?.content.kind ?? null) : null;
   const progress = readProgress(doc.inputParams);
 
   const running = doc.status === "QUEUED" || doc.status === "RUNNING";
@@ -134,6 +141,32 @@ export default async function HujjatPage({ params }: { params: Promise<{ id: str
               <Presentation className="size-4" strokeWidth={1.5} />
               {tS("open")}
             </Link>
+          )}
+
+          {/* O'yin rejimi FAQAT o'yin hujjatida (taqdimot bilan ayni
+              sabab). Varaq havolasi esa faqat VARAQLI o'yinda:
+              g'ildirak uchun varaq yo'q va qaror `GAMES[kind].hasSheet`
+              da — bitta manba uchta ekranni boshqaradi. */}
+          {doc.type === "GAME" && gameKind !== null && (
+            <>
+              <Link
+                href={`/ish/hujjat/${id}/oyin`}
+                className={cn(buttonVariants({ size: "touch" }))}
+              >
+                <Gamepad2 className="size-4" strokeWidth={1.5} />
+                {tG("open")}
+              </Link>
+
+              {GAMES[gameKind].hasSheet && (
+                <Link
+                  href={`/ish/hujjat/${id}/varaq`}
+                  className={cn(buttonVariants({ variant: "outline", size: "touch" }))}
+                >
+                  <Printer className="size-4" strokeWidth={1.5} />
+                  {tG("openSheet")}
+                </Link>
+              )}
+            </>
           )}
         </div>
       )}

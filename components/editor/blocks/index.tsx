@@ -34,9 +34,12 @@ import type { Block } from "@/lib/documents/blocks";
 export function BlockEditor({
   block,
   questions,
+  documentId,
   onChange,
 }: {
   block: Block;
+  /** `game` kartasidagi doska/varaq havolalari uchun. */
+  documentId: string;
   /** `answerKey` havolalari uchun hujjatdagi savollar. */
   questions: readonly QuestionRef[];
   onChange: (block: Block) => void;
@@ -72,6 +75,6 @@ export function BlockEditor({
     // o'qish uchun (sabab o'z faylida). Shartnomadan chiqmaslik uchun prop
     // saqlanadi — kelajakda tahrirlash qo'shilsa imzo o'zgarmaydi.
     case "game":
-      return <GameBlock block={block} onChange={onChange} />;
+      return <GameBlock block={block} documentId={documentId} onChange={onChange} />;
   }
 }
