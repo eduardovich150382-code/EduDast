@@ -42,6 +42,13 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 &#x20;  `bg-\[#123456]` yoki `text-purple-500` — taqiqlanadi.
 
+&#x20;  \*\*Istisno (o'yinlar):\*\* `components/games/**` — emoji va erkin ranglar
+&#x20;  ruxsat etiladi. Sabab: smart doskadagi o'yin bolalar uchun bayramona
+&#x20;  ko'rinishi kerak, "issiq qog'oz" palitrasi bu vazifani bajarmaydi.
+&#x20;  Qolgan barcha joyda 2 va 10-qoidalar kuchida. Ikonka sifatida baribir
+&#x20;  `lucide-react` afzal: emoji har platformada turlicha ko'rinadi, ba'zi
+&#x20;  smart doskalarda umuman chiqmaydi.
+
 3\. \*\*Har LLM chaqiruvida `costUsd`, `tokensIn`, `tokensOut`, `modelUsed` bazaga
 
 &#x20;  yozilishi SHART.\*\* Bu unutilgan PR merge qilinmaydi.
