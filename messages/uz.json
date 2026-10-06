@@ -271,7 +271,19 @@
     "stagePart": "{label} ({index}/{count})",
     "stageDone": "bajarildi",
     "stageCurrent": "bajarilmoqda",
-    "stagePending": "navbatda"
+    "stagePending": "navbatda",
+    "typeGame": "O'yin",
+    "typeGameHint": "Smart doskada o'ynaladigan o'yin va chop etiladigan varaq.",
+    "titleGame": "O'yin yaratish",
+    "descriptionGame": "Mavzuni tanlang — kurikulumga bog'langan o'yin tayyorlanadi.",
+    "gameKind": "O'yin turi",
+    "gameKindLabel": {
+      "wheel": "Omad g'ildiragi",
+      "word-search": "So'z qidirish",
+      "anagram": "Anagramma"
+    },
+    "itemCount": "Element soni",
+    "itemCountLabel": "{count} element"
   },
   "Documents": {
     "notFound": "Hujjat topilmadi.",
@@ -314,7 +326,8 @@
     "type": {
       "LESSON_PLAN": "Dars ishlanma",
       "TEST": "Test",
-      "SLIDES": "Taqdimot"
+      "SLIDES": "Taqdimot",
+      "GAME": "O'yin"
     },
     "qualityOk": "Sifat yaxshi",
     "qualityCheck": "Ko'zdan kechirish kerak",
@@ -348,7 +361,8 @@
     "add": {
       "action": "Blok qo'shish",
       "sheetTitle": "Qanday blok qo'shamiz?",
-      "needsQuestion": "Avval savol bloki kerak"
+      "needsQuestion": "Avval savol bloki kerak",
+      "needsWizard": "O'yin bloki sehrgar orqali yaratiladi"
     },
     "actions": {
       "moveUp": "Yuqoriga",
@@ -372,7 +386,8 @@
       "rubric": "Baholash mezonlari",
       "homework": "Uyga vazifa",
       "note": "Izoh",
-      "slide": "Slayd"
+      "slide": "Slayd",
+      "game": "O'yin"
     },
     "field": {
       "level": "Daraja",
@@ -493,6 +508,45 @@
     "presenterExit": "Oddiy ko'rinish",
     "nextSlide": "Keyingi",
     "deckHint": "Slaydlarni o'q tugmalari yoki barmoq bilan suring."
+  },
+  "Games": {
+    "open": "O'yin rejimi",
+    "openSheet": "Varaqni chop etish",
+    "title": "O'yin",
+    "back": "Hujjatga qaytish",
+    "empty": "Bu hujjatda o'yin yo'q.",
+    "noSheet": "Bu o'yin uchun varaq yo'q.",
+    "kind": {
+      "wheel": "Omad g'ildiragi",
+      "word-search": "So'z qidirish",
+      "anagram": "Anagramma"
+    },
+    "score": "Ball: {score}",
+    "restart": "Boshidan",
+    "done": "O'yin tugadi",
+    "variant": "{variant}-variant",
+    "print": "Chop etish",
+    "printHint": "Brauzerning chop etish oynasida «PDF sifatida saqlash» ni tanlang.",
+    "answerKey": "Javoblar kaliti",
+    "spin": "Aylantirish",
+    "spinning": "Aylanmoqda…",
+    "reveal": "Javobni ko'rsatish",
+    "answer": "Javob",
+    "wheelHint": "G'ildirakni aylantirib savolni oling.",
+    "words": "Topiladigan so'zlar",
+    "found": "Topildi: {found}/{total}",
+    "wordSearchHint": "So'zning birinchi va oxirgi harfini bosing.",
+    "check": "Tekshirish",
+    "clear": "Tozalash",
+    "skip": "O'tkazish",
+    "questionOf": "Savol {index}/{total}",
+    "correct": "To'g'ri!",
+    "wrong": "Qayta urinib ko'ring.",
+    "clue": "Ta'rif",
+    "letters": "Harflar",
+    "anagramHint": "Harflarni bosib so'zni tuzing.",
+    "sheetWords": "So'zlar",
+    "sheetAnswers": "Javoblar"
   },
   "Classes": {
     "title": "Sinflarim",
