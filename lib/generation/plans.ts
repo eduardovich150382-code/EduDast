@@ -73,7 +73,7 @@ export function buildPlan(skeletonStageCount: number | null): GenerationPlan {
  * esa baza sxemasi. Ikkisini bog'lash enum qiymatini qayta nomlashni
  * bir yillik marja tarixini ikkiga bo'lib yuboradigan ishga aylantirardi.
  */
-export type GenerationFeature = "lesson-plan" | "test" | "slides";
+export type GenerationFeature = "lesson-plan" | "test" | "slides" | "game";
 
 /**
  * `LlmCall.purpose` — marja tahlili shu kalit bo'yicha guruhlanadi.

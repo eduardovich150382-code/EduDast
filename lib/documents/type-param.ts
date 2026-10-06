@@ -15,6 +15,7 @@ export const TYPE_PARAM = {
   dars: "LESSON_PLAN",
   test: "TEST",
   taqdimot: "SLIDES",
+  oyin: "GAME",
 } as const;
 
 export type TypeParam = keyof typeof TYPE_PARAM;
@@ -39,6 +40,7 @@ const PARAM_BY_TYPE: Record<SupportedDocumentType, TypeParam> = {
   LESSON_PLAN: "dars",
   TEST: "test",
   SLIDES: "taqdimot",
+  GAME: "oyin",
 };
 
 /** `"dars"` -> `"dars"`, boshqa hamma narsa -> `null` (default chaqiruvchida). */

@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { buttonVariants } from "@/components/ui/button";
+import { paramForGameKind } from "@/lib/games/registry";
+import type { GameKind } from "@/lib/games/types";
 import { DIFFICULTIES, QUESTION_KINDS } from "@/lib/generation/prompts";
 import {
   confirmQuery,
@@ -33,11 +35,31 @@ type Props = {
   questionCosts: { value: number; cost: number }[];
   /** Slayd soni -> narx. Serverda hisoblangan. */
   slideCosts: { value: number; cost: number }[];
+  /**
+   * O'yin turi -> element soni -> narx. Serverda hisoblangan.
+   *
+   * IKKI QAVATLI, chunki chegara `kind` ga bog'liq: g'ildirakda bitta
+   * variant (8 sektor qat'iy), so'z qidirishda 8-14, anagrammada 6-12.
+   */
+  gameCosts: { kind: GameKind; counts: { value: number; cost: number }[] }[];
 };
 
-export async function StepParams({ params, lessonCost, questionCosts, slideCosts }: Props) {
+export async function StepParams({
+  params,
+  lessonCost,
+  questionCosts,
+  slideCosts,
+  gameCosts,
+}: Props) {
   const t = await getTranslations("Generator");
   const resolved = resolveParams(params);
+
+  // Tanlangan o'yin turining element variantlari. `resolved.type` boshqa
+  // bo'lsa bo'sh — quyidagi blok baribir render qilinmaydi.
+  const activeCounts =
+    resolved.type === "GAME"
+      ? (gameCosts.find((option) => option.kind === resolved.gameKind)?.counts ?? [])
+      : [];
 
   return (
     <div className="flex flex-col gap-5">
@@ -98,6 +120,50 @@ export async function StepParams({ params, lessonCost, questionCosts, slideCosts
             />
           ))}
         </Group>
+      )}
+
+      {resolved.type === "GAME" && (
+        <>
+          <Group label={t("gameKind")}>
+            {gameCosts.map((option) => (
+              <OptionLink
+                key={option.kind}
+                params={params}
+                // `element: null` — o'yin turi o'zgarganda eski element
+                // soni TASHLANADI: g'ildirakka o'tganda 14 so'zlik tanlov
+                // qolib ketsa `parseWizardParams` uni baribir rad etardi,
+                // lekin o'qituvchi bir qadam "hech narsa tanlanmagan"
+                // ekranini ko'rardi.
+                overrides={{ oyin: paramForGameKind(option.kind), element: null }}
+                selected={resolved.gameKind === option.kind}
+                label={t(`gameKindLabel.${option.kind}`)}
+              />
+            ))}
+          </Group>
+
+          {/* G'ILDIRAKDA ELEMENT TANLOVI KO'RSATILMAYDI: sektor soni
+              qat'iy 8, ya'ni bitta variantli guruh o'qituvchiga tanlov
+              taklif qilgandek ko'rinib, hech narsani o'zgartirmasdi.
+              Narx esa pastdagi alohida qatorda chiqadi. */}
+          {activeCounts.length > 1 && (
+            <Group label={t("itemCount")}>
+              {activeCounts.map((option) => (
+                <OptionLink
+                  key={option.value}
+                  params={params}
+                  overrides={{ element: option.value }}
+                  selected={resolved.itemCount === option.value}
+                  label={t("itemCountLabel", { count: option.value })}
+                  hint={t("cost", { count: option.cost })}
+                />
+              ))}
+            </Group>
+          )}
+
+          {activeCounts.length <= 1 && activeCounts[0] !== undefined && (
+            <p className="text-sm text-ink-2">{t("cost", { count: activeCounts[0].cost })}</p>
+          )}
+        </>
       )}
 
       {resolved.type === "LESSON_PLAN" && (

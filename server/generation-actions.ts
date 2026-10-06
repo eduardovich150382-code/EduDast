@@ -8,6 +8,7 @@ import { hold } from "@/lib/credits/ledger";
 import { EMPTY_CONTENT } from "@/lib/documents/blocks";
 import { prisma } from "@/lib/db";
 import { buildPlan } from "@/lib/generation/plans";
+import { buildGamePlan } from "@/lib/generation/plans-game";
 import { buildSlidesPlan } from "@/lib/generation/plans-slides";
 import { buildTestPlan } from "@/lib/generation/plans-test";
 import { resolveContextChunks } from "@/lib/generation/retrieval";
@@ -150,6 +151,12 @@ function costFor(req: StartInput): number {
       return creditCost({ type: "TEST", questionCount: req.questionCount });
     case "SLIDES":
       return creditCost({ type: "SLIDES", slideCount: req.slideCount });
+    case "GAME":
+      return creditCost({
+        type: "GAME",
+        gameKind: req.gameKind,
+        itemCount: req.itemCount,
+      });
     case "LESSON_PLAN":
       return creditCost({ type: "LESSON_PLAN" });
   }
@@ -168,6 +175,8 @@ function totalFor(req: StartInput): number {
       return buildTestPlan(req.questionCount).stages.length;
     case "SLIDES":
       return buildSlidesPlan(req.slideCount).stages.length;
+    case "GAME":
+      return buildGamePlan().stages.length;
     case "LESSON_PLAN":
       return buildPlan(null).stages.length;
   }
@@ -186,6 +195,8 @@ function titleFor(req: StartInput, topicTitle: string): string {
       return `${topicTitle} — test`;
     case "SLIDES":
       return `${topicTitle} — taqdimot`;
+    case "GAME":
+      return `${topicTitle} — o'yin`;
     case "LESSON_PLAN":
       return topicTitle;
   }
@@ -202,6 +213,8 @@ function typeParamsFor(req: StartInput): Record<string, unknown> {
       };
     case "SLIDES":
       return { slideCount: req.slideCount };
+    case "GAME":
+      return { gameKind: req.gameKind, itemCount: req.itemCount };
     case "LESSON_PLAN":
       return { durationMinutes: req.durationMinutes };
   }
