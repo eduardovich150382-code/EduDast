@@ -2,6 +2,7 @@ import type { BlockType, DocumentContent } from "@/lib/documents/blocks";
 import { renderDocument } from "@/lib/documents/render";
 import { gameItemCount } from "@/lib/games/content";
 import type { GameKind } from "@/lib/games/types";
+import { buildWordSearch } from "@/lib/games/word-search";
 import type { BloomTargets } from "./plans-test";
 
 /**
@@ -142,7 +143,8 @@ type RuleId =
   | "slide_layout_title"
   // 15-sessiya — `GAME` turiga xos qoidalar.
   | "game_item_count"
-  | "game_clue_short";
+  | "game_clue_short"
+  | "game_words_unplaced";
 
 export type Severity = "error" | "warn";
 
@@ -218,6 +220,14 @@ export const RULES: Record<RuleId, { severity: Severity; why: string }> = {
   game_item_count: { severity: "error", why: "O'yin elementlari soni so'ralganiga teng emas." },
   /** Qisqa ta'rifli so'zni o'qituvchi o'zi to'ldiradi, o'yin ishlab turadi. */
   game_clue_short: { severity: "warn", why: "Anagramma ta'rifi juda qisqa." },
+  /**
+   * Ro'yxatda bor, lekin panjarada yo'q so'z — topilmaydigan topshiriq.
+   *
+   * `error`: bola yo'q so'zni izlab vaqt yo'qotadi va o'yin "buzilgan"
+   * bo'lib ko'rinadi. `buildWordSearch` panjarani to'rt marta qayta quradi,
+   * ya'ni bu holat AMALDA YUZAGA CHIQMAYDI — qoida "yuz berdi" signali.
+   */
+  game_words_unplaced: { severity: "error", why: "So'z panjaraga joylashmagan." },
 };
 
 export type QualityNote = {
@@ -943,6 +953,26 @@ function measureGameStructure(
       "game_item_count",
       "game_item_count:mismatch",
       `O'yin elementlari soni ${String(itemCount)}, so'ralgani ${String(spec.itemCount)}`,
+    );
+  }
+
+  // JOYLASHMAGAN SO'Z — panjara HAQIQATAN qurilib tekshiriladi.
+  //
+  // Mazmunni o'qib "so'zlar joyida" deb qabul qilish yetarli emas:
+  // joylashuv `seed` ga bog'liq, ya'ni faqat `buildWordSearch` ni
+  // chaqirgandan keyin ma'lum bo'ladi. `build` sof va 200 ms dan tez,
+  // shuning uchun bahoda chaqirish xavfsiz.
+  const unplaced = games.flatMap((block) =>
+    block.content.kind === "word-search"
+      ? buildWordSearch(block.content, block.seed).unplaced
+      : [],
+  );
+  if (unplaced.length > 0) {
+    note(
+      notes,
+      "game_words_unplaced",
+      "game_words:unplaced",
+      `${String(unplaced.length)} ta so'z panjaraga joylashmadi: ${unplaced.join(", ")}`,
     );
   }
 

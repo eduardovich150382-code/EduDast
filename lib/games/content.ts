@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_WORD_LENGTH, MIN_WORD_LENGTH, normalizeWord } from "./alphabet";
+import { MAX_TOTAL_LETTERS } from "./grid";
 
 /**
  * O'yin MAZMUNI — AI yozadigan yagona qism (15-sessiya, 1-qatlam).
@@ -88,7 +89,26 @@ export const WordSearchContent = z
   .refine((content) => new Set(content.words).size === content.words.length, {
     error: "So'zlar takrorlanmasligi kerak",
     path: ["words"],
-  });
+  })
+  /**
+   * PANJARA SIG'IMI — so'z soni bilan uzunligi BIRGALIKDA cheklanadi.
+   *
+   * `min(8).max(14)` va `GridWord` ning `max(10)` i yolg'iz o'zi yetarli
+   * emas: 14 x 10 = 140 harf 144 katakli panjaraga 97% zichlik bilan
+   * tushardi va o'lchovda 9% urug'da so'z joylashmay qolardi. Ya'ni
+   * sxema ALGORITM BAJARA OLMAYDIGAN mazmunni qabul qilardi.
+   *
+   * Shu shift bilan "ro'yxatdagi har so'z panjarada bor" kafolati
+   * sxemadan o'tgan HAR mazmun uchun amal qiladi (o'lchov va sabab —
+   * `lib/games/grid.ts`).
+   */
+  .refine(
+    (content) => content.words.reduce((sum, word) => sum + word.length, 0) <= MAX_TOTAL_LETTERS,
+    {
+      error: `So'zlardagi jami harf ${String(MAX_TOTAL_LETTERS)} dan oshmasligi kerak (12x12 panjara sig'imi)`,
+      path: ["words"],
+    },
+  );
 
 /* ------------------------------------------------------------------ */
 /* Anagramma                                                           */
