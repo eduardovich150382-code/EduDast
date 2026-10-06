@@ -138,3 +138,22 @@ export type GameContent = z.infer<typeof GameContent>;
 export type WheelContent = z.infer<typeof WheelContent>;
 export type WordSearchContent = z.infer<typeof WordSearchContent>;
 export type AnagramContent = z.infer<typeof AnagramContent>;
+
+/**
+ * Mazmundagi element soni — narx va sifat bahosi shu songa qaraydi.
+ *
+ * `default` TARMOG'I YO'Q: yangi o'yin turi qo'shilganda TypeScript shu
+ * yerda yiqiladi va element soni jimgina `0` bo'lib qolmaydi (nol esa
+ * "o'qituvchi to'lagan son bilan olgan soni farq qildi" tekshiruvini
+ * ma'nosiz qilardi).
+ */
+export function gameItemCount(content: GameContent): number {
+  switch (content.kind) {
+    case "wheel":
+      return content.sectors.length;
+    case "word-search":
+      return content.words.length;
+    case "anagram":
+      return content.items.length;
+  }
+}

@@ -15,12 +15,16 @@ import { BLOCK_TYPES, type BlockType } from "@/lib/documents/blocks";
  * matn, ro'yxat, ..., izoh). Alohida tartib yasash ikkinchi haqiqat
  * manbai bo'lardi.
  *
- * `answerKey` savolsiz hujjatda O'CHIRILGAN: uning `items[].questionId`
- * mavjud savolga ishora qilishi kerak, savolsiz esa ishora qiladigan
- * narsa yo'q (`lib/documents/editor-defaults.ts` shu holda `null`
- * qaytaradi). Tugmani yashirish o'rniga o'chirilgan holda ko'rsatiladi —
- * sababi yonidagi izohda turadi, ya'ni o'qituvchi nima qilish kerakligini
- * biladi.
+ * IKKI TUR O'CHIRILGAN HOLDA KO'RSATILADI (yashirilmaydi — sababi yonidagi
+ * izohda turadi, ya'ni o'qituvchi nima qilish kerakligini biladi). Ikkisi
+ * ham `lib/documents/editor-defaults.ts` da `null` qaytaradi:
+ *
+ *   `answerKey` — savolsiz hujjatda: uning `items[].questionId` mavjud
+ *   savolga ishora qilishi kerak, savolsiz esa ishora qiladigan narsa yo'q.
+ *
+ *   `game` — HAR DOIM: eng kichik o'yin ham 6 ta turli so'z va ta'rifni
+ *   talab qiladi (`lib/games/content.ts`), ya'ni bo'sh blok o'ynab
+ *   bo'lmaydigan o'yin bo'lardi. O'yin sehrgar orqali mavzudan yaratiladi.
  *
  * Blok OXIRIGA qo'shiladi; joyini qobiqdagi yuqoriga/pastga tugmalari hal
  * qiladi. Oraga qo'shish v1 ga kirmaydi.
@@ -59,12 +63,20 @@ export function AddBlockMenu({
           }}
         >
           {BLOCK_TYPES.map((type) => {
-            const blocked = type === "answerKey" && !hasQuestion;
+            const needsQuestion = type === "answerKey" && !hasQuestion;
+            const needsWizard = type === "game";
+            const blocked = needsQuestion || needsWizard;
             return (
               <SheetAction
                 key={type}
                 label={tE(`block.${type}`)}
-                hint={blocked ? tE("add.needsQuestion") : undefined}
+                hint={
+                  needsWizard
+                    ? tE("add.needsWizard")
+                    : needsQuestion
+                      ? tE("add.needsQuestion")
+                      : undefined
+                }
                 disabled={blocked}
                 onClick={() => {
                   onAdd(type);

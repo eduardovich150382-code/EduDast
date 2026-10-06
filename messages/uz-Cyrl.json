@@ -426,7 +426,8 @@
       "addColumn": "Устун қўшиш",
       "removeColumn": "Устунни ўчириш",
       "addStage": "Босқич қўшиш",
-      "removeStage": "Босқични ўчириш"
+      "removeStage": "Босқични ўчириш",
+      "gameItems": "{count} элемент"
     },
     "enum": {
       "level": {

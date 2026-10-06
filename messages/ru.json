@@ -426,7 +426,8 @@
       "addColumn": "Добавить столбец",
       "removeColumn": "Удалить столбец",
       "addStage": "Добавить этап",
-      "removeStage": "Удалить этап"
+      "removeStage": "Удалить этап",
+      "gameItems": "{count} элем."
     },
     "enum": {
       "level": {

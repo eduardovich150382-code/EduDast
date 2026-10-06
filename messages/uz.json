@@ -426,7 +426,8 @@
       "addColumn": "Ustun qo'shish",
       "removeColumn": "Ustunni o'chirish",
       "addStage": "Bosqich qo'shish",
-      "removeStage": "Bosqichni o'chirish"
+      "removeStage": "Bosqichni o'chirish",
+      "gameItems": "{count} element"
     },
     "enum": {
       "level": {

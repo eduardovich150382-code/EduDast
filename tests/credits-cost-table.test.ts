@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MIN_PRICE, UNIT_LIMITS, creditCost, type CostInput } from "@/lib/credits/cost-table";
+import {
+  GAME_LIMITS,
+  MIN_PRICE,
+  UNIT_LIMITS,
+  creditCost,
+  type CostInput,
+} from "@/lib/credits/cost-table";
 import { DocumentType } from "@/lib/generated/prisma/enums";
+import { GAME_KINDS } from "@/lib/games/types";
 
 /**
  * lib/credits/cost-table.ts — sof funksiya, shuning uchun eng zich qamrov
@@ -28,6 +35,15 @@ function unitInput(type: UnitType, n: number): CostInput {
   return { type, [UNIT_FIELD[type]]: n } as CostInput;
 }
 
+/**
+ * `GAME` `UNIT_FIELD` ga kirmaydi — uning chegarasi `kind` ga bog'liq,
+ * ya'ni bitta `{min,max,step}` bilan ifodalanmaydi. Shuning uchun u
+ * yuqoridagi jadval yordamchilaridan ALOHIDA yuritiladi.
+ */
+function gameInput(gameKind: (typeof GAME_KINDS)[number], itemCount: number): CostInput {
+  return { type: "GAME", gameKind, itemCount };
+}
+
 describe("creditCost — har tur bo'yicha narx", () => {
   it.each([
     ["LESSON_PLAN", { type: "LESSON_PLAN" } as CostInput, 5],
@@ -39,6 +55,11 @@ describe("creditCost — har tur bo'yicha narx", () => {
     ["SLIDES (20 slayd)", { type: "SLIDES", slideCount: 20 } as CostInput, 8],
     ["CROSSWORD (6 so'z)", { type: "CROSSWORD", wordCount: 6 } as CostInput, 4],
     ["CROSSWORD (20 so'z)", { type: "CROSSWORD", wordCount: 20 } as CostInput, 6],
+    ["GAME g'ildirak (8 sektor)", gameInput("wheel", 8), 2],
+    ["GAME so'z qidirish (8 so'z)", gameInput("word-search", 8), 4],
+    ["GAME so'z qidirish (14 so'z)", gameInput("word-search", 14), 6],
+    ["GAME anagramma (6 element)", gameInput("anagram", 6), 3],
+    ["GAME anagramma (12 element)", gameInput("anagram", 12), 5],
   ])("%s → %i kredit", (_nom, input, expected) => {
     expect(creditCost(input)).toBe(expected);
   });
@@ -50,9 +71,14 @@ describe("creditCost — har tur bo'yicha narx", () => {
    */
   it("har DocumentType narxlanadi va nol emas", () => {
     for (const type of Object.values(DocumentType)) {
-      const input = (type in UNIT_FIELD
-        ? unitInput(type as UnitType, UNIT_LIMITS[type as UnitType].min)
-        : { type }) as CostInput;
+      // `GAME` — `kind` ga bog'liq, shuning uchun eng arzon turi olinadi:
+      // nol narx qayerda bo'lsa, aynan eng arzon yo'lda bo'lardi.
+      const input =
+        type === "GAME"
+          ? gameInput("anagram", GAME_LIMITS.anagram.min)
+          : ((type in UNIT_FIELD
+              ? unitInput(type as UnitType, UNIT_LIMITS[type as UnitType].min)
+              : { type }) as CostInput);
 
       const price = creditCost(input);
       expect(Number.isFinite(price), `${type}: narx son emas`).toBe(true);
@@ -79,6 +105,47 @@ describe("monotonlik — savol/slayd/so'z soni oshsa narx kamaymaydi", () => {
     // Faqat "kamaymaydi" yetarli emas — narx birlik soniga HAQIQATAN
     // bog'lanishi kerak, aks holda 40 savol 5 savol bilan bir xil turardi.
     expect(creditCost(unitInput(type, max))).toBeGreaterThan(creditCost(unitInput(type, min)));
+  });
+
+  it.each(GAME_KINDS)("GAME %s", (gameKind) => {
+    const { min, max } = GAME_LIMITS[gameKind];
+
+    let prev = creditCost(gameInput(gameKind, min - 3));
+    for (let n = min - 2; n <= max + 3; n += 1) {
+      const price = creditCost(gameInput(gameKind, n));
+      expect(price, `${gameKind}: ${n} da narx kamaydi (${prev} → ${price})`).toBeGreaterThanOrEqual(
+        prev,
+      );
+      prev = price;
+    }
+
+    // G'ildirakda `min === max` (8 sektor qat'iy), ya'ni "narx birlik soniga
+    // bog'lanadi" shartini u BAJARMAYDI va bajarmasligi kerak — element soni
+    // tanlanmaydigan turda narx ham o'zgarmaydi.
+    if (min === max) {
+      expect(creditCost(gameInput(gameKind, max))).toBe(creditCost(gameInput(gameKind, min)));
+    } else {
+      expect(creditCost(gameInput(gameKind, max))).toBeGreaterThan(
+        creditCost(gameInput(gameKind, min)),
+      );
+    }
+  });
+
+  /**
+   * `GAME_LIMITS` ning o'zini qadaydi: har `kind` uchun yozuv borligi va
+   * chegaralar mazmunli ekani. `Record<GameKind, ...>` TypeScript darajasida
+   * yetishmagan kalitni ushlaydi, lekin `{min: 0, max: 0, step: 0}` kabi
+   * ma'nosiz qiymatni ushlamaydi — `step: 0` esa `unitCost` da `Infinity`
+   * berardi.
+   */
+  it("GAME_LIMITS har kind uchun mazmunli", () => {
+    for (const gameKind of GAME_KINDS) {
+      const limit = GAME_LIMITS[gameKind];
+      expect(limit, `${gameKind}: chegara yo'q`).toBeDefined();
+      expect(limit.step, `${gameKind}: step musbat emas`).toBeGreaterThan(0);
+      expect(limit.min, `${gameKind}: min musbat emas`).toBeGreaterThan(0);
+      expect(limit.max, `${gameKind}: max < min`).toBeGreaterThanOrEqual(limit.min);
+    }
   });
 });
 

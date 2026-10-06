@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GameContent } from "@/lib/games/content";
 
 /**
  * Hujjat kontentining SAQLASH shartnomasi.
@@ -291,6 +292,40 @@ const Slide = z.strictObject({
 });
 
 /**
+ * O'yin bloki (15-sessiya).
+ *
+ * `kind` YUQORI DARAJADA YO'Q — u `content` ichidagi diskriminator
+ * (`lib/games/content.ts`). Spetsifikatsiya blokni `{ id, type:"game",
+ * kind, content, seed }` deb yozadi, lekin `kind` ni ikki joyda saqlash
+ * ikkita haqiqat manbai bo'lardi va ularni sinxron tutish uchun `.refine`
+ * kerak bo'lardi. Yutuq yo'q: blok baribir `contentJson` ichidagi JSON,
+ * `kind` ustun emas — `block.kind` ham, `block.content.kind` ham bir xil
+ * blobni ochishni talab qiladi. O'qish: `block.content.kind`.
+ *
+ * PANJARA VA ARALASHMA SAQLANMAYDI, faqat `seed`. Ular har render'da sof
+ * algoritm bilan qayta hisoblanadi (`lib/games/*.ts`), shu sababli
+ * `?variant=N` bir xil mazmundan boshqa varaq yasay oladi va bitta hujjat
+ * ikki marta ochilganda AYNI o'yinni beradi.
+ *
+ * HUJJATDA BITTA `game` BLOKI BO'LADI (`lib/generation/plans-game.ts`
+ * bittasini yozadi), lekin bu sxemada QULFLANMAGAN: cheklov `DocumentContent`
+ * darajasida bo'lardi va boshqa hamma blok turining erkinligini
+ * cheklaydigan maxsus qoida yasardi. Pleyer birinchi `game` blokini oladi.
+ */
+const Game = z.strictObject({
+  id: Id,
+  type: z.literal("game"),
+  /**
+   * `gameSeed(documentId, 0)` — generatsiya paytida bir marta yoziladi.
+   *
+   * `min(0)`: `gameSeed` ishorasiz 32-bit qaytaradi. Manfiy son kelsa bu
+   * urug' boshqa joyda hisoblangan degani va panjara takrorlanmasligi mumkin.
+   */
+  seed: z.number().int().min(0).max(0xffffffff),
+  content: GameContent,
+});
+
+/**
  * Zod 4 da refinement sxema ICHIDA yashaydi, ya'ni `.refine()` /
  * `.superRefine()` `ZodObject` ni saqlaydi va `discriminatedUnion` uni qabul
  * qiladi (Zod 3 da bu `ZodEffects` bo'lib, union'ni buzardi).
@@ -309,6 +344,7 @@ export const Block = z.discriminatedUnion("type", [
   Homework,
   Note,
   Slide,
+  Game,
 ]);
 export type Block = z.infer<typeof Block>;
 export type BlockType = Block["type"];
@@ -331,6 +367,7 @@ export const BLOCK_TYPES = [
   "homework",
   "note",
   "slide",
+  "game",
 ] as const satisfies readonly BlockType[];
 
 /**
