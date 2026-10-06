@@ -889,3 +889,230 @@ describe("SLIDES turi", () => {
     expect(request.system[3]?.cacheable).toBeUndefined();
   });
 });
+describe("GAME turi — darvoza va kredit", () => {
+  const GAME_PARAMS = {
+    gameKind: "word-search" as const,
+    itemCount: 10,
+    contextChunkIds: ["c-1"],
+    progress: { stage: 0, total: 1, attempts: 0 },
+  };
+
+  /**
+   * IKKI MARTA o'qiladi: birinchisi bosqich uchun, ikkinchisi
+   * `finishDocument` dagi sifat bahosi uchun. O'yin rejasi BITTA
+   * bosqichli, ya'ni commit'dan keyin darhol yakunga o'tiladi —
+   * ko'p bosqichli turlarda yakun alohida POST da bo'ladi.
+   */
+  function wireGame(contentJson?: unknown) {
+    mocks.documentFindFirst.mockResolvedValueOnce({
+        status: "QUEUED",
+        type: "GAME",
+        topicId: "t-1",
+        inputParams: GAME_PARAMS,
+        creditsHeldFor: 4,
+        topic: TOPIC,
+      });
+    // Ikkinchi qiymat FAQAT yakunga yetadigan testlarda navbatga
+    // qo'yiladi: `vi.clearAllMocks()` `mockResolvedValueOnce` navbatini
+    // TOZALAMAYDI (u faqat chaqiruvlar tarixini tozalaydi), ya'ni
+    // iste'mol qilinmagan qiymat KEYINGI testning birinchi o'qishiga
+    // tushib, hujjat turini "qo'llab-quvvatlanmagan" qilib qo'yardi.
+    if (contentJson !== undefined) {
+      mocks.documentFindFirst.mockResolvedValueOnce({ contentJson, creditsHeldFor: 4 });
+    }
+    mocks.claimStage.mockResolvedValue({
+      topicId: "t-1",
+      creditsHeldFor: 4,
+      inputParams: GAME_PARAMS,
+      attempts: 1,
+    });
+  }
+
+  /** Darvozadan o'tgan javobdan yasaladigan kontent. */
+  function contentFor(words: string[]) {
+    return {
+      v: 1,
+      blocks: [
+        { id: "s1-heading-0", type: "heading", level: 1, text: "Geometriya so'zlari" },
+        {
+          id: "s1-game-0",
+          type: "game",
+          seed: 12345,
+          content: { kind: "word-search", words: words.map((w) => w.toUpperCase()) },
+        },
+      ],
+    };
+  }
+
+  /** 10 ta qisqa, yaroqli so'z — darvozadan o'tadigan javob. */
+  const GOOD = {
+    title: "Geometriya so'zlari",
+    words: [
+      "chiziq",
+      "doira",
+      "burchak",
+      "kvadrat",
+      "tomon",
+      "yuza",
+      "hajm",
+      "radius",
+      "kesma",
+      "qirra",
+    ],
+  };
+
+  it("yaxshi javob bir bosqichda tugaydi va kredit YECHILADI", async () => {
+    wireGame(contentFor(GOOD.words));
+    mocks.runLlm.mockResolvedValue(llmResult(GOOD));
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    const outcome = await runStage(ARGS);
+    // `done` — oxirgi bosqich o'tdi va kredit yechildi. `complete` esa
+    // "hujjat allaqachon tugagan" degani, boshqa holat.
+    expect(outcome.kind).toBe("done");
+    expect(mocks.charge).toHaveBeenCalledWith("u-1", 4, "d-1");
+    expect(mocks.release).not.toHaveBeenCalled();
+  });
+
+  it("cheap daraja ishlatiladi — o'yin uchun mid ortiqcha", async () => {
+    wireGame(contentFor(GOOD.words));
+    mocks.runLlm.mockResolvedValue(llmResult(GOOD));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    expect(mocks.runLlm.mock.calls[0]?.[0]?.tier).toBe("cheap");
+    expect(mocks.runLlm.mock.calls[0]?.[0]?.purpose).toBe("game:stage-1");
+  });
+
+  it("BITTA runLlm — reja bitta bosqichli", async () => {
+    wireGame(contentFor(GOOD.words));
+    mocks.runLlm.mockResolvedValue(llmResult(GOOD));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    expect(mocks.runLlm).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * ENG MUHIM TEST: darvoza yiqilganda kredit QAYTADI.
+   *
+   * Darvoza yiqilishi `run-stage.ts` da darhol `release` + `failed` beradi —
+   * QAYTA URINISH YO'Q (`retry` faqat tarmoq xatolarida). Shuning uchun
+   * o'qituvchi "Yakunlanmadi" ni ko'radi, lekin puli band qolmaydi.
+   */
+  it("yaroqsiz so'zlar tufayli darvoza yiqilsa kredit RELEASE", async () => {
+    wireGame();
+    mocks.runLlm.mockResolvedValue(
+      llmResult({
+        title: "Geometriya so'zlari",
+        words: [
+          "chiziq",
+          "doira",
+          "burchak",
+          "window", // `w` — o'zbek alifbosida yo'q
+          "issiq havo", // ikki so'z
+          "test 1", // raqam
+          "ab", // juda qisqa
+          "aaa", // bir xil harf
+          "ko'k-sariq", // chiziqcha
+          "ПАР", // kirill
+        ],
+      }),
+    );
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    const outcome = await runStage(ARGS);
+    expect(outcome.kind).toBe("failed");
+    expect(mocks.commitStage).not.toHaveBeenCalled();
+    expect(mocks.charge).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 4, "d-1", expect.stringContaining("o'yin"));
+  });
+
+  /**
+   * Panjaraga sig'maslik ALOHIDA sabab bilan chiqadi.
+   *
+   * Ilgari ikkisi ham "N ta yaroqli element qaytdi" deb chiqardi va bu
+   * chalg'itardi: so'zlar mukammal, faqat jami harf shiftdan oshgan.
+   * Sabab `Document.failReason` ga tushadi, ya'ni o'qituvchi uni ko'radi.
+   */
+  it("panjaraga sig'masa sabab SHUNI aytadi, 'yaroqsiz' demaydi", async () => {
+    /*
+     * 12 ELEMENT bilan — 10 bilan bu holat MUMKIN EMAS.
+     *
+     * Sxema har so'zni 10 harf bilan cheklaydi, ya'ni 10 so'z eng
+     * ko'pi bilan 100 harf beradi va 112 shiftiga hech qachon urilmaydi.
+     * Byudjet faqat 12 so'zda (12 x 10 = 120) oshishi mumkin —
+     * `GAME_LIMITS` max ni 12 ga tushirgandan keyin bu eng yuqori
+     * so'raladigan son, ya'ni yiqilish oynasi juda tor: 12 ta so'z,
+     * deyarli hammasi 10 harfli.
+     */
+    mocks.documentFindFirst.mockResolvedValueOnce({
+      status: "QUEUED",
+      type: "GAME",
+      topicId: "t-1",
+      inputParams: { ...GAME_PARAMS, itemCount: 12 },
+      creditsHeldFor: 4,
+      topic: TOPIC,
+    });
+    mocks.claimStage.mockResolvedValue({
+      topicId: "t-1",
+      creditsHeldFor: 4,
+      inputParams: { ...GAME_PARAMS, itemCount: 12 },
+      attempts: 1,
+    });
+    mocks.runLlm.mockResolvedValue(
+      llmResult({
+        title: "Geometriya so'zlari",
+        words: [
+          "uchburchak",
+          "gipotenuza",
+          "simmetriya",
+          "koordinata",
+          "tengsizlik",
+          "perimetrga",
+          "diametrlar",
+          "aylanishga",
+          "kesishgani",
+          "parallelga",
+          "radiuslari",
+          "yuzalarini",
+        ],
+      }),
+    );
+    const { runStage } = await import("@/lib/generation/run-stage");
+
+    const outcome = await runStage(ARGS);
+    expect(outcome.kind).toBe("failed");
+    if (outcome.kind !== "failed") throw new Error("outcome");
+    expect(outcome.reason).toContain("panjaraga sig'madi");
+    expect(outcome.reason).not.toContain("yaroqli element");
+    expect(mocks.release).toHaveBeenCalledWith("u-1", 4, "d-1", expect.anything());
+  });
+
+  it("DARVOZA YIQILGANDA IKKINCHI runLlm CHAQIRILMAYDI", async () => {
+    // Qayta urinish bo'lmasligi ONGLI qaror: ikkinchi chaqiruv o'qituvchi
+    // to'lagan narxni ikkilantirardi. Shuning uchun chegaralar (element
+    // soni, so'z uzunligi) promptda va `GAME_LIMITS` da shunday
+    // qo'yilgan — model birinchi urinishda bajarsin.
+    wireGame();
+    mocks.runLlm.mockResolvedValue(llmResult({ title: "Qisqa", words: ["ab", "aaa"] }));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    expect(mocks.runLlm).toHaveBeenCalledTimes(1);
+  });
+
+  it("so'z uzunligi chegarasi PROMPTDA bor", async () => {
+    wireGame(contentFor(GOOD.words));
+    mocks.runLlm.mockResolvedValue(llmResult(GOOD));
+    const { runStage } = await import("@/lib/generation/run-stage");
+    await runStage(ARGS);
+
+    const request = mocks.runLlm.mock.calls[0]?.[0];
+    // Keshdan TASHQARIDA — oxirgi bo'lakda, element soniga bog'liq.
+    expect(request.system[3]?.text).toContain("4-8 harf");
+    expect(request.system[3]?.text).toContain("Element soni: 10");
+    // Keshlanadigan qo'llanmada ham bor (umumiy qoida sifatida).
+    expect(request.system[2]?.text).toContain("4-8 HARFDAN");
+  });
+});

@@ -1,4 +1,8 @@
-import { MAX_TOTAL_LETTERS } from "@/lib/games/grid";
+import {
+  MAX_TOTAL_LETTERS,
+  PREFERRED_WORD_MAX,
+  PREFERRED_WORD_MIN,
+} from "@/lib/games/grid";
 import type { GameKind } from "@/lib/games/types";
 
 /**
@@ -321,7 +325,11 @@ Bu qoidalarga tushmaydigan so'zni YOZMA. Uning o'rniga mavzudan boshqa so'z tanl
 
 ### So'z qidirish
 
-So'zlar 12x12 panjaraga joylashadi, shuning uchun UZUNLIK JAMI ham cheklanadi: so'zlar qancha uzun bo'lsa, shuncha kam so'z sig'adi. Qisqa va o'rta uzunlikdagi so'zlarni afzal ko'r — ular panjarada chiroyli kesishadi.
+So'zlar 12x12 panjaraga joylashadi, ya'ni jami 144 katak bor. Shuning uchun UZUNLIK JAMI ham cheklanadi: so'zlar qancha uzun bo'lsa, shuncha kam so'z sig'adi.
+
+HAR BIR SO'Z 4-8 HARFDAN BO'LSIN. Bu eng muhim cheklov: bitta 12 harfli so'z panjaraning bir qatorini to'liq egallaydi va qolgan so'zlarga joy qoldirmaydi. Uzun atama o'rniga uning o'zagini ol — "balandliklar" emas, "balandlik"; "koordinatalar" emas, "kesma". Agar mavzuda faqat uzun atamalar bo'lsa, ularning qisqa sinonimini yoki tarkibiy qismini tanla.
+
+To'rt harfdan qisqa so'z ham yaramaydi: uch harfli so'z 12x12 panjarada tasodifan ham paydo bo'lib qoladi va bola uni "topgan" bo'lib hisoblaydi.
 
 PANJARANI O'ZING TUZMA. Faqat so'zlar ro'yxatini ber; joylashuv va to'ldirish harflari keyin hisoblanadi.
 
@@ -375,11 +383,16 @@ export function gameTail(input: { gameKind: GameKind; itemCount: number }): stri
   lines.push("So'zlar takrorlanmasin.");
 
   if (input.gameKind === "word-search") {
+    // HAR BIR SO'Z uchun chegara — o'rtacha uzunlik ko'rsatmasidan
+    // ANIQROQ. "O'rtacha 9 harf" deganda model bir nechta 12 harfli so'z
+    // qo'yib, qolganini qisqartirib muvozanatlashtirishga urinadi va
+    // uzun so'z panjaraga sig'masdan tashlanadi. Har so'zga qo'yilgan
+    // shift esa bajarilishi oson va natijasi tekshiriladi.
     lines.push(
-      `So'zlardagi JAMI harf ${String(MAX_TOTAL_LETTERS)} dan oshmasin — ular 12x12 panjaraga sig'ishi kerak.`,
+      `Har bir so'z ${String(PREFERRED_WORD_MIN)}-${String(PREFERRED_WORD_MAX)} harfdan bo'lsin.`,
     );
     lines.push(
-      `Ya'ni o'rtacha so'z uzunligi ${String(Math.floor(MAX_TOTAL_LETTERS / input.itemCount))} harfdan oshmasin.`,
+      `So'zlardagi JAMI harf ${String(MAX_TOTAL_LETTERS)} dan oshmasin — ular 12x12 panjaraga sig'ishi kerak.`,
     );
   }
 

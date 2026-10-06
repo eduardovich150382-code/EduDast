@@ -286,13 +286,34 @@ export function gameStageInstruction(input: { kind: GameKind; itemCount: number 
  */
 export function checkGameContent(result: GameOut, itemCount: number): SkeletonGate {
   const got = countItems(gameContentFrom(result, itemCount));
-  if (got < itemCount) {
-    return {
-      ok: false,
-      reason: `o'yin: ${String(got)} ta yaroqli element qaytdi, so'ralgani ${String(itemCount)}`,
-    };
+  if (got >= itemCount) return { ok: true };
+
+  /*
+   * SABABNI AJRATAMIZ: so'z YAROQSIZ bo'lgani uchunmi, yoki yaroqli,
+   * lekin PANJARAGA SIG'MAGANI uchunmi.
+   *
+   * Ilgari ikkisi ham "N ta yaroqli element qaytdi" deb chiqardi va bu
+   * chalg'itardi: model 14 ta mukammal o'zbek so'zini qaytargan, hammasi
+   * normalizatsiyadan o'tgan, lekin jami 133 harf bo'lgani uchun uchtasi
+   * tashlangan holat "yaroqsiz so'z" bo'lib ko'rinardi. Sabab
+   * `Document.failReason` ga tushadi va o'qituvchi uni ekranda ko'radi,
+   * shuning uchun u to'g'ri bo'lishi kerak.
+   */
+  if (result.kind === "word-search") {
+    const valid = normalizedWords(result.out.words);
+    const letters = valid.reduce((sum, word) => sum + word.length, 0);
+    if (valid.length >= itemCount && letters > MAX_TOTAL_LETTERS) {
+      return {
+        ok: false,
+        reason: `o'yin: so'zlar panjaraga sig'madi (${String(letters)} harf, shift ${String(MAX_TOTAL_LETTERS)})`,
+      };
+    }
   }
-  return { ok: true };
+
+  return {
+    ok: false,
+    reason: `o'yin: ${String(got)} ta yaroqli element qaytdi, so'ralgani ${String(itemCount)}`,
+  };
 }
 
 function countItems(content: GameContent): number {

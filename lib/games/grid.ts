@@ -36,3 +36,22 @@ export const GRID_SIZE = 12;
  * o'tgan HAR mazmun uchun amal qiladi, "odatda" emas.
  */
 export const MAX_TOTAL_LETTERS = 112;
+
+/**
+ * PROMPTGA aytiladigan so'z uzunligi oralig'i.
+ *
+ * Sxema 3-10 harfga ruxsat beradi (`lib/games/alphabet.ts`), bu oraliq esa
+ * TORROQ va ataylab: model shuni bajarsa jami harf shiftiga URILMAYDI.
+ *
+ *   12 so'z x 8 harf = 96  — shiftda 16 harf zapas.
+ *   12 so'z x 9 harf = 108 — zapas 4, ya'ni bitta uzun so'z yetarli.
+ *
+ * Pastki chegara 4: uch harfli so'z 12x12 panjarada tasodifan ham paydo
+ * bo'lib qoladi va bola uni "topgan" bo'lib hisoblardi.
+ *
+ * Oraliq sxemaning ICHIDA, shuning uchun modelning mos javobi har doim
+ * parse bo'ladi; mos kelmagani esa `normalizeWord` dan o'tadi-u,
+ * `fitLetters` da tashlanishi mumkin.
+ */
+export const PREFERRED_WORD_MIN = 4;
+export const PREFERRED_WORD_MAX = 8;

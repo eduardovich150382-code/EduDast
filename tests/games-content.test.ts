@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { GAME_LIMITS } from "@/lib/credits/cost-table";
+import { MAX_WORD_LENGTH, MIN_WORD_LENGTH } from "@/lib/games/alphabet";
 import { AnagramContent, GameContent, WheelContent, WordSearchContent } from "@/lib/games/content";
+import {
+  MAX_TOTAL_LETTERS,
+  PREFERRED_WORD_MAX,
+  PREFERRED_WORD_MIN,
+} from "@/lib/games/grid";
 import { GAME_KINDS } from "@/lib/games/types";
 
 const sector = (n: number) => ({
@@ -114,5 +121,47 @@ describe("GameContent union", () => {
     // reyestrni yarim holatda qoldirardi.
     const parsedKinds = [WHEEL, WORD_SEARCH, ANAGRAM].map((c) => c.kind);
     expect([...parsedKinds].sort()).toEqual([...GAME_KINDS].sort());
+  });
+});
+/* ------------------------------------------------------------------ */
+/* Sig'im va so'raladigan son muvofiqligi                              */
+/* ------------------------------------------------------------------ */
+
+describe("panjara sig'imi va GAME_LIMITS", () => {
+  /**
+   * BU TEST QARORNING SABABINI QULFLAYDI.
+   *
+   * `fitLetters` jami harf shiftidan oshgan so'zlarni tashlaydi,
+   * `checkGameContent` esa son yetmasa bosqichni yiqitadi — QAYTA
+   * URINISH YO'Q, ya'ni o'qituvchi "Yakunlanmadi" ni ko'radi (krediti
+   * qaytsa ham).
+   *
+   * Shuning uchun so'raladigan eng yuqori son shunday tanlangan: model
+   * eng uzun ruxsat etilgan so'zlarni qaytarganda ham byudjet yiqilishi
+   * TOR oyna bo'lib qolsin.
+   *
+   *   10 so'z x 10 harf = 100 <= 112 -> yiqilish MUMKIN EMAS
+   *   12 so'z x 10 harf = 120 >  112 -> faqat 113-120 oralig'ida
+   *   14 so'z x 10 harf = 140 >  112 -> keng oyna (shuning uchun 14 EMAS)
+   */
+  it("eng yuqori son bilan ham yiqilish oynasi tor", () => {
+    const max = GAME_LIMITS["word-search"].max;
+    const worst = max * MAX_WORD_LENGTH;
+    // Oyna = eng yomon holat shiftdan qancha oshadi.
+    const window = Math.max(0, worst - MAX_TOTAL_LETTERS);
+    expect(window, `${String(max)} so'z uchun yiqilish oynasi juda keng`).toBeLessThanOrEqual(10);
+  });
+
+  it("promptdagi tavsiya oraliq sxema ichida", () => {
+    // Model tavsiyani bajarsa javob HAR DOIM parse bo'lishi kerak.
+    expect(PREFERRED_WORD_MIN).toBeGreaterThanOrEqual(MIN_WORD_LENGTH);
+    expect(PREFERRED_WORD_MAX).toBeLessThanOrEqual(MAX_WORD_LENGTH);
+  });
+
+  it("tavsiyani bajargan javob byudjetga SIG'ADI", () => {
+    // Eng yuqori son x tavsiyaning yuqori chegarasi shiftdan oshmasin —
+    // aks holda prompt bajarilsa ham generatsiya yiqilardi.
+    const max = GAME_LIMITS["word-search"].max;
+    expect(max * PREFERRED_WORD_MAX).toBeLessThanOrEqual(MAX_TOTAL_LETTERS);
   });
 });

@@ -62,10 +62,28 @@ export const UNIT_LIMITS = {
  * G'ildirakda `min === max === 8`: SVG geometriyasi 45 gradusli sektorga
  * qurilgan (`lib/games/content.ts` dagi `.length(8)` bilan bir qarorning
  * ikki tomoni), ya'ni element soni tanlanmaydi.
+ *
+ * SO'Z QIDIRISHDA `max === 12`, 14 EMAS — va bu panjara sig'imidan
+ * (`MAX_TOTAL_LETTERS = 112`) kelib chiqadi:
+ *
+ *   14 so'z x 8 harf = 112 — AYNAN shiftda, zapas nol.
+ *   14 so'z x 9 harf = 126 — sig'maydi.
+ *   12 so'z x 9 harf = 108 — sig'adi.
+ *
+ * O'qituvchi 14 ni tanlab, model o'rtacha 9 harfli so'zlar qaytarsa
+ * `checkGameContent` bosqichni yiqitadi. Qayta urinish YO'Q (darvoza
+ * yiqilishi `run-stage.ts` da darhol `release` + `failed`), ya'ni
+ * o'qituvchi krediti qaytsa ham "Yakunlanmadi" ni ko'radi. 12 da esa
+ * o'rtacha 9 harfga ham zapas qoladi.
+ *
+ * `lib/games/content.ts` dagi sxema 14 ga RUXSAT BERISHDA DAVOM ETADI:
+ * u bazadagi mavjud kontentni o'qiydi va algoritm 112 harf ichida 14
+ * so'zni ham bemalol joylashtiradi. Bu shift faqat O'QITUVCHI SO'RAY
+ * OLADIGAN songa tegishli.
  */
 export const GAME_LIMITS: Record<GameKind, { min: number; max: number; step: number }> = {
   wheel: { min: 8, max: 8, step: 8 },
-  "word-search": { min: 8, max: 14, step: 3 },
+  "word-search": { min: 8, max: 12, step: 3 },
   anagram: { min: 6, max: 12, step: 3 },
 };
 

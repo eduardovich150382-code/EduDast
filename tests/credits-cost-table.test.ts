@@ -57,7 +57,7 @@ describe("creditCost — har tur bo'yicha narx", () => {
     ["CROSSWORD (20 so'z)", { type: "CROSSWORD", wordCount: 20 } as CostInput, 6],
     ["GAME g'ildirak (8 sektor)", gameInput("wheel", 8), 2],
     ["GAME so'z qidirish (8 so'z)", gameInput("word-search", 8), 4],
-    ["GAME so'z qidirish (14 so'z)", gameInput("word-search", 14), 6],
+    ["GAME so'z qidirish (12 so'z)", gameInput("word-search", 12), 5],
     ["GAME anagramma (6 element)", gameInput("anagram", 6), 3],
     ["GAME anagramma (12 element)", gameInput("anagram", 12), 5],
   ])("%s → %i kredit", (_nom, input, expected) => {

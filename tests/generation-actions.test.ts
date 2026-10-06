@@ -498,8 +498,10 @@ describe("GAME turi", () => {
 
   it("narx kind VA element soniga qarab band qilinadi", async () => {
     const { creditCost } = await import("@/lib/credits/cost-table");
-    const data = await create({ ...GAME_INPUT, itemCount: 14 });
-    const expected = creditCost({ type: "GAME", gameKind: "word-search", itemCount: 14 });
+    // 12 — so'z qidirishdagi eng yuqori son (`GAME_LIMITS`). 14 edi,
+    // lekin panjara sig'imi (112 harf) tufayli tushirildi.
+    const data = await create({ ...GAME_INPUT, itemCount: 12 });
+    const expected = creditCost({ type: "GAME", gameKind: "word-search", itemCount: 12 });
 
     expect(data.creditsHeldFor).toBe(expected);
     expect(mocks.hold).toHaveBeenCalledWith("u-1", expected, expect.any(String), expect.anything());
@@ -509,7 +511,7 @@ describe("GAME turi", () => {
   });
 
   it("progress.total bitta bosqich — reja parametrga bog'liq EMAS", async () => {
-    for (const itemCount of [8, 10, 14]) {
+    for (const itemCount of [8, 10, 12]) {
       mocks.documentCreate.mockClear();
       const data = await create({ ...GAME_INPUT, itemCount });
       expect(data.inputParams.progress).toEqual({ stage: 0, total: 1, attempts: 0 });
