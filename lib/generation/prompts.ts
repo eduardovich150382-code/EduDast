@@ -1,7 +1,8 @@
+import { MAX_WORD_LENGTH } from "@/lib/games/alphabet";
 import {
-  MAX_TOTAL_LETTERS,
   PREFERRED_WORD_MAX,
   PREFERRED_WORD_MIN,
+  WORD_REQUEST_BUFFER,
 } from "@/lib/games/grid";
 import type { GameKind } from "@/lib/games/types";
 
@@ -379,22 +380,38 @@ export function gameTail(input: { gameKind: GameKind; itemCount: number }): stri
     return lines.join("\n");
   }
 
+  if (input.gameKind === "word-search") {
+    /*
+     * SO'Z QIDIRISHDA ZAPAS BILAN SO'RALADI — "aynan N ta" EMAS.
+     *
+     * Ilgari bu yerda "Element soni: N ta — aynan shuncha bo'lsin"
+     * turardi va u bosqich ko'rsatmasidagi "N+4 ta so'z" bilan
+     * QARAMA-QARSHI edi: tail SISTEMA promptida, ko'rsatma esa
+     * `messages` da, model esa sistemaga ishonadi va aynan N ta
+     * qaytaradi. O'lchovda ko'rindi: ikki generatsiya 10 ta so'z berib
+     * yiqildi, uchinchisi 14 ta berib o'tdi.
+     *
+     * Har so'z uzunligi SXEMA SHIFTI bilan aytiladi (`MAX_WORD_LENGTH`),
+     * tavsiya oralig'i esa alohida: o'zbek fizika terminologiyasi uzun
+     * (`ishqalanish` 11, `trayektoriya` 12), ya'ni qat'iy 4-8 bajarilmaydi
+     * va uni "shart" qilib qo'yish foydasiz. Shift — bajarilishi kerak
+     * bo'lgan narsa, oraliq — afzal ko'rilgani.
+     */
+    lines.push(
+      `So'z soni: ${String(input.itemCount + WORD_REQUEST_BUFFER)} ta ber — o'yinga eng mos ${String(input.itemCount)} tasi tanlanadi.`,
+    );
+    lines.push("So'zlar takrorlanmasin.");
+    lines.push(
+      `Har so'z ${String(MAX_WORD_LENGTH)} harfdan UZUN BO'LMASIN — uzun atama 12x12 panjaraga sig'maydi va tashlanadi.`,
+    );
+    lines.push(
+      `Afzali ${String(PREFERRED_WORD_MIN)}-${String(PREFERRED_WORD_MAX)} harf: qisqa so'zlar panjarada chiroyli kesishadi.`,
+    );
+    return lines.join("\n");
+  }
+
   lines.push(`Element soni: ${String(input.itemCount)} ta — aynan shuncha bo'lsin.`);
   lines.push("So'zlar takrorlanmasin.");
-
-  if (input.gameKind === "word-search") {
-    // HAR BIR SO'Z uchun chegara — o'rtacha uzunlik ko'rsatmasidan
-    // ANIQROQ. "O'rtacha 9 harf" deganda model bir nechta 12 harfli so'z
-    // qo'yib, qolganini qisqartirib muvozanatlashtirishga urinadi va
-    // uzun so'z panjaraga sig'masdan tashlanadi. Har so'zga qo'yilgan
-    // shift esa bajarilishi oson va natijasi tekshiriladi.
-    lines.push(
-      `Har bir so'z ${String(PREFERRED_WORD_MIN)}-${String(PREFERRED_WORD_MAX)} harfdan bo'lsin.`,
-    );
-    lines.push(
-      `So'zlardagi JAMI harf ${String(MAX_TOTAL_LETTERS)} dan oshmasin — ular 12x12 panjaraga sig'ishi kerak.`,
-    );
-  }
 
   return lines.join("\n");
 }

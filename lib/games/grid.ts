@@ -55,3 +55,26 @@ export const MAX_TOTAL_LETTERS = 112;
  */
 export const PREFERRED_WORD_MIN = 4;
 export const PREFERRED_WORD_MAX = 8;
+
+/**
+ * So'z qidirishda modeldan qancha ZAPAS so'raladi.
+ *
+ * O'LCHOV ASOSIDA. To'rtta haqiqiy generatsiyada uchtasi yiqildi va
+ * sababi har uchalasida bir xil: model mukammal o'zbek atamalarini
+ * qaytardi, lekin bir-ikkitasi `MAX_WORD_LENGTH` (10 harf) dan uzun edi
+ * — `ishqalanish` (11), `trayektoriya` (12), `solishtirma` (11). O'zbek
+ * fizika terminologiyasi UZUN, ya'ni bu tizimli hol.
+ *
+ * Darvoza aniq sonni talab qiladi va QAYTA URINISH YO'Q, shuning uchun
+ * bitta uzun atama butun generatsiyani yiqitardi. Zapas har xil
+ * tashlanishni qoplaydi: uzun so'z, yaroqsiz belgi, takrorlanish,
+ * byudjetga sig'maslik.
+ *
+ * SON IKKI JOYDA ISHLATILADI — sistema promptidagi quyruq (`gameTail`)
+ * va bosqich ko'rsatmasi (`gameStageInstruction`). Ular ajralsa model
+ * ziddiyatli ikki talabni ko'radi va SISTEMA promptiga ishonadi:
+ * o'lchovda aynan shu yuz berdi (quyruq "aynan 10" deyardi, ko'rsatma
+ * "14 ta" so'rardi, model 10 ta berib yiqilardi). Shuning uchun son shu
+ * yerda, bitta joyda.
+ */
+export const WORD_REQUEST_BUFFER = 4;

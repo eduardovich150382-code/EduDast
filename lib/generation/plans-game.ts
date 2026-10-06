@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { blockId, type Block } from "@/lib/documents/blocks";
-import { normalizeWord } from "@/lib/games/alphabet";
-import { MAX_TOTAL_LETTERS } from "@/lib/games/grid";
+import { MAX_WORD_LENGTH, normalizeWord } from "@/lib/games/alphabet";
+import { MAX_TOTAL_LETTERS, WORD_REQUEST_BUFFER } from "@/lib/games/grid";
 import { GAME_LIMITS } from "@/lib/credits/cost-table";
 import type { GameContent, GameKind } from "@/lib/games/types";
 import type { GenerationPlan, SkeletonGate, StageSpec } from "./plans";
@@ -201,6 +201,11 @@ function fitLetters(words: readonly string[], itemCount: number): string[] {
   return words.filter((word) => keptSet.has(word));
 }
 
+/** Modeldan so'raladigan so'z soni — zapas bilan (sabab `grid.ts` da). */
+export function requestCount(itemCount: number): number {
+  return itemCount + WORD_REQUEST_BUFFER;
+}
+
 /** Sarlavha + o'yin bloki. */
 export function gameBlocks(
   spec: StageSpec,
@@ -248,10 +253,11 @@ export function gameStageInstruction(input: { kind: GameKind; itemCount: number 
         "",
         "Kerak:",
         "- o'yinning sarlavhasi;",
-        `- aynan ${count} ta so'z.`,
+        `- ${String(requestCount(input.itemCount))} ta so'z (o'yinga eng mos ${count} tasi tanlanadi).`,
         "",
         "Har so'z BITTA so'z bo'lsin: ibora, chiziqcha, raqam va qisqartma yo'q.",
         "ch va sh digraflari, o' va g' harflari mumkin.",
+        `Har so'z ${String(MAX_WORD_LENGTH)} harfdan UZUN BO'LMASIN — uzun atama panjaraga sig'maydi.`,
         "PANJARANI TUZMA — faqat so'zlar ro'yxatini ber.",
       ].join("\n");
 

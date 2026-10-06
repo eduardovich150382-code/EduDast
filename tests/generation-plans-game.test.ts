@@ -12,11 +12,13 @@ import {
   gameBlocks,
   gameContentFrom,
   gameStageInstruction,
+  requestCount,
   WheelOut,
   WordSearchOut,
   type GameOut,
 } from "@/lib/generation/plans-game";
 import { stagePurpose } from "@/lib/generation/plans";
+import { gameTail } from "@/lib/generation/prompts";
 
 /**
  * `GAME` konveyerining o'yinga xos qismi.
@@ -313,5 +315,45 @@ describe("gameStageInstruction", () => {
   it("uchala tur boshqa ko'rsatma beradi", () => {
     const texts = GAME_KINDS.map((kind) => gameStageInstruction({ kind, itemCount: 8 }));
     expect(new Set(texts).size).toBe(GAME_KINDS.length);
+  });
+});
+describe("so'z soni — prompt va ko'rsatma BIR XIL", () => {
+  /**
+   * ZIDDIYAT O'LCHOVDA TOPILGAN: sistema promptidagi quyruq "aynan 10
+   * ta" deyardi, bosqich ko'rsatmasi esa "14 ta" so'rardi. Model
+   * SISTEMA promptiga ishonadi va 10 ta qaytaradi — bitta uzun atama
+   * tashlanishi bilan darvoza yiqilardi.
+   */
+  it("ikkala matn ham AYNI sonni aytadi", () => {
+    for (const itemCount of [8, 10, 12]) {
+      const want = requestCount(itemCount);
+      const tail = gameTail({ gameKind: "word-search", itemCount });
+      const instruction = gameStageInstruction({ kind: "word-search", itemCount });
+
+      expect(tail, `quyruqda ${String(want)} yo'q`).toContain(String(want));
+      expect(instruction, `ko'rsatmada ${String(want)} yo'q`).toContain(String(want));
+      // "aynan shuncha" so'z qidirishda BO'LMASIN — u zapasni bekor qiladi.
+      expect(tail).not.toContain("aynan shuncha");
+    }
+  });
+
+  it("zapas so'ralgan sondan KO'P", () => {
+    expect(requestCount(10)).toBeGreaterThan(10);
+  });
+
+  it("zapas chiqish sxemasining yuqori chegarasiga sig'adi", () => {
+    // Model zapas bilan javob bersa sxema uni RAD ETMASLIGI kerak.
+    const parsed = WordSearchOut.safeParse({
+      title: "Namuna sarlavha",
+      words: Array.from({ length: requestCount(12) }, (_, i) => `soz${String(i)}`),
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("g'ildirak va anagrammada hali ham ANIQ son", () => {
+    // Zapas faqat so'z qidirishda ma'noga ega: g'ildirakda sektor soni
+    // qat'iy, anagrammada esa uzunlik shifti muammo tug'dirmaydi.
+    expect(gameTail({ gameKind: "wheel", itemCount: 8 })).toContain("aynan shuncha");
+    expect(gameTail({ gameKind: "anagram", itemCount: 8 })).toContain("aynan shuncha");
   });
 });

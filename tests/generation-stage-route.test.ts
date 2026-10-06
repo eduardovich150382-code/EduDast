@@ -1110,8 +1110,15 @@ describe("GAME turi — darvoza va kredit", () => {
 
     const request = mocks.runLlm.mock.calls[0]?.[0];
     // Keshdan TASHQARIDA — oxirgi bo'lakda, element soniga bog'liq.
-    expect(request.system[3]?.text).toContain("4-8 harf");
-    expect(request.system[3]?.text).toContain("Element soni: 10");
+    const tail = request.system[3]?.text as string;
+    // ZAPAS BILAN so'raladi: 10 + 4 = 14. "aynan shuncha" BO'LMASLIGI
+    // kerak — u zapasni bekor qilib, bosqich ko'rsatmasi bilan
+    // qarama-qarshi bo'lardi (o'lchovda aynan shu yiqitgan).
+    expect(tail).toContain("So'z soni: 14");
+    expect(tail).not.toContain("aynan shuncha");
+    // Uzunlik SHIFTI — sxema bilan bir xil son.
+    expect(tail).toContain("10 harfdan UZUN BO'LMASIN");
+    expect(tail).toContain("Afzali 4-8 harf");
     // Keshlanadigan qo'llanmada ham bor (umumiy qoida sifatida).
     expect(request.system[2]?.text).toContain("4-8 HARFDAN");
   });
