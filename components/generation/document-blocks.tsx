@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
+import type { ReactElement } from "react";
 import type { Block } from "@/lib/documents/blocks";
+import { gameItemCount } from "@/lib/games/content";
 
 /**
  * Bloklarni o'qishga qulay ko'rinishda chiqaradi.
@@ -42,10 +44,21 @@ export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
   // Slayd ko'rinishi nomlari muharrir lug'atida — ularni `Documents` ga
   // nusxalash ikki manba yasardi.
   const tE = await getTranslations("Editor");
+  // Uchinchi nomfaza, uchinchi ALOHIDA nom: `i18n-usage` skaneri nomfazani
+  // o'zgaruvchi NOMI bo'yicha bog'laydi, ikki binding bir xil atalsa kalit
+  // noto'g'ri nomfazada tekshirilib jimgina o'tib ketardi.
+  const tG = await getTranslations("Games");
 
   return (
     <div className="flex flex-col gap-6">
-      {blocks.map((block) => {
+      {/*
+        QAYTISH TURI (`: ReactElement`) — "default tarmog'i yo'q" kafolatining
+        O'ZI. Annotatsiyasiz yetishmagan `case` shunchaki `undefined` beradi
+        va blok ekranda JIMGINA yo'qoladi; `tsc` esa React komponenti
+        `undefined` qaytarishi mumkin bo'lgani uchun xato bermaydi.
+        15-sessiyada `game` turi qo'shilganda aynan shunday bo'ldi.
+      */}
+      {blocks.map((block): ReactElement => {
         switch (block.type) {
           case "heading":
             return (
@@ -260,6 +273,24 @@ export async function DocumentBlocks({ blocks }: { blocks: Block[] }) {
                       {t("slideNotes")}: {block.notes}
                     </p>
                   )}
+                </div>
+              </Section>
+            );
+
+          // O'yin ham KARTA sifatida: mazmun ro'yxati emas, qisqa xulosa.
+          // So'zlar ro'yxatini bu yerda chiqarish javoblarni oshkor qilardi
+          // (anagrammada bola ko'rishi kerak bo'lgan narsa — ta'rif, so'z
+          // emas). Haqiqiy o'yin — `/ish/hujjat/[id]/oyin`.
+          case "game":
+            return (
+              <Section key={block.id} title={tG("title")}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-line px-3 py-2">
+                  <span className="font-heading text-sm font-semibold text-ink">
+                    {tG(`kind.${block.content.kind}`)}
+                  </span>
+                  <span className="text-xs text-ink-2">
+                    {tE("field.gameItems", { count: gameItemCount(block.content) })}
+                  </span>
                 </div>
               </Section>
             );

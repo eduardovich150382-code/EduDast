@@ -36,7 +36,7 @@ describe("blok sxemasi", () => {
     // `satisfies` tipda tekshiradi, bu esa RO'YXAT to'liqligini: union'ga
     // blok qo'shilib ro'yxat unutilsa, bu yerda son farq qiladi.
     expect(new Set(BLOCK_TYPES).size).toBe(BLOCK_TYPES.length);
-    expect(BLOCK_TYPES.length).toBe(13);
+    expect(BLOCK_TYPES.length).toBe(14);
   });
 
   it("har blok turi round-trip dan o'tadi", () => {

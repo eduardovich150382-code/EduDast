@@ -40,9 +40,11 @@ enum Role {
 enum DocumentType {
   LESSON_PLAN
   TEST
+  /// Eskirgan — GAME + kind:"crossword" ishlating
   CROSSWORD
   SLIDES
   GUIDE
+  GAME
 }
 
 enum DocumentStatus {

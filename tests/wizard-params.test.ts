@@ -58,6 +58,8 @@ const EMPTY: WizardParams = {
   kinds: null,
   difficulty: null,
   slideCount: null,
+  gameKind: null,
+  itemCount: null,
 };
 
 describe("parseWizardParams — har kirish uchun xavfsiz default", () => {
@@ -92,6 +94,8 @@ describe("parseWizardParams — har kirish uchun xavfsiz default", () => {
       kinds: ["mcq", "short"],
       difficulty: "hard",
       slideCount: null,
+      gameKind: null,
+      itemCount: null,
     });
   });
 

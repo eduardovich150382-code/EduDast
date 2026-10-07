@@ -51,3 +51,32 @@ javob — hech qanday javobdan yaxshi.
 bosh sahifa aynan shuni taklif qiladi ("Dars jadvalini kiritish"). Agar
 jadvalsiz foydalanuvchilar ulushi katta bo'lib qolsa, taklifni kuchaytirish
 kerak, hisobni emas.
+---
+
+## `notFound()` 404 emas, 200 qaytaradi
+
+**Qachon:** 15-sessiya (o'yinlar poydevori). Topildi, ataylab tuzatilmadi.
+
+**Nima:** hujjat marshrutlarida `notFound()` chaqirilganda sahifa to'g'ri
+render bo'ladi, lekin HTTP status 404 emas, **200**. Butun ilovada shunday va
+15-sessiyadan oldin ham shunday bo'lgan (`/taqdimot` ham 200 beradi). Marshrut
+umuman mavjud bo'lmaganda (`/uz/butunlay-yoq`) esa 404 to'g'ri qaytadi.
+
+**Nega:** Next.js hujjatlashtirgan xatti-harakat — oqimli (streamed) javobda
+status 200 bo'ladi, chunki sarlavhalar allaqachon yuborilgan. Bizda oqim OTA
+LAYOUTLARDA boshlanadi (`[locale]/layout.tsx` va `ish/layout.tsx` dagi
+`await`lar), ya'ni sahifa kodi ishga tushishidan oldin — shuning uchun
+`notFound()` ni sahifa ichida qayerga qo'yish ahamiyatsiz.
+
+SEO zarari yo'q: javobda `<meta name="robots" content="noindex">` bor, ya'ni
+Google "soft 404" deb belgilasa ham indekslamaydi.
+
+**Qachon qaytiladi:** 404 statusi tashqi tahlil yoki compliance uchun kerak
+bo'lganda. Yechim `proxy.ts` da mavjudlik tekshiruvi, lekin narxi katta:
+proxy har navigatsiyada (RSC prefetch ham) ishlaydi va DB so'rovi har havolaga
+50-150 ms qo'shadi — `proxy.ts` ning o'z izohi bazaga borishni ataylab
+taqiqlaydi.
+
+**To'liq diagnostika va sinab ko'rilganlar ro'yxati:**
+`docs/notes/notfound-200-status.md` — noldan qaytadan tekshirmaslik uchun
+o'sha yerda nima ishlamagani ham yozilgan.

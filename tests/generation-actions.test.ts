@@ -450,3 +450,110 @@ describe("SLIDES turi", () => {
     expect(mocks.hold).not.toHaveBeenCalled();
   });
 });
+describe("GAME turi", () => {
+  beforeEach(wireHappyPath);
+
+  const GAME_INPUT = {
+    type: "GAME",
+    topicId: "t-1",
+    gameKind: "word-search",
+    itemCount: 10,
+  };
+
+  type CreateData = {
+    type: string;
+    title: string;
+    creditsHeldFor: number;
+    inputParams: {
+      progress: { stage: number; total: number; attempts: number };
+      gameKind: string;
+      itemCount: number;
+      durationMinutes?: number;
+      questionCount?: number;
+      slideCount?: number;
+    };
+  };
+
+  async function create(input: unknown): Promise<CreateData> {
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    const result = await boshlaGeneratsiya(input);
+    expect(result.ok).toBe(true);
+    return mocks.documentCreate.mock.calls[0]?.[0]?.data as CreateData;
+  }
+
+  it("GAME hujjati o'z turi va nomi bilan yaratiladi", async () => {
+    const data = await create(GAME_INPUT);
+    expect(data.type).toBe("GAME");
+    expect(data.title).toContain("o'yin");
+  });
+
+  it("inputParams da o'yin parametrlari, boshqa turlarning maydoni YO'Q", async () => {
+    const data = await create(GAME_INPUT);
+    expect(data.inputParams.gameKind).toBe("word-search");
+    expect(data.inputParams.itemCount).toBe(10);
+    expect(data.inputParams.durationMinutes).toBeUndefined();
+    expect(data.inputParams.questionCount).toBeUndefined();
+    expect(data.inputParams.slideCount).toBeUndefined();
+  });
+
+  it("narx kind VA element soniga qarab band qilinadi", async () => {
+    const { creditCost } = await import("@/lib/credits/cost-table");
+    // 12 — so'z qidirishdagi eng yuqori son (`GAME_LIMITS`). 14 edi,
+    // lekin panjara sig'imi (112 harf) tufayli tushirildi.
+    const data = await create({ ...GAME_INPUT, itemCount: 12 });
+    const expected = creditCost({ type: "GAME", gameKind: "word-search", itemCount: 12 });
+
+    expect(data.creditsHeldFor).toBe(expected);
+    expect(mocks.hold).toHaveBeenCalledWith("u-1", expected, expect.any(String), expect.anything());
+    expect(expected).toBeGreaterThan(
+      creditCost({ type: "GAME", gameKind: "word-search", itemCount: 8 }),
+    );
+  });
+
+  it("progress.total bitta bosqich — reja parametrga bog'liq EMAS", async () => {
+    for (const itemCount of [8, 10, 12]) {
+      mocks.documentCreate.mockClear();
+      const data = await create({ ...GAME_INPUT, itemCount });
+      expect(data.inputParams.progress).toEqual({ stage: 0, total: 1, attempts: 0 });
+    }
+  });
+
+  it("g'ildirakda 8 dan boshqa son RAD ETILADI", async () => {
+    // Chegara `kind` ga bog'liq (`startSchema` dagi `superRefine`): tekis
+    // chegara bo'lsa 6 sektorli g'ildirak generatsiyaning oxirida
+    // yiqilardi — kredit band qilingandan keyin.
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    const result = await boshlaGeneratsiya({
+      ...GAME_INPUT,
+      gameKind: "wheel",
+      itemCount: 6,
+    });
+
+    expect(result).toEqual({ ok: false, error: "invalid" });
+    expect(mocks.hold).not.toHaveBeenCalled();
+  });
+
+  it("noma'lum o'yin turi rad etiladi", async () => {
+    const { boshlaGeneratsiya } = await import("@/server/generation-actions");
+    const result = await boshlaGeneratsiya({ ...GAME_INPUT, gameKind: "crossword" });
+
+    expect(result).toEqual({ ok: false, error: "invalid" });
+    expect(mocks.hold).not.toHaveBeenCalled();
+  });
+
+  it("har kind o'z chegarasida yaratiladi", async () => {
+    const { GAME_LIMITS } = await import("@/lib/credits/cost-table");
+    const { GAME_KINDS } = await import("@/lib/games/types");
+
+    for (const gameKind of GAME_KINDS) {
+      mocks.documentCreate.mockClear();
+      const data = await create({
+        ...GAME_INPUT,
+        gameKind,
+        itemCount: GAME_LIMITS[gameKind].min,
+      });
+      expect(data.inputParams.gameKind, gameKind).toBe(gameKind);
+      expect(data.creditsHeldFor, gameKind).toBeGreaterThan(0);
+    }
+  });
+});

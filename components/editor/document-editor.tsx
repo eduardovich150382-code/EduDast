@@ -89,6 +89,7 @@ export function DocumentEditor({
             <BlockEditor
               block={block}
               questions={questions}
+              documentId={documentId}
               onChange={(next: Block) => {
                 setContent(replaceBlock(content, index, next));
               }}

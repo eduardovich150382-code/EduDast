@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { quoteParts, twoColumns, type SlideBlock } from "@/lib/slides/deck";
 
 /**
@@ -8,16 +9,21 @@ import { quoteParts, twoColumns, type SlideBlock } from "@/lib/slides/deck";
  * (`taqdimot/page.tsx` izohiga qarang). Klient kod faqat navigatsiya
  * qobig'ida.
  *
- * `default` TARMOG'I ATAYLAB YO'Q (`components/editor/blocks/index.tsx`
- * bilan bir xil sabab): `SLIDE_LAYOUTS` ga yettinchi ko'rinish qo'shilsa
- * TypeScript shu yerda yiqiladi va yangi ko'rinish jimgina bo'sh ekran
- * bermaydi.
+ * `default` TARMOG'I ATAYLAB YO'Q va QAYTISH TURI ANNOTATSIYA QILINGAN
+ * (`: ReactElement`) — IKKISI BIRGA ishlaydi. Annotatsiyasiz React
+ * komponenti `undefined` qaytarishi mumkin, ya'ni `default` yo'qligi HECH
+ * NARSANI kafolatlamaydi: yetishmagan `case` jimgina bo'sh ekran beradi.
+ *
+ * Bu fayl 15-sessiyagacha ANNOTATSIYASIZ turgan, ya'ni izohda yozilgan
+ * kafolat amalda ishlamagan — `case "question"` ni olib tashlab `tsc`
+ * ni yugurtirish bilan tasdiqlandi (xato bermadi). CLAUDE.md ning
+ * 11-qoidasi shundan kelib chiqqan.
  *
  * Har ko'rinishning qoidasi `lib/documents/blocks.ts:SLIDE_LAYOUTS` izohida
  * yozilgan; `twoColumns` va `quoteParts` esa `lib/slides/deck.ts` da sof
  * funksiya sifatida — ular testlanadi, bu fayl faqat render.
  */
-export function SlideLayout({ slide }: { slide: SlideBlock }) {
+export function SlideLayout({ slide }: { slide: SlideBlock }): ReactElement {
   switch (slide.layout) {
     case "title":
       return <TitleSlide slide={slide} />;

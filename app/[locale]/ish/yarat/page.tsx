@@ -7,6 +7,7 @@ import type { PickerNode, PickerTopic } from "@/components/generation/topic-pick
 import { Wizard } from "@/components/generation/wizard";
 import { auth } from "@/lib/auth";
 import { creditCost } from "@/lib/credits/cost-table";
+import { GAME_KINDS } from "@/lib/games/types";
 import { searchTopics } from "@/lib/curriculum/search";
 import { prisma } from "@/lib/db";
 import {
@@ -17,6 +18,7 @@ import {
   inferStep,
   parseWizardParams,
   previousStep,
+  GAME_ITEM_COUNTS,
   QUESTION_COUNTS,
   SLIDE_COUNTS,
   resolveParams,
@@ -127,16 +129,19 @@ export default async function YaratPage({
     LESSON_PLAN: "title",
     TEST: "titleTest",
     SLIDES: "titleSlides",
+    GAME: "titleGame",
   };
   const DESCRIPTION_KEY: Record<SupportedDocumentType, string> = {
     LESSON_PLAN: "description",
     TEST: "descriptionTest",
     SLIDES: "descriptionSlides",
+    GAME: "descriptionGame",
   };
   const TYPE_KEY: Record<SupportedDocumentType, string> = {
     LESSON_PLAN: "typeLesson",
     TEST: "typeTest",
     SLIDES: "typeSlides",
+    GAME: "typeGame",
   };
 
   const title = t(TITLE_KEY[docType]);
@@ -183,6 +188,13 @@ export default async function YaratPage({
             value,
             cost: creditCost({ type: "SLIDES", slideCount: value }),
           }))}
+          gameCosts={GAME_KINDS.map((kind) => ({
+            kind,
+            counts: GAME_ITEM_COUNTS[kind].map((value) => ({
+              value,
+              cost: creditCost({ type: "GAME", gameKind: kind, itemCount: value }),
+            })),
+          }))}
         />
       )}
 
@@ -213,6 +225,11 @@ export default async function YaratPage({
         ].join(" · ");
       case "SLIDES":
         return t("slideCountLabel", { count: resolved.slideCount });
+      case "GAME":
+        return [
+          t(`gameKindLabel.${resolved.gameKind}`),
+          t("itemCountLabel", { count: resolved.itemCount }),
+        ].join(" · ");
       case "LESSON_PLAN":
         return t("durationLabel", { minutes: resolved.durationMinutes });
     }

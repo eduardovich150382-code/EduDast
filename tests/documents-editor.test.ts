@@ -92,7 +92,9 @@ describe("newBlockId", () => {
 describe("newBlock", () => {
   // ENG MUHIM TEST: yangi blok tug'ilgan zahoti valid bo'lmasa, "blok
   // qo'shish" amali butun hujjatning avtosaqlashini to'xtatardi.
-  it.each(BLOCK_TYPES.filter((type) => type !== "answerKey"))(
+  // `answerKey` va `game` CHIQARILGAN: ikkisi ham `null` qaytaradi va
+  // ularning sababi pastdagi alohida testlarda qadalgan.
+  it.each(BLOCK_TYPES.filter((type) => type !== "answerKey" && type !== "game"))(
     "%s standart qiymati sxemadan o'tadi",
     (type) => {
       const block = newBlock(type, "new-1", LABELS, []);
@@ -105,6 +107,16 @@ describe("newBlock", () => {
 
   it("answerKey savolsiz hujjatda null qaytaradi", () => {
     expect(newBlock("answerKey", "new-1", LABELS, [])).toBeNull();
+  });
+
+  /**
+   * O'yin bloki HAR DOIM `null`: eng kichik o'yin ham 6 ta turli,
+   * normallashgan so'z va ta'rifni talab qiladi (`lib/games/content.ts`),
+   * ya'ni "bo'sh o'yin" degan holat yo'q. O'yin sehrgar orqali yaratiladi.
+   */
+  it("game har qanday holatda null qaytaradi", () => {
+    expect(newBlock("game", "new-1", LABELS, [])).toBeNull();
+    expect(newBlock("game", "new-1", LABELS, content().blocks)).toBeNull();
   });
 
   it("answerKey mavjud savollardan urug'lanadi va sxemadan o'tadi", () => {

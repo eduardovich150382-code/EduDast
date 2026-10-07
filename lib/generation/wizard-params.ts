@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { UNIT_LIMITS } from "@/lib/credits/cost-table";
+import { GAME_LIMITS, UNIT_LIMITS } from "@/lib/credits/cost-table";
+import {
+  gameKindFor,
+  paramForGameKind,
+  readGameKindParam,
+} from "@/lib/games/registry";
+import { GAME_KINDS, type GameKind } from "@/lib/games/types";
 import {
   documentTypeFor,
   readTypeParam,
@@ -67,6 +73,8 @@ export const WIZARD_PARAM_NAMES = [
   "turlar",
   "qiyin",
   "slayd",
+  "oyin",
+  "element",
 ] as const;
 export type WizardParamName = (typeof WIZARD_PARAM_NAMES)[number];
 export type WizardOverrides = Partial<Record<WizardParamName, QueryValue>>;
@@ -106,6 +114,56 @@ export const SLIDE_COUNTS = [8, 10, 12, 14].filter(
   (count) => count >= UNIT_LIMITS.SLIDES.min && count <= UNIT_LIMITS.SLIDES.max,
 );
 export const DEFAULT_SLIDE_COUNT = 12;
+
+/**
+ * O'yin element soni variantlari — `kind` BO'YICHA.
+ *
+ * `QUESTION_COUNTS`/`SLIDE_COUNTS` naqshi: ro'yxat o'qituvchi uchun qulay
+ * sonlardan, lekin `GAME_LIMITS` bo'yicha FILTRLANADI, ya'ni narx jadvali
+ * chegarasi o'zgarsa ro'yxat o'zi moslashadi.
+ *
+ * G'ildirakda bitta variant (8) — sektor soni qat'iy, shuning uchun forma
+ * u yerda element tanlovini KO'RSATMAYDI.
+ */
+export const GAME_ITEM_COUNTS: Record<GameKind, number[]> = {
+  wheel: [8],
+  "word-search": [8, 10, 12, 14],
+  anagram: [6, 8, 10, 12],
+};
+
+for (const kind of GAME_KINDS) {
+  const { min, max } = GAME_LIMITS[kind];
+  GAME_ITEM_COUNTS[kind] = GAME_ITEM_COUNTS[kind].filter(
+    (count) => count >= min && count <= max,
+  );
+}
+
+export const DEFAULT_GAME_KIND: GameKind = "word-search";
+
+/** `kind` uchun default element soni — ro'yxatning o'rtasiga yaqin. */
+export function defaultItemCount(kind: GameKind): number {
+  const counts = GAME_ITEM_COUNTS[kind];
+  return counts[Math.floor(counts.length / 2)] ?? GAME_LIMITS[kind].min;
+}
+
+/** Son ro'yxatda bormi — URL'dan kelgan qiymatni tekshirish uchun. */
+export function itemCountAllowed(kind: GameKind, count: number): boolean {
+  return GAME_ITEM_COUNTS[kind].includes(count);
+}
+
+/**
+ * Element sonini `kind` ning ro'yxatiga tortadi.
+ *
+ * `?element=99` yoki `kind` o'zgarganda eski son qolib ketgan holat
+ * narxsiz ekran yasamasin: `creditCost` chegaradan tashqari sonni
+ * `clampUnits` bilan tortadi, lekin forma ro'yxatda yo'q sonni tanlangan
+ * deb ko'rsata olmasdi va o'qituvchi hech narsa tanlanmagan ekranni
+ * ko'rardi.
+ */
+export function clampItemCount(kind: GameKind, count: number | null): number {
+  if (count !== null && itemCountAllowed(kind, count)) return count;
+  return defaultItemCount(kind);
+}
 
 /**
  * Standart savol turlari — `match` ATAYLAB yo'q.
@@ -154,6 +212,8 @@ export type WizardParams = {
   kinds: readonly QuestionKind[] | null;
   difficulty: Difficulty | null;
   slideCount: number | null;
+  gameKind: GameKind | null;
+  itemCount: number | null;
 };
 
 const GRADE_MIN = 1;
@@ -201,6 +261,11 @@ export function parseWizardParams(raw: RawSearchParams): WizardParams {
     min: UNIT_LIMITS.SLIDES.min,
     max: UNIT_LIMITS.SLIDES.max,
   });
+  const gameKindParam = readGameKindParam(readOne(raw.oyin));
+  const gameKind = gameKindParam === null ? null : gameKindFor(gameKindParam);
+  // Eng keng chegara bilan o'qiladi, `kind` ga xos tekshiruv pastda:
+  // bu yerda `kind` hali ma'lum emas.
+  const itemCount = readInt(raw.element, { min: 1, max: 64 });
 
   return {
     step: readStep(readOne(raw.qadam)),
@@ -223,6 +288,14 @@ export function parseWizardParams(raw: RawSearchParams): WizardParams {
     difficulty: readDifficulty(readOne(raw.qiyin)),
     slideCount:
       slideCount !== null && SLIDE_COUNTS.includes(slideCount) ? slideCount : null,
+    gameKind,
+    // Element soni `kind` GA BOG'LIQ holda tekshiriladi: `kind` hali
+    // tanlanmagan bo'lsa son ham qabul qilinmaydi, aks holda g'ildirakka
+    // o'tганda 14 so'zlik tanlov qolib ketardi.
+    itemCount:
+      gameKind !== null && itemCount !== null && itemCountAllowed(gameKind, itemCount)
+        ? itemCount
+        : null,
   };
 }
 
@@ -254,6 +327,11 @@ export function paramsCompleteForType(params: WizardParams): boolean {
       );
     case "SLIDES":
       return params.slideCount !== null;
+    // G'ILDIRAKDA `itemCount` SO'RALMAYDI: sektor soni qat'iy 8, ya'ni
+    // tanlov yo'q va o'qituvchiga bo'sh parametr ekranini ko'rsatish
+    // ma'nosiz bo'lardi. `resolveParams` uni default bilan to'ldiradi.
+    case "GAME":
+      return params.gameKind !== null && (params.gameKind === "wheel" || params.itemCount !== null);
     case "LESSON_PLAN":
       return params.duration !== null;
   }
@@ -317,7 +395,8 @@ export type ResolvedParams =
       kinds: readonly QuestionKind[];
       difficulty: Difficulty;
     }
-  | { type: "SLIDES"; slideCount: number };
+  | { type: "SLIDES"; slideCount: number }
+  | { type: "GAME"; gameKind: GameKind; itemCount: number };
 
 /**
  * Ko'rsatish va narx uchun default bilan to'ldirilgan qiymatlar.
@@ -339,6 +418,18 @@ export function resolveParams(params: WizardParams): ResolvedParams {
       };
     case "SLIDES":
       return { type: "SLIDES", slideCount: params.slideCount ?? DEFAULT_SLIDE_COUNT };
+    case "GAME": {
+      const gameKind = params.gameKind ?? DEFAULT_GAME_KIND;
+      return {
+        type: "GAME",
+        gameKind,
+        // Chegara `kind` ga bog'liq, shuning uchun default ham: g'ildirakda
+        // 8 (qat'iy), qolganlarida `DEFAULT_ITEM_COUNT`. Chegaradan tashqari
+        // son `clampItemCount` bilan tortiladi — `?element=99` bilan kelgan
+        // havola narxsiz holat yasamasin.
+        itemCount: clampItemCount(gameKind, params.itemCount),
+      };
+    }
     case "LESSON_PLAN":
       return { type: "LESSON_PLAN", durationMinutes: params.duration ?? DEFAULT_DURATION };
   }
@@ -367,6 +458,13 @@ export function startInputFor(
       };
     case "SLIDES":
       return { type: "SLIDES", topicId, slideCount: resolved.slideCount };
+    case "GAME":
+      return {
+        type: "GAME",
+        topicId,
+        gameKind: resolved.gameKind,
+        itemCount: resolved.itemCount,
+      };
     case "LESSON_PLAN":
       return { type: "LESSON_PLAN", topicId, durationMinutes: resolved.durationMinutes };
   }
@@ -399,6 +497,8 @@ export function wizardQuery(
     turlar: params.kinds,
     qiyin: params.difficulty,
     slayd: params.slideCount,
+    oyin: params.gameKind === null ? null : paramForGameKind(params.gameKind),
+    element: params.itemCount,
   };
   return buildQuery({ ...base, ...overrides });
 }
@@ -426,6 +526,8 @@ export function confirmQuery(params: WizardParams): Record<string, string> {
         qiyin: resolved.difficulty,
         daqiqa: null,
         slayd: null,
+        oyin: null,
+        element: null,
       });
     case "SLIDES":
       return wizardQuery(params, {
@@ -435,6 +537,19 @@ export function confirmQuery(params: WizardParams): Record<string, string> {
         savol: null,
         turlar: null,
         qiyin: null,
+        oyin: null,
+        element: null,
+      });
+    case "GAME":
+      return wizardQuery(params, {
+        qadam: "tasdiq",
+        oyin: paramForGameKind(resolved.gameKind),
+        element: resolved.itemCount,
+        daqiqa: null,
+        savol: null,
+        turlar: null,
+        qiyin: null,
+        slayd: null,
       });
     case "LESSON_PLAN":
       return wizardQuery(params, {
@@ -444,6 +559,8 @@ export function confirmQuery(params: WizardParams): Record<string, string> {
         turlar: null,
         qiyin: null,
         slayd: null,
+        oyin: null,
+        element: null,
       });
   }
 }
@@ -486,6 +603,8 @@ const RetryParams = z.object({
   kinds: z.array(z.enum(QUESTION_KINDS)).optional(),
   difficulty: z.enum(DIFFICULTIES).optional(),
   slideCount: z.number().int().optional(),
+  gameKind: z.enum(GAME_KINDS).optional(),
+  itemCount: z.number().int().optional(),
 });
 
 /**
@@ -523,6 +642,8 @@ export function wizardQueryFromDocument(doc: {
     turlar: null,
     qiyin: null,
     slayd: null,
+    oyin: null,
+    element: null,
   };
 
   switch (doc.type) {
@@ -541,6 +662,17 @@ export function wizardQueryFromDocument(doc: {
       base.slayd =
         saved.slideCount !== undefined && SLIDE_COUNTS.includes(saved.slideCount)
           ? saved.slideCount
+          : null;
+      break;
+    case "GAME":
+      base.oyin = saved.gameKind === undefined ? null : paramForGameKind(saved.gameKind);
+      // Chegaradan tashqari son tashlanadi — `parseWizardParams` uni
+      // baribir rad etardi va qadam `param` ga tushardi.
+      base.element =
+        saved.gameKind !== undefined &&
+        saved.itemCount !== undefined &&
+        itemCountAllowed(saved.gameKind, saved.itemCount)
+          ? saved.itemCount
           : null;
       break;
     case "LESSON_PLAN":

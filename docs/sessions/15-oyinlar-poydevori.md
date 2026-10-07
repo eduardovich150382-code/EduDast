@@ -60,6 +60,15 @@ ko'chira olmaydi). `?variant=N` bilan boshqa urug'.
 `game` bloki `lib/documents/blocks.ts` ga: `{ id, type:"game", kind,
 content, seed }`.
 
+> **Bajarilganda chetlanish (kelishilgan).** Blokda yuqori darajadagi `kind`
+> YO'Q — u faqat `content` ichidagi diskriminator
+> (`content: z.discriminatedUnion("kind", [...])`), o'qish
+> `block.content.kind`. Sabab: `kind` ni ikki joyda saqlash ikkita haqiqat
+> manbai va drift xavfi, ularni sinxron tutish uchun `.refine` kerak
+> bo'lardi. Yutuq esa yo'q — blok baribir `contentJson` ichidagi JSON,
+> `kind` ustun emas, ya'ni `block.kind` ham, `block.content.kind` ham bir
+> xil blobni ochishni talab qiladi.
+
 ### 5. Dastlabki uchta o'yin
 
 **`lib/games/wheel.ts` — Omad g'ildiragi**
@@ -70,6 +79,15 @@ chiqadi, javobni ochish tugmasi. Varaq yo'q.
 **`lib/games/word-search.ts` — So'z qidirish**
 12×12 panjara. So'zlar 8 yo'nalishda joylashadi, qolgan kataklar tasodifiy
 harflar bilan to'ldiriladi (seeded).
+
+> **Bajarilganda qo'shilgan shift.** `min(8).max(14)` va so'z uzunligi
+> `max(10)` birgalikda 14×10 = 140 harfga ruxsat berardi — 144 katakli
+> panjaraga 97% zichlik. O'lchovda (300 urug') 9% holatda so'z joylashmay
+> qolardi, ya'ni sxema algoritm bajara olmaydigan mazmunni qabul qilardi.
+> Shuning uchun `MAX_TOTAL_LETTERS = 112` (o'lchovda nol) sxemaga ham
+> qo'shildi — `lib/games/grid.ts` dagi o'lchov jadvaliga qarang. Shu bilan
+> "ro'yxatdagi har so'z panjarada bor" kafolati sxemadan o'tgan HAR mazmun
+> uchun amal qiladi.
 Doska: **so'zning birinchi va oxirgi harfini ketma-ket bosish** (skrinshotdagi
 mexanika — smart doskada barmoq bilan ishlaydi). Topilgan so'z yashil
 bo'ladi, BALL oshadi.

@@ -1,3 +1,15 @@
+import {
+  GRID_WORD_MAX,
+  MIN_WORD_LENGTH,
+  TILE_WORD_MAX,
+} from "@/lib/games/alphabet";
+import {
+  PREFERRED_WORD_MAX,
+  PREFERRED_WORD_MIN,
+  WORD_REQUEST_BUFFER,
+} from "@/lib/games/grid";
+import type { GameKind } from "@/lib/games/types";
+
 /**
  * Generatsiya promptlarining MATNI.
  *
@@ -283,4 +295,147 @@ export function slidesTail(slideCount: number): string {
     `Slayd soni: ${String(slideCount)} ta — aynan shuncha bo'lsin.`,
     "Bitta slaydda 6 tadan ortiq punkt bo'lmasin.",
   ].join("\n");
+}
+/**
+ * O'yin mazmuni qoidalari (15-sessiya).
+ *
+ * BU QO'LLANMA FAQAT MAZMUN HAQIDA. Panjara, aralashma va joylashuv modeldan
+ * SO'RALMAYDI — ular `lib/games/*.ts` da urug'dan hisoblanadi. Sabab
+ * spetsifikatsiyada: model kesishgan harflarni deyarli hech qachon to'g'ri
+ * qilmaydi va natijani tekshirib ham bo'lmaydi.
+ *
+ * HARF CHEKLOVLARI `lib/games/alphabet.ts` DAGI `normalizeWord` BILAN
+ * BOG'LANGAN. Shu yerdagi matn o'zgarsa u funksiyani ham ko'rib chiq:
+ * ikkisi ajralsa model yaroqsiz so'z yozadi, `checkGameContent` esa
+ * bosqichni yiqitadi va o'qituvchi sababsiz "qayta urinib ko'ring" oladi.
+ */
+export const GAME_GUIDE = `## Sinf o'yini uchun talablar
+
+Sen bu safar dars ishlanma, test yoki taqdimot emas, SINF O'YINI uchun mazmun tuzasan. O'yin smart doskada (bitta katta teginishli ekran) o'ynaladi yoki A4 varaq sifatida chop etiladi. O'quvchilarda alohida qurilma YO'Q — ular doska oldiga chiqadi yoki varaqda ishlaydi.
+
+ENG MUHIM TUSHUNCHA: o'yin test emas. Test bilimni O'LCHAYDI, o'yin esa mustahkamlaydi va sinfni jonlantiradi. Shuning uchun savol "kim ko'proq biladi" degan musobaqa bo'lmasin — har o'quvchi javob topishga urinib ko'rishi mumkin bo'lsin.
+
+### So'zlar uchun harf qoidalari
+
+So'z qidirish va anagramma o'yinlarida so'z PANJARAGA yoki HARF PLITKALARIGA tushadi, shuning uchun u faqat harflardan iborat bo'lishi kerak:
+
+- Faqat bitta so'z. Ikki so'zli ibora ("issiq havo"), chiziqcha ("ko'k-sariq"), raqam, tinish belgisi va qisqartma YARAMAYDI.
+- O'zbek lotin alifbosi. "w" harfi yo'q.
+- Apostrofli harflar (o', g') MUMKIN — ular panjarada apostrofsiz yoziladi: "o'quvchi" panjarada OQUVCHI bo'ladi.
+- ch va sh digraflari MUMKIN va tabiiy: "chiziq", "uchburchak", "shamol".
+- Uzunlik shifti O'YIN TURIGA QARAB farq qiladi (pastdagi bo'limlarda aytilgan): so'z qidirishda panjara kattaligi cheklaydi, anagrammada esa cheklov ancha keng. Bir xil harfdan iborat so'z hech qaysisida yaramaydi.
+- So'zning o'zagi mavzuga tegishli bo'lsin: "doira", "radius", "kvadrat" — ha; "narsa", "yaxshi" — yo'q.
+
+Bu qoidalarga tushmaydigan so'zni YOZMA. Uning o'rniga mavzudan boshqa so'z tanla — ro'yxat to'liq bo'lishi kerak.
+
+### So'z qidirish
+
+So'zlar 12x12 panjaraga joylashadi, ya'ni jami 144 katak bor. Shuning uchun UZUNLIK JAMI ham cheklanadi: so'zlar qancha uzun bo'lsa, shuncha kam so'z sig'adi.
+
+HAR BIR SO'Z 4-8 HARFDAN BO'LSIN. Bu eng muhim cheklov: bitta 12 harfli so'z panjaraning bir qatorini to'liq egallaydi va qolgan so'zlarga joy qoldirmaydi. Uzun atama o'rniga uning o'zagini ol — "balandliklar" emas, "balandlik"; "koordinatalar" emas, "kesma". Agar mavzuda faqat uzun atamalar bo'lsa, ularning qisqa sinonimini yoki tarkibiy qismini tanla.
+
+To'rt harfdan qisqa so'z ham yaramaydi: uch harfli so'z 12x12 panjarada tasodifan ham paydo bo'lib qoladi va bola uni "topgan" bo'lib hisoblaydi.
+
+PANJARANI O'ZING TUZMA. Faqat so'zlar ro'yxatini ber; joylashuv va to'ldirish harflari keyin hisoblanadi.
+
+### Anagramma
+
+Har element — bitta so'z va uning TA'RIFI. Bola ta'rifni o'qib, aralashgan harflardan so'zni tiklaydi.
+
+UZUNLIK SHIFTI BU YERDA KENG: 3 dan 16 harfgacha. Anagrammada panjara yo'q — harflar plitkada turadi, shuning uchun uzun atamadan qo'rqma. Aksincha: "kondensatsiya", "trayektoriya", "ishqalanish" kabi mavzuning asosiy atamalari aynan shu o'yinga mos, chunki so'z qidirishda ular panjaraga sig'maydi. Qisqartirib "kondensat" deb yozishning hojati yo'q.
+
+Lekin BITTA SO'Z sharti qoladi: "issiq havo" yoki "solishtirma issiqlik" kabi qo'shma ibora plitkalarga bo'linganda bo'sh joy yo'qoladi va bola so'zni tiklay olmaydi.
+
+Ta'rif so'zning o'zini ichiga OLMASIN: "doira — doira shaklidagi shakl" javobni oshkor qiladi. "Markazdan barcha nuqtalari teng uzoqlikdagi yopiq chiziq" deb yoz.
+
+Ta'rif qisqa bo'lmasin: bir-ikki so'zli ta'rif ("shakl", "o'lcham") topishga yetmaydi va o'yin taxminga aylanadi. Bir to'liq jumla yoz.
+
+HARFLARNI ARALASHTIRMA. Faqat asl so'zni va ta'rifni ber.
+
+### Omad g'ildiragi
+
+Aynan 8 sektor. Har sektorda KATEGORIYA, SAVOL va JAVOB bor.
+
+Kategoriya — sektor yorlig'i, g'ildirakda kichik joyga sig'adi: 1-2 so'z ("Formulalar", "Ta'riflar", "Hisoblash"). Kategoriyalar TAKRORLANMASIN — sakkiztasi ham boshqa-boshqa bo'lsin.
+
+Savol og'zaki javob beriladigan bo'lsin: o'quvchi doska oldida turib aytadi. Shuning uchun uzun hisob-kitob talab qiladigan savol yozma — javob bir-ikki jumlada aytilsin.
+
+Javob TO'LIQ va ANIQ bo'lsin: o'qituvchi uni ekranda ko'rib, o'quvchining javobini shunga solishtiradi. "Ha" yoki "To'g'ri" yetarli emas — nima uchun to'g'ri ekanini ham yoz.
+
+Sektorlar qiyinligi bo'yicha aralash bo'lsin: ikki-uchtasi oson (eslab qolish), qolgani tushunish va qo'llash darajasida. Hammasi qiyin bo'lsa o'yin to'xtab qoladi.`;
+
+/** O'yin turlarining promptdagi nomi — modelga shu atama ketadi. */
+const GAME_LABEL: Record<GameKind, string> = {
+  wheel: "omad g'ildiragi",
+  "word-search": "so'z qidirish",
+  anagram: "anagramma",
+};
+
+/**
+ * O'yinga xos parametrlar — `teacherParams` dan keyin qo'shiladi.
+ *
+ * JAMI HARF SHIFTI faqat so'z qidirishda aytiladi: anagrammada panjara yo'q,
+ * ya'ni u yerda shu chegara ma'nosiz va bekorga token olardi. Son
+ * `MAX_TOTAL_LETTERS` dan o'qiladi, qotirilmaydi — sxema shifti o'zgarsa
+ * prompt o'zi moslashadi va model sxemadan o'tmaydigan mazmun yozmaydi.
+ */
+export function gameTail(input: { gameKind: GameKind; itemCount: number }): string {
+  const lines = ["", `O'yin turi: ${GAME_LABEL[input.gameKind]}.`];
+
+  if (input.gameKind === "wheel") {
+    lines.push(`Sektor soni: ${String(input.itemCount)} ta — aynan shuncha bo'lsin.`);
+    lines.push("Kategoriyalar takrorlanmasin.");
+    return lines.join("\n");
+  }
+
+  if (input.gameKind === "word-search") {
+    /*
+     * SO'Z QIDIRISHDA ZAPAS BILAN SO'RALADI — "aynan N ta" EMAS.
+     *
+     * Ilgari bu yerda "Element soni: N ta — aynan shuncha bo'lsin"
+     * turardi va u bosqich ko'rsatmasidagi "N+4 ta so'z" bilan
+     * QARAMA-QARSHI edi: tail SISTEMA promptida, ko'rsatma esa
+     * `messages` da, model esa sistemaga ishonadi va aynan N ta
+     * qaytaradi. O'lchovda ko'rindi: ikki generatsiya 10 ta so'z berib
+     * yiqildi, uchinchisi 14 ta berib o'tdi.
+     *
+     * Har so'z uzunligi SXEMA SHIFTI bilan aytiladi (`GRID_WORD_MAX`),
+     * tavsiya oralig'i esa alohida: o'zbek fizika terminologiyasi uzun
+     * (`ishqalanish` 11, `trayektoriya` 12), ya'ni qat'iy 4-8 bajarilmaydi
+     * va uni "shart" qilib qo'yish foydasiz. Shift — bajarilishi kerak
+     * bo'lgan narsa, oraliq — afzal ko'rilgani.
+     */
+    lines.push(
+      `So'z soni: ${String(input.itemCount + WORD_REQUEST_BUFFER)} ta ber — o'yinga eng mos ${String(input.itemCount)} tasi tanlanadi.`,
+    );
+    lines.push("So'zlar takrorlanmasin.");
+    lines.push(
+      `Har so'z BITTA so'z va ${String(MIN_WORD_LENGTH)}-${String(GRID_WORD_MAX)} harf bo'lsin — uzun atama 12x12 panjaraga sig'maydi va tashlanadi.`,
+    );
+    lines.push(
+      `Afzali ${String(PREFERRED_WORD_MIN)}-${String(PREFERRED_WORD_MAX)} harf: qisqa so'zlar panjarada chiroyli kesishadi.`,
+    );
+    return lines.join("\n");
+  }
+
+  /*
+   * ANAGRAMMADA UZUNLIK SHIFTI YUQORI — panjara yo'q.
+   *
+   * Harflar plitkada turadi, ya'ni uzunlikni cheklash uchun geometrik
+   * sabab yo'q. `kondensatsiya` (13), `trayektoriya` (12) kabi atamalar
+   * aynan anagrammaga tushishi kerak: so'z qidirishda ular tashlanadi,
+   * bu esa o'yinni mavzuning asosiy atamalaridan mahrum qilardi.
+   *
+   * "BITTA SO'Z" sharti esa SAQLANADI va shart: qo'shma ibora
+   * ("issiq havo") plitkalarga bo'linganda bo'sh joy yo'qoladi va bola
+   * so'zni tiklay olmaydi.
+   */
+  lines.push(`Element soni: ${String(input.itemCount)} ta — aynan shuncha bo'lsin.`);
+  lines.push("So'zlar takrorlanmasin.");
+  lines.push(
+    `Har so'z BITTA so'z va ${String(MIN_WORD_LENGTH)}-${String(TILE_WORD_MAX)} harf bo'lsin — qo'shma ibora yaramaydi.`,
+  );
+  lines.push("Uzun atamadan qo'rqma: harflar plitkada turadi, panjara yo'q.");
+
+  return lines.join("\n");
 }

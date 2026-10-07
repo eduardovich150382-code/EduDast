@@ -106,6 +106,36 @@ function lines(block: Block): string[] {
       if (block.notes !== undefined) out.push(`Izoh: ${block.notes}`);
       return out;
     }
+
+    /**
+     * O'yin bloki — FAQAT MAZMUN, yorliqsiz.
+     *
+     * "Savol:", "Javob:" kabi yorliq QO'YILMAYDI: bu funksiya `lib/` ichida
+     * yashaydi va 1-qoida (hardcode matn yo'q) unga ham tegishli. Qolgan
+     * bloklar yorliqni ko'rsatish qatlamiga qoldiradi, bu ham shunday.
+     *
+     * Panjara CHIQMAYDI — u `seed` dan hisoblanadigan tasodifiy harflar
+     * to'plami, ya'ni sifat bahosiga faqat shovqin qo'shardi (kalit so'z
+     * qamrovi va markdown detektori harflar ustida ma'nosiz ishlardi) va
+     * eksport matnini ham o'qilmas qilardi.
+     */
+    case "game": {
+      const content = block.content;
+      switch (content.kind) {
+        case "wheel":
+          return content.sectors.flatMap((sector) => [
+            sector.category,
+            sector.question,
+            sector.answer,
+          ]);
+        case "word-search":
+          // So'zlar — HAR BIRI alohida satr: bir satrga qo'shilsa sifat
+          // bahosidagi "juda uzun jumla" qoidasi noto'g'ri ishga tushardi.
+          return [...content.words];
+        case "anagram":
+          return content.items.flatMap((item) => [item.word, item.clue]);
+      }
+    }
   }
 }
 

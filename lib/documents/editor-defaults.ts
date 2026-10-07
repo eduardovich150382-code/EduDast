@@ -114,5 +114,22 @@ export function newBlock(
     // bo'sh satr bilan tug'ilgan blok butun hujjat saqlanishini bloklardi.
     case "slide":
       return { id, type, layout: "bullets", title: labels.heading, bullets: [labels.item] };
+
+    /**
+     * O'yin bloki QO'LDA QO'SHILMAYDI — `answerKey` naqshi.
+     *
+     * Sxema eng kichik o'yin uchun ham 6 ta TURLI, normallashgan so'z va
+     * ularning ta'riflarini talab qiladi (`lib/games/content.ts`). Soxta
+     * namuna so'zlar bilan to'ldirish sxemadan o'tardi, lekin natija
+     * o'ynab bo'lmaydigan o'yin bo'lardi: o'qituvchi oltita "NAMUNA" ni
+     * birma-bir tahrirlashi kerak edi va biri qolib ketsa varaq shu holda
+     * chop etilardi.
+     *
+     * O'yin SEHRGAR orqali yaratiladi — u mazmunni mavzudan oladi. Qo'shish
+     * menyusi shu `null` ni ko'rib bandni `add.needsWizard` izohi bilan
+     * o'chirilgan holatda ko'rsatadi.
+     */
+    case "game":
+      return null;
   }
 }

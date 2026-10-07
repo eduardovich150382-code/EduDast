@@ -42,6 +42,13 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 
 &#x20;  `bg-\[#123456]` yoki `text-purple-500` — taqiqlanadi.
 
+&#x20;  \*\*Istisno (o'yinlar):\*\* `components/games/**` — emoji va erkin ranglar
+&#x20;  ruxsat etiladi. Sabab: smart doskadagi o'yin bolalar uchun bayramona
+&#x20;  ko'rinishi kerak, "issiq qog'oz" palitrasi bu vazifani bajarmaydi.
+&#x20;  Qolgan barcha joyda 2 va 10-qoidalar kuchida. Ikonka sifatida baribir
+&#x20;  `lucide-react` afzal: emoji har platformada turlicha ko'rinadi, ba'zi
+&#x20;  smart doskalarda umuman chiqmaydi.
+
 3\. \*\*Har LLM chaqiruvida `costUsd`, `tokensIn`, `tokensOut`, `modelUsed` bazaga
 
 &#x20;  yozilishi SHART.\*\* Bu unutilgan PR merge qilinmaydi.
@@ -73,6 +80,26 @@ o'qituvchisi, telefondan, o'zbek tilida (lotin va kirill).
 9\. \*\*Sirlar faqat `.env` da.\*\* `.env.example` yangilanib boradi.
 
 10\. \*\*Emoji ikonka sifatida ishlatilmaydi\*\* — faqat `lucide-react`, 1.5px stroke.
+
+11\. \*\*Komponent reyestrida (`kind -> Component` switch) qaytish turi
+&#x20;  MAJBURAN annotatsiya qilinadi: `): ReactElement`.\*\* Annotatsiyasiz
+&#x20;  TypeScript `undefined` qaytishga ruxsat beradi, ya'ni `default`
+&#x20;  tarmog'ining yo'qligi HECH NARSANI kafolatlamaydi — yangi tur
+&#x20;  qo'shilganda blok ekranda jimgina yo'qoladi.
+
+&#x20;  `.map()` ichidagi switch uchun callback'ga qo'yiladi:
+&#x20;  `blocks.map((block): ReactElement => { ... })`.
+
+&#x20;  \*\*Tekshirish:\*\* bitta `case` ni vaqtincha o'chirib `pnpm typecheck`
+&#x20;  yugurtir. TS2366 ("Function lacks ending return statement") chiqmasa —
+&#x20;  kafolat yo'q. 15-sessiyada uch fayl aynan shu holatda topildi
+&#x20;  (`components/editor/blocks/index.tsx`,
+&#x20;  `components/generation/document-blocks.tsx`,
+&#x20;  `components/slides/layouts/index.tsx`) — izohlarida "TypeScript shu
+&#x20;  yerda yiqiladi" deb yozilgan, lekin yiqilmagan.
+
+&#x20;  `lib/` ichidagi switch'larga qoida KERAK EMAS: ular `string`/`Block`
+&#x20;  kabi aniq tur qaytargani uchun yetishmagan tarmoq allaqachon xato beradi.
 
 
 

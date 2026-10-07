@@ -1,6 +1,8 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { AnswerKeyBlock, type QuestionRef } from "@/components/editor/blocks/answer-key-block";
+import { GameBlock } from "@/components/editor/blocks/game-block";
 import { HeadingBlock } from "@/components/editor/blocks/heading-block";
 import { HomeworkBlock } from "@/components/editor/blocks/homework-block";
 import { MaterialsBlock, ObjectivesBlock } from "@/components/editor/blocks/items-block";
@@ -18,20 +20,30 @@ import type { Block } from "@/lib/documents/blocks";
  * Blok turi -> tahrirlagich.
  *
  * `default` TARMOG'I ATAYLAB YO'Q (`components/generation/document-blocks.tsx`
- * bilan bir xil sabab): `Block` union'iga o'n uchinchi tur qo'shilsa
- * TypeScript aynan shu yerda yiqiladi va yangi tur jimgina tahrirsiz
- * qolib ketmaydi.
+ * bilan bir xil sabab): `Block` union'iga yangi tur qo'shilsa TypeScript
+ * aynan shu yerda yiqiladi va yangi tur jimgina tahrirsiz qolib ketmaydi.
+ *
+ * QAYTISH TURI (`: ReactElement`) SHU KAFOLATNING O'ZI — izoh emas.
+ * Annotatsiyasiz React komponenti `undefined` qaytarishi mumkin, ya'ni
+ * `default` yo'qligi HECH NARSANI ushlamaydi: yetishmagan `case` shunchaki
+ * `undefined` beradi va blok ekranda jimgina yo'qoladi. 15-sessiyada
+ * `game` turi qo'shilganda aynan shu holat yuzaga chiqdi — `tsc` jim
+ * o'tib ketdi. Annotatsiya bilan yetishmagan tarmoq "Function lacks ending
+ * return statement" xatosiga aylanadi.
  */
 export function BlockEditor({
   block,
   questions,
+  documentId,
   onChange,
 }: {
   block: Block;
+  /** `game` kartasidagi doska/varaq havolalari uchun. */
+  documentId: string;
   /** `answerKey` havolalari uchun hujjatdagi savollar. */
   questions: readonly QuestionRef[];
   onChange: (block: Block) => void;
-}) {
+}): ReactElement {
   switch (block.type) {
     case "heading":
       return <HeadingBlock block={block} onChange={onChange} />;
@@ -59,5 +71,10 @@ export function BlockEditor({
       return <NoteBlock block={block} onChange={onChange} />;
     case "slide":
       return <SlideBlock block={block} onChange={onChange} />;
+    // `onChange` uzatiladi, lekin `GameBlock` uni ISHLATMAYDI: karta faqat
+    // o'qish uchun (sabab o'z faylida). Shartnomadan chiqmaslik uchun prop
+    // saqlanadi — kelajakda tahrirlash qo'shilsa imzo o'zgarmaydi.
+    case "game":
+      return <GameBlock block={block} documentId={documentId} onChange={onChange} />;
   }
 }

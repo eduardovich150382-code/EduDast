@@ -271,7 +271,19 @@
     "stagePart": "{label} ({index}/{count})",
     "stageDone": "выполнено",
     "stageCurrent": "выполняется",
-    "stagePending": "в очереди"
+    "stagePending": "в очереди",
+    "typeGame": "Игра",
+    "typeGameHint": "Игра для интерактивной доски и лист для печати.",
+    "titleGame": "Создать игру",
+    "descriptionGame": "Выберите тему — будет подготовлена игра по учебной программе.",
+    "gameKind": "Тип игры",
+    "gameKindLabel": {
+      "wheel": "Колесо удачи",
+      "word-search": "Поиск слов",
+      "anagram": "Анаграмма"
+    },
+    "itemCount": "Количество элементов",
+    "itemCountLabel": "{count} элем."
   },
   "Documents": {
     "notFound": "Документ не найден.",
@@ -314,7 +326,8 @@
     "type": {
       "LESSON_PLAN": "План урока",
       "TEST": "Тест",
-      "SLIDES": "Презентация"
+      "SLIDES": "Презентация",
+      "GAME": "Игра"
     },
     "qualityOk": "Качество хорошее",
     "qualityCheck": "Требует проверки",
@@ -348,7 +361,8 @@
     "add": {
       "action": "Добавить блок",
       "sheetTitle": "Какой блок добавить?",
-      "needsQuestion": "Сначала нужен блок с вопросом"
+      "needsQuestion": "Сначала нужен блок с вопросом",
+      "needsWizard": "Блок игры создаётся через мастер"
     },
     "actions": {
       "moveUp": "Вверх",
@@ -372,7 +386,8 @@
       "rubric": "Критерии оценивания",
       "homework": "Домашнее задание",
       "note": "Примечание",
-      "slide": "Слайд"
+      "slide": "Слайд",
+      "game": "Игра"
     },
     "field": {
       "level": "Уровень",
@@ -411,7 +426,8 @@
       "addColumn": "Добавить столбец",
       "removeColumn": "Удалить столбец",
       "addStage": "Добавить этап",
-      "removeStage": "Удалить этап"
+      "removeStage": "Удалить этап",
+      "gameItems": "{count} элем."
     },
     "enum": {
       "level": {
@@ -493,6 +509,45 @@
     "presenterExit": "Обычный режим",
     "nextSlide": "Далее",
     "deckHint": "Переключайте слайды стрелками или свайпом."
+  },
+  "Games": {
+    "open": "Режим игры",
+    "openSheet": "Распечатать лист",
+    "title": "Игра",
+    "back": "Вернуться к документу",
+    "empty": "В этом документе нет игры.",
+    "noSheet": "Для этой игры нет листа.",
+    "kind": {
+      "wheel": "Колесо удачи",
+      "word-search": "Поиск слов",
+      "anagram": "Анаграмма"
+    },
+    "score": "Баллы: {score}",
+    "restart": "Сначала",
+    "done": "Игра завершена",
+    "variant": "Вариант {variant}",
+    "print": "Печать",
+    "printHint": "В окне печати браузера выберите «Сохранить как PDF».",
+    "answerKey": "Ключ к ответам",
+    "spin": "Крутить",
+    "spinning": "Крутится…",
+    "reveal": "Показать ответ",
+    "answer": "Ответ",
+    "wheelHint": "Крутите колесо, чтобы получить вопрос.",
+    "words": "Слова для поиска",
+    "found": "Найдено: {found}/{total}",
+    "wordSearchHint": "Нажмите первую и последнюю буквы слова.",
+    "check": "Проверить",
+    "clear": "Очистить",
+    "skip": "Пропустить",
+    "questionOf": "Вопрос {index}/{total}",
+    "correct": "Верно!",
+    "wrong": "Попробуйте снова.",
+    "clue": "Определение",
+    "letters": "Буквы",
+    "anagramHint": "Нажимайте буквы, чтобы составить слово.",
+    "sheetWords": "Слова",
+    "sheetAnswers": "Ответы"
   },
   "Classes": {
     "title": "Мои классы",

@@ -3,7 +3,9 @@ import { charge, release } from "@/lib/credits/ledger";
 import { DocumentContent, type Block } from "@/lib/documents/blocks";
 import { claimStage, commitStage, MAX_ATTEMPTS } from "@/lib/documents/lifecycle";
 import { prisma } from "@/lib/db";
-import { isLlmError, runLlm, type SystemPart } from "@/lib/llm";
+import { gameSeed } from "@/lib/games/seed";
+import { GAME_KINDS } from "@/lib/games/types";
+import { isLlmError, runLlm, type SystemPart, type Tier } from "@/lib/llm";
 import {
   buildPlan,
   checkSkeleton,
@@ -43,7 +45,19 @@ import {
   SlidesOutlineOut,
 } from "./plans-slides";
 import {
+  AnagramOut,
+  buildGamePlan,
+  checkGameContent,
+  gameBlocks,
+  gameStageInstruction,
+  WheelOut,
+  WordSearchOut,
+  type GameOut,
+} from "./plans-game";
+import {
   DIFFICULTIES,
+  GAME_GUIDE,
+  gameTail,
   LESSON_GUIDE,
   lessonTail,
   QUESTION_KINDS,
@@ -122,6 +136,17 @@ const SlidesParams = BaseParams.extend({
 });
 
 /**
+ * O'yin parametrlari — `skeleton`/`outline` ANALOGI YO'Q.
+ *
+ * Reja bitta bosqichli (`buildGamePlan`), ya'ni keyingi bosqichga
+ * uzatiladigan oraliq natija ham yo'q va `paramsPatch` kerak bo'lmaydi.
+ */
+const GameParams = BaseParams.extend({
+  gameKind: z.enum(GAME_KINDS),
+  itemCount: z.number().int().min(1),
+});
+
+/**
  * Bitta generatsiya ishi — tur va uning parametrlari BIRGA.
  *
  * `inputParams` ning o'zida `type` yo'q (u `Document.type` da), shuning
@@ -132,7 +157,8 @@ const SlidesParams = BaseParams.extend({
 type Job =
   | { type: "LESSON_PLAN"; params: z.infer<typeof LessonParams> }
   | { type: "TEST"; params: z.infer<typeof TestParams> }
-  | { type: "SLIDES"; params: z.infer<typeof SlidesParams> };
+  | { type: "SLIDES"; params: z.infer<typeof SlidesParams> }
+  | { type: "GAME"; params: z.infer<typeof GameParams> };
 
 function readJob(type: string, inputParams: unknown): Job | null {
   if (type === "LESSON_PLAN") {
@@ -144,6 +170,9 @@ function readJob(type: string, inputParams: unknown): Job | null {
   if (type === "SLIDES") {
     return { type: "SLIDES", params: SlidesParams.parse(inputParams) };
   }
+  if (type === "GAME") {
+    return { type: "GAME", params: GameParams.parse(inputParams) };
+  }
   return null;
 }
 
@@ -151,6 +180,7 @@ const FEATURE: Record<Job["type"], GenerationFeature> = {
   LESSON_PLAN: "lesson-plan",
   TEST: "test",
   SLIDES: "slides",
+  GAME: "game",
 };
 
 /**
@@ -164,6 +194,7 @@ const GUIDES: Record<Job["type"], string> = {
   LESSON_PLAN: LESSON_GUIDE,
   TEST: TEST_GUIDE,
   SLIDES: SLIDES_GUIDE,
+  GAME: GAME_GUIDE,
 };
 
 /** Turga xos parametr quyrug'i — KESHDAN TASHQARI qism. */
@@ -177,6 +208,8 @@ function tailFor(job: Job): string {
       });
     case "SLIDES":
       return slidesTail(job.params.slideCount);
+    case "GAME":
+      return gameTail({ gameKind: job.params.gameKind, itemCount: job.params.itemCount });
     case "LESSON_PLAN":
       return lessonTail(job.params.durationMinutes);
   }
@@ -222,6 +255,13 @@ function instructionFor(job: Job, spec: StageSpec): string {
         slideCount: job.params.slideCount,
         outline: job.params.outline ?? null,
       });
+    // `spec` KERAK EMAS: reja bitta bosqichli, ya'ni bosqichga qarab
+    // o'zgaradigan ko'rsatma yo'q.
+    case "GAME":
+      return gameStageInstruction({
+        kind: job.params.gameKind,
+        itemCount: job.params.itemCount,
+      });
     case "LESSON_PLAN":
       return stageInstruction(spec, {
         durationMinutes: job.params.durationMinutes,
@@ -241,6 +281,12 @@ function scoreSpecFor(job: Job): ScoreSpec {
       };
     case "SLIDES":
       return { type: "SLIDES", slideCount: job.params.slideCount };
+    case "GAME":
+      return {
+        type: "GAME",
+        gameKind: job.params.gameKind,
+        itemCount: job.params.itemCount,
+      };
     case "LESSON_PLAN":
       return { type: "LESSON_PLAN", durationMinutes: job.params.durationMinutes };
   }
@@ -253,6 +299,8 @@ function planFor(job: Job) {
       return buildTestPlan(job.params.questionCount);
     case "SLIDES":
       return buildSlidesPlan(job.params.slideCount);
+    case "GAME":
+      return buildGamePlan();
     case "LESSON_PLAN":
       return buildPlan(job.params.skeleton?.stages.length ?? null);
   }
@@ -404,10 +452,29 @@ type Produced =
     }
   | { ok: false; reason: string };
 
+/**
+ * Turga xos model darajasi.
+ *
+ * ILGARI `LlmBase.tier` LITERAL `"mid"` EDI va hamma tur uchun bir xil
+ * turardi. 15-sessiya spetsifikatsiyasi o'yinlar uchun `cheap` ni
+ * belgilaydi va mazmun turi ham shunga mos: so'z–ta'rif juftligi uchun
+ * `mid` ortiqcha xarajat.
+ *
+ * `Record<Job["type"], Tier>` — yangi hujjat turi `tier` siz qolmaydi.
+ * `lib/llm/router.ts` zanjirni o'zi quradi, ya'ni `cheap` ham fallback'ga
+ * ega (`lowerTier`).
+ */
+const TIER: Record<Job["type"], Tier> = {
+  LESSON_PLAN: "mid",
+  TEST: "mid",
+  SLIDES: "mid",
+  GAME: "cheap",
+};
+
 /** `runLlm` ning bosqichdan bosqichga o'zgarmaydigan qismi. */
 type LlmBase = {
   purpose: string;
-  tier: "mid";
+  tier: Tier;
   userId: string;
   documentId: string;
   system: SystemPart[];
@@ -432,7 +499,7 @@ async function produceBlocks(args: {
 
   const base: LlmBase = {
     purpose: stagePurpose(spec, FEATURE[job.type]),
-    tier: "mid",
+    tier: TIER[job.type],
     userId,
     // A/B taqsimoti shundan hashlanadi — bitta hujjatning HAMMA bosqichi
     // bir xil provayderga tushadi, aks holda kesh va muzlatilgan
@@ -447,9 +514,62 @@ async function produceBlocks(args: {
       return produceTestBlocks(spec, base, job.params);
     case "SLIDES":
       return produceSlidesBlocks(spec, base, job.params);
+    case "GAME":
+      return produceGameBlocks(spec, base, job.params, documentId);
     case "LESSON_PLAN":
       return produceLessonBlocks(spec, base, job.params);
   }
+}
+
+/**
+ * O'yin — BITTA bosqich, bitta `runLlm`.
+ *
+ * `documentId` KERAK: urug' shundan hisoblanadi (`gameSeed`). Blokdagi
+ * urug' 0-variant uchun, `?variant=N` esa render paytida boshqasini
+ * hisoblaydi — ikkisi bir xil funksiyadan chiqqani uchun 0-variant har
+ * doim blokdagi urug'ga teng bo'ladi.
+ */
+async function produceGameBlocks(
+  spec: StageSpec,
+  base: LlmBase,
+  params: z.infer<typeof GameParams>,
+  documentId: string,
+): Promise<Produced> {
+  const { gameKind, itemCount } = params;
+
+  // `kind` BO'YICHA TARMOQLANADI, `gameOutSchema(gameKind)` bilan bitta
+  // chaqiruv emas. Sabab turlarda: union qaytaradigan sxema `runLlm` ning
+  // generigini union'ning BIRINCHI a'zosiga bog'lab qo'yadi va natija
+  // noto'g'ri turda chiqadi. Har tarmoqda sxema KONKRET, shuning uchun
+  // `result.data` ham konkret va `as GameOut` kasti kerak bo'lmaydi.
+  //
+  // "BITTA CHAQIRUVDA BITTA `runLlm`" qoidasi saqlanadi: faqat bitta
+  // tarmoq bajariladi.
+  const out = await (async (): Promise<GameOut> => {
+    switch (gameKind) {
+      case "wheel":
+        return { kind: "wheel", out: (await runLlm({ ...base, schema: WheelOut })).data };
+      case "word-search":
+        return {
+          kind: "word-search",
+          out: (await runLlm({ ...base, schema: WordSearchOut })).data,
+        };
+      case "anagram":
+        return { kind: "anagram", out: (await runLlm({ ...base, schema: AnagramOut })).data };
+    }
+  })();
+
+  const gate = checkGameContent(out, itemCount);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
+
+  return {
+    ok: true,
+    blocks: gameBlocks(spec, {
+      result: out,
+      itemCount,
+      seed: gameSeed(documentId, 0),
+    }),
+  };
 }
 
 async function produceLessonBlocks(

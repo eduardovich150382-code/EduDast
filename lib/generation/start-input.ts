@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { UNIT_LIMITS } from "@/lib/credits/cost-table";
+import { GAME_LIMITS, UNIT_LIMITS } from "@/lib/credits/cost-table";
+import { GAME_KINDS } from "@/lib/games/types";
 import { DIFFICULTIES, QUESTION_KINDS } from "@/lib/generation/prompts";
 
 /**
@@ -66,6 +67,35 @@ export const startSchema = z.discriminatedUnion("type", [
       .min(UNIT_LIMITS.SLIDES.min)
       .max(UNIT_LIMITS.SLIDES.max),
   }),
+  z
+    .object({
+      type: z.literal("GAME"),
+      topicId: topicIdSchema,
+      gameKind: z.enum(GAME_KINDS),
+      itemCount: z.number().int().min(1),
+    })
+    /**
+     * Chegara `kind` GA BOG'LIQ, shuning uchun tekis `.min()/.max()` emas.
+     *
+     * G'ildirakda 8-8 (sektor soni qat'iy), so'z qidirishda 8-14,
+     * anagrammada 6-12 — `GAME_LIMITS` dan o'qiladi, qo'lda takrorlanmaydi.
+     * Tekis chegara qo'yilsa (masalan 6-14) o'qituvchi URL orqali 6 sektorli
+     * g'ildirak so'rashi mumkin bo'lardi va `WheelContent` ning `.length(8)`
+     * i generatsiyaning OXIRIDA yiqilardi — krediti band qilingandan keyin.
+     *
+     * Zod 4 da `.superRefine()` `ZodObject` ni saqlaydi, ya'ni bu a'zo
+     * `discriminatedUnion` ga tushadi (`lib/documents/blocks.ts:293-297`).
+     */
+    .superRefine((input, ctx) => {
+      const limit = GAME_LIMITS[input.gameKind];
+      if (input.itemCount < limit.min || input.itemCount > limit.max) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["itemCount"],
+          message: `${input.gameKind}: element soni ${String(limit.min)}-${String(limit.max)} oralig'ida bo'lishi kerak`,
+        });
+      }
+    }),
 ]);
 
 export type StartInput = z.infer<typeof startSchema>;

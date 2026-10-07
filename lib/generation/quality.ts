@@ -1,5 +1,8 @@
 import type { BlockType, DocumentContent } from "@/lib/documents/blocks";
 import { renderDocument } from "@/lib/documents/render";
+import { gameItemCount } from "@/lib/games/content";
+import type { GameKind } from "@/lib/games/types";
+import { buildWordSearch } from "@/lib/games/word-search";
 import type { BloomTargets } from "./plans-test";
 
 /**
@@ -137,7 +140,11 @@ type RuleId =
   | "slide_count"
   | "slide_bullets"
   | "slide_bullet_long"
-  | "slide_layout_title";
+  | "slide_layout_title"
+  // 15-sessiya — `GAME` turiga xos qoidalar.
+  | "game_item_count"
+  | "game_clue_short"
+  | "game_words_unplaced";
 
 export type Severity = "error" | "warn";
 
@@ -206,6 +213,21 @@ export const RULES: Record<RuleId, { severity: Severity; why: string }> = {
   slide_bullet_long: { severity: "warn", why: "Punkt proyektorda o'qish uchun uzun." },
   /** Taqdimot o'rtasidagi bosh slayd xatoga o'xshaydi, halokat emas. */
   slide_layout_title: { severity: "warn", why: "Bosh slayd ko'rinishi birinchi slaydda emas." },
+  /**
+   * 14 so'zga to'lab 11 ta olish — slayd soni bilan ayni pul masalasi,
+   * shuning uchun `error`.
+   */
+  game_item_count: { severity: "error", why: "O'yin elementlari soni so'ralganiga teng emas." },
+  /** Qisqa ta'rifli so'zni o'qituvchi o'zi to'ldiradi, o'yin ishlab turadi. */
+  game_clue_short: { severity: "warn", why: "Anagramma ta'rifi juda qisqa." },
+  /**
+   * Ro'yxatda bor, lekin panjarada yo'q so'z — topilmaydigan topshiriq.
+   *
+   * `error`: bola yo'q so'zni izlab vaqt yo'qotadi va o'yin "buzilgan"
+   * bo'lib ko'rinadi. `buildWordSearch` panjarani to'rt marta qayta quradi,
+   * ya'ni bu holat AMALDA YUZAGA CHIQMAYDI — qoida "yuz berdi" signali.
+   */
+  game_words_unplaced: { severity: "error", why: "So'z panjaraga joylashmagan." },
 };
 
 export type QualityNote = {
@@ -319,7 +341,8 @@ function note(notes: QualityNote[], rule: RuleId, code: string, message: string)
 export type ScoreSpec =
   | { type: "LESSON_PLAN"; durationMinutes: number }
   | { type: "TEST"; questionCount: number; bloomTargets: BloomTargets }
-  | { type: "SLIDES"; slideCount: number };
+  | { type: "SLIDES"; slideCount: number }
+  | { type: "GAME"; gameKind: GameKind; itemCount: number };
 
 /**
  * Sxema KAFOLATLAGAN bloklar.
@@ -357,6 +380,14 @@ const TEST_BLOCKS = [
  */
 const SLIDES_BLOCKS = ["heading", "slide"] as const satisfies readonly BlockType[];
 
+/**
+ * O'yinning majburiy bloklari.
+ *
+ * `plans-game.ts` sarlavha va BITTA `game` blokini yozadi. Ikkisidan biri
+ * yo'q bo'lsa bosqich commit bo'lmagan — aynan veto ushlaydigan holat.
+ */
+const GAME_BLOCKS = ["heading", "game"] as const satisfies readonly BlockType[];
+
 function requireBlocks(
   present: ReadonlySet<BlockType>,
   required: readonly BlockType[],
@@ -386,6 +417,8 @@ function measureStructure(
       return measureTestStructure(content, spec, notes);
     case "SLIDES":
       return measureSlidesStructure(content, spec, notes);
+    case "GAME":
+      return measureGameStructure(content, spec, notes);
     case "LESSON_PLAN":
       return measureLessonStructure(content, spec.durationMinutes, notes);
   }
@@ -869,6 +902,100 @@ function measureSlidesStructure(
   // "biz yozgan kodni biz tekshirdik" holatini yasardi — hech qachon
   // ishlamaydigan `if` va hech qachon chiqmaydigan izoh.
   // `tests/slides-blocks.test.ts` kafolatning o'zini qadab turadi.
+
+  return { raw: points / total };
+}
+
+/** Anagramma ta'rifining eng qisqa uzunligi — bundan qisqasi topishga yetmaydi. */
+const GAME_CLUE_MIN = 15;
+
+type GameBlock = Extract<DocumentContent["blocks"][number], { type: "game" }>;
+
+/**
+ * O'yin strukturasi — ATAYLAB IKKI QOIDA.
+ *
+ * `lib/games/content.ts` sxemasi juda ko'p narsani KAFOLATLAB BERADI:
+ * g'ildirakda aynan 8 ta takrorlanmas kategoriya, so'zlar normallashgan va
+ * takrorlanmaydi, anagrammada 6-12 element. Bularga qoida yozish
+ * `LESSON_BLOCKS` izohidagi "biz yozgan kodni biz tekshirdik" holatini
+ * yasardi — hech qachon ishlamaydigan `if` va hech qachon chiqmaydigan izoh.
+ *
+ * Shuning uchun faqat sxema KAFOLATLAMAYDIGAN ikki narsa tekshiriladi:
+ *   1. element soni O'QITUVCHI SO'RAGANIGA teng (sxema oraliqni biladi,
+ *      so'ralgan aniq sonni esa `spec` biladi) — bu pul masalasi;
+ *   2. anagramma ta'rifi topishga yetarlicha uzun (sxema faqat `min(1)`).
+ *
+ * "Joylashmagan so'z" qoidasi bu yerda YO'Q: u `buildWordSearch` ni
+ * chaqirishni talab qiladi va u keyingi commitda paydo bo'ladi.
+ */
+function measureGameStructure(
+  content: DocumentContent,
+  spec: Extract<ScoreSpec, { type: "GAME" }>,
+  notes: QualityNote[],
+): Measure {
+  const present = new Set(content.blocks.map((block) => block.type));
+  requireBlocks(present, GAME_BLOCKS, notes);
+
+  const games = content.blocks.filter((block): block is GameBlock => block.type === "game");
+
+  let points = 0;
+  let total = 1;
+
+  // Element soni — kredit aynan shunga qarab yechiladi (`cost-table.ts`).
+  // `reduce`: hujjatda bitta `game` bloki bo'ladi, lekin sxema buni
+  // qulflamaydi (`blocks.ts` izohi), shuning uchun jami hisoblanadi.
+  const itemCount = games.reduce((sum, block) => sum + gameItemCount(block.content), 0);
+  if (itemCount === spec.itemCount) {
+    points += 1;
+  } else {
+    note(
+      notes,
+      "game_item_count",
+      "game_item_count:mismatch",
+      `O'yin elementlari soni ${String(itemCount)}, so'ralgani ${String(spec.itemCount)}`,
+    );
+  }
+
+  // JOYLASHMAGAN SO'Z — panjara HAQIQATAN qurilib tekshiriladi.
+  //
+  // Mazmunni o'qib "so'zlar joyida" deb qabul qilish yetarli emas:
+  // joylashuv `seed` ga bog'liq, ya'ni faqat `buildWordSearch` ni
+  // chaqirgandan keyin ma'lum bo'ladi. `build` sof va 200 ms dan tez,
+  // shuning uchun bahoda chaqirish xavfsiz.
+  const unplaced = games.flatMap((block) =>
+    block.content.kind === "word-search"
+      ? buildWordSearch(block.content, block.seed).unplaced
+      : [],
+  );
+  if (unplaced.length > 0) {
+    note(
+      notes,
+      "game_words_unplaced",
+      "game_words:unplaced",
+      `${String(unplaced.length)} ta so'z panjaraga joylashmadi: ${unplaced.join(", ")}`,
+    );
+  }
+
+  // Ta'rif uzunligi — FAQAT anagrammada. G'ildirakda savol/javob, so'z
+  // qidirishda esa umuman ta'rif yo'q, ya'ni boshqa turlarda bu o'lcham
+  // ma'nosiz bo'lardi va ballni bekorga ko'tarardi.
+  const clues = games.flatMap((block) =>
+    block.content.kind === "anagram" ? block.content.items.map((item) => item.clue) : [],
+  );
+  if (clues.length > 0) {
+    total += 1;
+    const short = clues.filter((clue) => clue.length < GAME_CLUE_MIN);
+    if (short.length === 0) {
+      points += 1;
+    } else {
+      note(
+        notes,
+        "game_clue_short",
+        "game_clue:short",
+        `${String(short.length)} ta ta'rif ${String(GAME_CLUE_MIN)} belgidan qisqa`,
+      );
+    }
+  }
 
   return { raw: points / total };
 }

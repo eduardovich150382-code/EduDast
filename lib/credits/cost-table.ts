@@ -1,4 +1,5 @@
 import type { DocumentType } from "@/lib/generated/prisma/client";
+import type { GameKind } from "@/lib/games/types";
 
 /**
  * Hujjat turi + parametrlar → KREDIT narxi.
@@ -32,7 +33,8 @@ export type CostInput =
   | { type: "GUIDE" }
   | { type: "TEST"; questionCount: number }
   | { type: "SLIDES"; slideCount: number }
-  | { type: "CROSSWORD"; wordCount: number };
+  | { type: "CROSSWORD"; wordCount: number }
+  | { type: "GAME"; gameKind: GameKind; itemCount: number };
 
 /**
  * Birlik chegaralari. Generatsiya formasi (08/10/14-sessiyalar) AYNAN shu
@@ -46,6 +48,46 @@ export const UNIT_LIMITS = {
 } as const;
 
 /**
+ * O'yin element chegaralari — `kind` BO'YICHA (15-sessiya).
+ *
+ * NEGA `UNIT_LIMITS` ICHIDA EMAS: u tekis `Record<tur, {min,max,step}>`,
+ * ichiga ikkinchi qavat tiqish uning shaklini buzardi va `unitCost` ga
+ * uzatilgan joyda tur tekshiruvini yo'qotardi.
+ *
+ * BU — YAGONA MANBA. `lib/games/registry.ts` shu qiymatlarni RE-EKSPORT
+ * qiladi, qayta yozmaydi; sehrgar formasi va `startSchema` ham shundan
+ * o'qiydi. Ikkinchi nusxa paydo bo'lsa, o'qituvchi ko'rgan narx bilan
+ * yechilgan kredit farq qilardi.
+ *
+ * G'ildirakda `min === max === 8`: SVG geometriyasi 45 gradusli sektorga
+ * qurilgan (`lib/games/content.ts` dagi `.length(8)` bilan bir qarorning
+ * ikki tomoni), ya'ni element soni tanlanmaydi.
+ *
+ * SO'Z QIDIRISHDA `max === 12`, 14 EMAS — va bu panjara sig'imidan
+ * (`MAX_TOTAL_LETTERS = 112`) kelib chiqadi:
+ *
+ *   14 so'z x 8 harf = 112 — AYNAN shiftda, zapas nol.
+ *   14 so'z x 9 harf = 126 — sig'maydi.
+ *   12 so'z x 9 harf = 108 — sig'adi.
+ *
+ * O'qituvchi 14 ni tanlab, model o'rtacha 9 harfli so'zlar qaytarsa
+ * `checkGameContent` bosqichni yiqitadi. Qayta urinish YO'Q (darvoza
+ * yiqilishi `run-stage.ts` da darhol `release` + `failed`), ya'ni
+ * o'qituvchi krediti qaytsa ham "Yakunlanmadi" ni ko'radi. 12 da esa
+ * o'rtacha 9 harfga ham zapas qoladi.
+ *
+ * `lib/games/content.ts` dagi sxema 14 ga RUXSAT BERISHDA DAVOM ETADI:
+ * u bazadagi mavjud kontentni o'qiydi va algoritm 112 harf ichida 14
+ * so'zni ham bemalol joylashtiradi. Bu shift faqat O'QITUVCHI SO'RAY
+ * OLADIGAN songa tegishli.
+ */
+export const GAME_LIMITS: Record<GameKind, { min: number; max: number; step: number }> = {
+  wheel: { min: 8, max: 8, step: 8 },
+  "word-search": { min: 8, max: 12, step: 3 },
+  anagram: { min: 6, max: 12, step: 3 },
+};
+
+/**
  * Bazis narx — turning o'zi qancha LLM bosqichi talab qilishiga qarab.
  * `Record<DocumentType, number>`: sxemaga yangi tur qo'shilsa TypeScript shu
  * yerda yiqiladi, ya'ni narxsiz (bepul) tur paydo bo'lmaydi.
@@ -56,6 +98,7 @@ const BASE: Record<DocumentType, number> = {
   SLIDES: 3, // struktura + 2 yarim (14-sessiya)
   CROSSWORD: 2, // panjara mahalliy hisoblanadi, LLM faqat so'z/ta'rif beradi
   GUIDE: 4,
+  GAME: 1, // bitta `cheap` chaqiruv, panjara/aralashma mahalliy (15-sessiya)
 };
 
 /**
@@ -91,5 +134,7 @@ export function creditCost(input: CostInput): number {
       return Math.max(MIN_PRICE, base + unitCost(input.slideCount, UNIT_LIMITS.SLIDES));
     case "CROSSWORD":
       return Math.max(MIN_PRICE, base + unitCost(input.wordCount, UNIT_LIMITS.CROSSWORD));
+    case "GAME":
+      return Math.max(MIN_PRICE, base + unitCost(input.itemCount, GAME_LIMITS[input.gameKind]));
   }
 }
