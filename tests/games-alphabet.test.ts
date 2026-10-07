@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FILLER_ALPHABET,
-  MAX_WORD_LENGTH,
+  GRID_WORD_MAX,
   MIN_WORD_LENGTH,
   normalizeWord,
   WORD_ALPHABET,
@@ -27,13 +27,13 @@ describe("normalizeWord — o'zbek digraflari", () => {
     ["g'isht", "GISHT"],
     ["ng", null], // ikki harf — MIN_WORD_LENGTH dan qisqa
   ])("%s -> %s", (input, expected) => {
-    expect(normalizeWord(input)).toBe(expected);
+    expect(normalizeWord(input, GRID_WORD_MAX)).toBe(expected);
   });
 
   it("ch li so'zlar yo'qolmaydi", () => {
     const words = ["chiziq", "uchburchak", "kuch", "o'quvchi", "chap", "ochiq"];
     for (const word of words) {
-      expect(normalizeWord(word), `"${word}" tashlab ketildi`).not.toBeNull();
+      expect(normalizeWord(word, GRID_WORD_MAX), `"${word}" tashlab ketildi`).not.toBeNull();
     }
   });
 });
@@ -42,7 +42,7 @@ describe("normalizeWord — apostrof", () => {
   it.each(["o'zbek", "oʻzbek", "o’zbek", "oʼzbek"])(
     "%s uchun apostrof shakli ahamiyatsiz",
     (input) => {
-      expect(normalizeWord(input)).toBe("OZBEK");
+      expect(normalizeWord(input, GRID_WORD_MAX)).toBe("OZBEK");
     },
   );
 });
@@ -59,22 +59,22 @@ describe("normalizeWord — rad etiladigan kirish", () => {
     ["", "bo'sh satr"],
     ["abracadabraa", "juda uzun"],
   ])("%s rad etiladi (%s)", (input) => {
-    expect(normalizeWord(input)).toBeNull();
+    expect(normalizeWord(input, GRID_WORD_MAX)).toBeNull();
   });
 
   it("uzunlik chegaralari aynan ishlaydi", () => {
     // `AB` + takrorlanmaydigan harflar bilan aynan chegaraga teng so'z.
     const atMin = "ABC".slice(0, MIN_WORD_LENGTH);
-    const atMax = "ABCDEFGHIJ".slice(0, MAX_WORD_LENGTH);
-    expect(normalizeWord(atMin)).toBe(atMin);
-    expect(normalizeWord(atMax)).toBe(atMax);
-    expect(normalizeWord(`${atMax}K`)).toBeNull();
+    const atMax = "ABCDEFGHIJ".slice(0, GRID_WORD_MAX);
+    expect(normalizeWord(atMin, GRID_WORD_MAX)).toBe(atMin);
+    expect(normalizeWord(atMax, GRID_WORD_MAX)).toBe(atMax);
+    expect(normalizeWord(`${atMax}K`, GRID_WORD_MAX)).toBeNull();
   });
 
   it("natija idempotent", () => {
-    const once = normalizeWord("o'quvchi");
+    const once = normalizeWord("o'quvchi", GRID_WORD_MAX);
     expect(once).not.toBeNull();
-    expect(normalizeWord(once!)).toBe(once);
+    expect(normalizeWord(once!, GRID_WORD_MAX)).toBe(once);
   });
 });
 

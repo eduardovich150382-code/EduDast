@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { GAME_LIMITS } from "@/lib/credits/cost-table";
-import { MAX_WORD_LENGTH, MIN_WORD_LENGTH } from "@/lib/games/alphabet";
+import {
+  GRID_WORD_MAX,
+  MIN_WORD_LENGTH,
+  normalizeWord,
+  TILE_WORD_MAX,
+} from "@/lib/games/alphabet";
 import { AnagramContent, GameContent, WheelContent, WordSearchContent } from "@/lib/games/content";
+import { gameTail } from "@/lib/generation/prompts";
 import {
   MAX_TOTAL_LETTERS,
   PREFERRED_WORD_MAX,
@@ -146,7 +152,7 @@ describe("panjara sig'imi va GAME_LIMITS", () => {
    */
   it("eng yuqori son bilan ham yiqilish oynasi tor", () => {
     const max = GAME_LIMITS["word-search"].max;
-    const worst = max * MAX_WORD_LENGTH;
+    const worst = max * GRID_WORD_MAX;
     // Oyna = eng yomon holat shiftdan qancha oshadi.
     const window = Math.max(0, worst - MAX_TOTAL_LETTERS);
     expect(window, `${String(max)} so'z uchun yiqilish oynasi juda keng`).toBeLessThanOrEqual(10);
@@ -155,7 +161,7 @@ describe("panjara sig'imi va GAME_LIMITS", () => {
   it("promptdagi tavsiya oraliq sxema ichida", () => {
     // Model tavsiyani bajarsa javob HAR DOIM parse bo'lishi kerak.
     expect(PREFERRED_WORD_MIN).toBeGreaterThanOrEqual(MIN_WORD_LENGTH);
-    expect(PREFERRED_WORD_MAX).toBeLessThanOrEqual(MAX_WORD_LENGTH);
+    expect(PREFERRED_WORD_MAX).toBeLessThanOrEqual(GRID_WORD_MAX);
   });
 
   it("tavsiyani bajargan javob byudjetga SIG'ADI", () => {
@@ -163,5 +169,95 @@ describe("panjara sig'imi va GAME_LIMITS", () => {
     // aks holda prompt bajarilsa ham generatsiya yiqilardi.
     const max = GAME_LIMITS["word-search"].max;
     expect(max * PREFERRED_WORD_MAX).toBeLessThanOrEqual(MAX_TOTAL_LETTERS);
+  });
+});
+/* ------------------------------------------------------------------ */
+/* Uzunlik shifti O'YIN TURIGA QARAB                                   */
+/* ------------------------------------------------------------------ */
+
+describe("uzunlik shifti kind ga bog'liq", () => {
+  /**
+   * BU TEST REGRESSIYANI QO'RIQLAYDI.
+   *
+   * Ilgari bitta `MAX_WORD_LENGTH = 10` ikkala o'yinga ham qo'llanardi.
+   * So'z qidirishda bu to'g'ri (12x12 panjara), anagrammada esa XATO:
+   * u yerda panjara yo'q, harflar plitkada turadi. Natijada
+   * `kondensatsiya` (13), `trayektoriya` (12) kabi atamalar anagrammaga
+   * ham tusha olmasdi — holbuki aynan ular uchun anagramma eng mos
+   * o'yin, chunki so'z qidirishda ular baribir tashlanadi.
+   */
+  it("anagramma shifti so'z qidirishdan KATTA", () => {
+    expect(TILE_WORD_MAX).toBeGreaterThan(GRID_WORD_MAX);
+  });
+
+  const LONG_TERMS = ["KONDENSATSIYA", "TRAYEKTORIYA", "ISHQALANISH", "SOLISHTIRMA"];
+
+  it.each(LONG_TERMS)("%s anagrammaga TUSHADI", (word) => {
+    const content = AnagramContent.safeParse({
+      kind: "anagram",
+      items: [word, ...["CHIZIQ", "DOIRA", "TOMON", "YUZA", "HAJM"]].map((w) => ({
+        word: w,
+        clue: `${w} nimani bildiradi?`,
+      })),
+    });
+    expect(content.error?.issues ?? [], word).toEqual([]);
+  });
+
+  it.each(LONG_TERMS)("%s so'z qidirishga TUSHMAYDI", (word) => {
+    // Panjara sababi: 11-12 harfli so'z faqat to'liq qator, ustun yoki
+    // diagonalga sig'adi — ko'z bilan darhol ko'rinadi.
+    const content = WordSearchContent.safeParse({
+      kind: "word-search",
+      words: [word, "CHIZIQ", "DOIRA", "TOMON", "YUZA", "HAJM", "KESMA", "QIRRA"],
+    });
+    expect(content.success, word).toBe(false);
+  });
+
+  it("normalizeWord shiftni PARAMETRDAN oladi", () => {
+    // Majburiy parametr: default qo'yilsa yangi chaqiruvchi uni
+    // e'tiborsiz qoldirib panjara shiftini anagrammaga qo'llardi.
+    expect(normalizeWord("kondensatsiya", TILE_WORD_MAX)).toBe("KONDENSATSIYA");
+    expect(normalizeWord("kondensatsiya", GRID_WORD_MAX)).toBeNull();
+  });
+
+  it("anagramma shifti plitka qatoriga sig'adigan darajada", () => {
+    // Cheksiz emas: bundan uzun atama bola uchun topishga emas,
+    // sanashga aylanadi.
+    expect(TILE_WORD_MAX).toBeLessThanOrEqual(16);
+  });
+
+  it("ikkala shift ham MIN dan katta", () => {
+    expect(GRID_WORD_MAX).toBeGreaterThan(MIN_WORD_LENGTH);
+    expect(TILE_WORD_MAX).toBeGreaterThan(MIN_WORD_LENGTH);
+  });
+});
+
+describe("gameTail uzunlik ko'rsatmasi kind ga bog'liq", () => {
+  it("so'z qidirishda PANJARA shifti aytiladi", () => {
+    const tail = gameTail({ gameKind: "word-search", itemCount: 10 });
+    expect(tail).toContain(`${String(MIN_WORD_LENGTH)}-${String(GRID_WORD_MAX)} harf`);
+    expect(tail).toContain("panjaraga sig'maydi");
+  });
+
+  it("anagrammada PLITKA shifti aytiladi va panjara eslatilmaydi", () => {
+    const tail = gameTail({ gameKind: "anagram", itemCount: 8 });
+    expect(tail).toContain(`${String(MIN_WORD_LENGTH)}-${String(TILE_WORD_MAX)} harf`);
+    expect(tail).toContain("panjara yo'q");
+    expect(tail).not.toContain("panjaraga sig'maydi");
+  });
+
+  it("ikkala turda ham BITTA SO'Z sharti bor", () => {
+    // Qo'shma ibora ikkalasida ham yaramaydi, lekin sababi boshqa:
+    // panjarada bo'sh joy katagi yo'q, plitkada esa bola so'zni
+    // tiklay olmaydi.
+    for (const gameKind of ["word-search", "anagram"] as const) {
+      expect(gameTail({ gameKind, itemCount: 8 }), gameKind).toContain("BITTA so'z");
+    }
+  });
+
+  it("g'ildirakda uzunlik ko'rsatmasi UMUMAN yo'q", () => {
+    // Sektor savollari panjaraga ham, plitkaga ham tushmaydi.
+    const tail = gameTail({ gameKind: "wheel", itemCount: 8 });
+    expect(tail).not.toContain("harf");
   });
 });

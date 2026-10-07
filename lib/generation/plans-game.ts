@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { blockId, type Block } from "@/lib/documents/blocks";
-import { MAX_WORD_LENGTH, normalizeWord } from "@/lib/games/alphabet";
+import { GRID_WORD_MAX, normalizeWord, TILE_WORD_MAX } from "@/lib/games/alphabet";
 import { MAX_TOTAL_LETTERS, WORD_REQUEST_BUFFER } from "@/lib/games/grid";
 import { GAME_LIMITS } from "@/lib/credits/cost-table";
 import type { GameContent, GameKind } from "@/lib/games/types";
@@ -151,7 +151,8 @@ export function gameContentFrom(result: GameOut, itemCount: number): GameContent
       const items: { word: string; clue: string }[] = [];
       const seen = new Set<string>();
       for (const item of result.out.items) {
-        const word = normalizeWord(item.word);
+        // `TILE_WORD_MAX` — anagrammada panjara yo'q, uzun atama ham o'tadi.
+        const word = normalizeWord(item.word, TILE_WORD_MAX);
         if (word === null || seen.has(word)) continue;
         seen.add(word);
         items.push({ word, clue: item.clue });
@@ -161,12 +162,17 @@ export function gameContentFrom(result: GameOut, itemCount: number): GameContent
   }
 }
 
-/** Normallashgan, takrorlanmas so'zlar — kelgan tartibda. */
-function normalizedWords(raw: readonly string[]): string[] {
+/**
+ * Normallashgan, takrorlanmas so'zlar — kelgan tartibda.
+ *
+ * FAQAT SO'Z QIDIRISH uchun: shift `GRID_WORD_MAX`, ya'ni panjaraga
+ * sig'maydigan uzun atama shu yerda tashlanadi.
+ */
+export function normalizedWords(raw: readonly string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const value of raw) {
-    const word = normalizeWord(value);
+    const word = normalizeWord(value, GRID_WORD_MAX);
     if (word === null || seen.has(word)) continue;
     seen.add(word);
     out.push(word);
@@ -257,7 +263,7 @@ export function gameStageInstruction(input: { kind: GameKind; itemCount: number 
         "",
         "Har so'z BITTA so'z bo'lsin: ibora, chiziqcha, raqam va qisqartma yo'q.",
         "ch va sh digraflari, o' va g' harflari mumkin.",
-        `Har so'z ${String(MAX_WORD_LENGTH)} harfdan UZUN BO'LMASIN — uzun atama panjaraga sig'maydi.`,
+        `Har so'z ${String(GRID_WORD_MAX)} harfdan UZUN BO'LMASIN — uzun atama panjaraga sig'maydi.`,
         "PANJARANI TUZMA — faqat so'zlar ro'yxatini ber.",
       ].join("\n");
 

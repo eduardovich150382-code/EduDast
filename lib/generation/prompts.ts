@@ -1,4 +1,8 @@
-import { MAX_WORD_LENGTH } from "@/lib/games/alphabet";
+import {
+  GRID_WORD_MAX,
+  MIN_WORD_LENGTH,
+  TILE_WORD_MAX,
+} from "@/lib/games/alphabet";
 import {
   PREFERRED_WORD_MAX,
   PREFERRED_WORD_MIN,
@@ -319,7 +323,7 @@ So'z qidirish va anagramma o'yinlarida so'z PANJARAGA yoki HARF PLITKALARIGA tus
 - O'zbek lotin alifbosi. "w" harfi yo'q.
 - Apostrofli harflar (o', g') MUMKIN — ular panjarada apostrofsiz yoziladi: "o'quvchi" panjarada OQUVCHI bo'ladi.
 - ch va sh digraflari MUMKIN va tabiiy: "chiziq", "uchburchak", "shamol".
-- Uzunligi 3 dan 10 harfgacha. Bir xil harfdan iborat so'z yaramaydi.
+- Uzunlik shifti O'YIN TURIGA QARAB farq qiladi (pastdagi bo'limlarda aytilgan): so'z qidirishda panjara kattaligi cheklaydi, anagrammada esa cheklov ancha keng. Bir xil harfdan iborat so'z hech qaysisida yaramaydi.
 - So'zning o'zagi mavzuga tegishli bo'lsin: "doira", "radius", "kvadrat" — ha; "narsa", "yaxshi" — yo'q.
 
 Bu qoidalarga tushmaydigan so'zni YOZMA. Uning o'rniga mavzudan boshqa so'z tanla — ro'yxat to'liq bo'lishi kerak.
@@ -337,6 +341,10 @@ PANJARANI O'ZING TUZMA. Faqat so'zlar ro'yxatini ber; joylashuv va to'ldirish ha
 ### Anagramma
 
 Har element — bitta so'z va uning TA'RIFI. Bola ta'rifni o'qib, aralashgan harflardan so'zni tiklaydi.
+
+UZUNLIK SHIFTI BU YERDA KENG: 3 dan 16 harfgacha. Anagrammada panjara yo'q — harflar plitkada turadi, shuning uchun uzun atamadan qo'rqma. Aksincha: "kondensatsiya", "trayektoriya", "ishqalanish" kabi mavzuning asosiy atamalari aynan shu o'yinga mos, chunki so'z qidirishda ular panjaraga sig'maydi. Qisqartirib "kondensat" deb yozishning hojati yo'q.
+
+Lekin BITTA SO'Z sharti qoladi: "issiq havo" yoki "solishtirma issiqlik" kabi qo'shma ibora plitkalarga bo'linganda bo'sh joy yo'qoladi va bola so'zni tiklay olmaydi.
 
 Ta'rif so'zning o'zini ichiga OLMASIN: "doira — doira shaklidagi shakl" javobni oshkor qiladi. "Markazdan barcha nuqtalari teng uzoqlikdagi yopiq chiziq" deb yoz.
 
@@ -391,7 +399,7 @@ export function gameTail(input: { gameKind: GameKind; itemCount: number }): stri
      * qaytaradi. O'lchovda ko'rindi: ikki generatsiya 10 ta so'z berib
      * yiqildi, uchinchisi 14 ta berib o'tdi.
      *
-     * Har so'z uzunligi SXEMA SHIFTI bilan aytiladi (`MAX_WORD_LENGTH`),
+     * Har so'z uzunligi SXEMA SHIFTI bilan aytiladi (`GRID_WORD_MAX`),
      * tavsiya oralig'i esa alohida: o'zbek fizika terminologiyasi uzun
      * (`ishqalanish` 11, `trayektoriya` 12), ya'ni qat'iy 4-8 bajarilmaydi
      * va uni "shart" qilib qo'yish foydasiz. Shift — bajarilishi kerak
@@ -402,7 +410,7 @@ export function gameTail(input: { gameKind: GameKind; itemCount: number }): stri
     );
     lines.push("So'zlar takrorlanmasin.");
     lines.push(
-      `Har so'z ${String(MAX_WORD_LENGTH)} harfdan UZUN BO'LMASIN — uzun atama 12x12 panjaraga sig'maydi va tashlanadi.`,
+      `Har so'z BITTA so'z va ${String(MIN_WORD_LENGTH)}-${String(GRID_WORD_MAX)} harf bo'lsin — uzun atama 12x12 panjaraga sig'maydi va tashlanadi.`,
     );
     lines.push(
       `Afzali ${String(PREFERRED_WORD_MIN)}-${String(PREFERRED_WORD_MAX)} harf: qisqa so'zlar panjarada chiroyli kesishadi.`,
@@ -410,8 +418,24 @@ export function gameTail(input: { gameKind: GameKind; itemCount: number }): stri
     return lines.join("\n");
   }
 
+  /*
+   * ANAGRAMMADA UZUNLIK SHIFTI YUQORI — panjara yo'q.
+   *
+   * Harflar plitkada turadi, ya'ni uzunlikni cheklash uchun geometrik
+   * sabab yo'q. `kondensatsiya` (13), `trayektoriya` (12) kabi atamalar
+   * aynan anagrammaga tushishi kerak: so'z qidirishda ular tashlanadi,
+   * bu esa o'yinni mavzuning asosiy atamalaridan mahrum qilardi.
+   *
+   * "BITTA SO'Z" sharti esa SAQLANADI va shart: qo'shma ibora
+   * ("issiq havo") plitkalarga bo'linganda bo'sh joy yo'qoladi va bola
+   * so'zni tiklay olmaydi.
+   */
   lines.push(`Element soni: ${String(input.itemCount)} ta — aynan shuncha bo'lsin.`);
   lines.push("So'zlar takrorlanmasin.");
+  lines.push(
+    `Har so'z BITTA so'z va ${String(MIN_WORD_LENGTH)}-${String(TILE_WORD_MAX)} harf bo'lsin — qo'shma ibora yaramaydi.`,
+  );
+  lines.push("Uzun atamadan qo'rqma: harflar plitkada turadi, panjara yo'q.");
 
   return lines.join("\n");
 }

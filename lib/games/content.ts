@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { MAX_WORD_LENGTH, MIN_WORD_LENGTH, normalizeWord } from "./alphabet";
+import {
+  GRID_WORD_MAX,
+  MIN_WORD_LENGTH,
+  normalizeWord,
+  TILE_WORD_MAX,
+} from "./alphabet";
 import { MAX_TOTAL_LETTERS } from "./grid";
 
 /**
@@ -33,13 +38,27 @@ const txt = (max: number) => z.string().trim().min(1).max(max);
  * holatini KO'RSATADI, jimgina tuzatib yubormaydi — aks holda eski buzuq
  * ma'lumot abadiy ko'rinmas bo'lib qolardi.
  */
-const GridWord = z
-  .string()
-  .min(MIN_WORD_LENGTH)
-  .max(MAX_WORD_LENGTH)
-  .refine((word) => normalizeWord(word) === word, {
-    error: `So'z normallashgan bo'lishi kerak: faqat ${String(MIN_WORD_LENGTH)}-${String(MAX_WORD_LENGTH)} harf, apostrofsiz, kamida ikki xil harf`,
-  });
+/**
+ * Normallashgan so'z — UZUNLIK SHIFTI O'YIN TURIDAN keladi.
+ *
+ * Fabrika, bitta konstanta emas: panjara va plitka turli geometriyaga
+ * ega (`lib/games/alphabet.ts` dagi `GRID_WORD_MAX`/`TILE_WORD_MAX`
+ * izohiga qarang).
+ */
+const normalizedWord = (maxLength: number) =>
+  z
+    .string()
+    .min(MIN_WORD_LENGTH)
+    .max(maxLength)
+    .refine((word) => normalizeWord(word, maxLength) === word, {
+      error: `So'z normallashgan bo'lishi kerak: faqat ${String(MIN_WORD_LENGTH)}-${String(maxLength)} harf, apostrofsiz, kamida ikki xil harf`,
+    });
+
+/** So'z qidirish uchun — 12x12 panjara shifti. */
+const GridWord = normalizedWord(GRID_WORD_MAX);
+
+/** Anagramma uchun — plitka shifti, panjara yo'q. */
+const TileWord = normalizedWord(TILE_WORD_MAX);
 
 /* ------------------------------------------------------------------ */
 /* Omad g'ildiragi                                                     */
@@ -115,7 +134,9 @@ export const WordSearchContent = z
 /* ------------------------------------------------------------------ */
 
 const AnagramItem = z.strictObject({
-  word: GridWord,
+  // `TileWord`, `GridWord` EMAS: anagrammada panjara yo'q, ya'ni
+  // `kondensatsiya` (13) kabi atamalar ham tushishi kerak.
+  word: TileWord,
   /** Ta'rif — bola shu matndan so'zni topadi. Harflar aralashgan holda beriladi. */
   clue: txt(300),
 });

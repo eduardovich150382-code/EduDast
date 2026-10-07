@@ -30,9 +30,29 @@ export const FILLER_ALPHABET = "ABDEFGHIJKLMNOPQRSTUVXYZ";
 
 const WORD_LETTERS = new Set(WORD_ALPHABET);
 
-/** Panjaraga va plitkaga tushadigan so'zning eng qisqa/uzun uzunligi. */
+/** Eng qisqa so'z — har ikki o'yinda bir xil. */
 export const MIN_WORD_LENGTH = 3;
-export const MAX_WORD_LENGTH = 10;
+
+/**
+ * ENG UZUN SO'Z — O'YIN TURIGA QARAB, UMUMIY EMAS.
+ *
+ * Ilgari bitta `MAX_WORD_LENGTH = 10` ikkala o'yinga ham qo'llanardi va
+ * bu ANAGRAMMADA XATO edi: u yerda panjara yo'q, harflar plitkada turadi,
+ * ya'ni uzunlikni cheklash uchun geometrik sabab yo'q. Natijada
+ * `kondensatsiya` (13), `trayektoriya` (12), `ishqalanish` (11) kabi
+ * atamalar anagrammaga ham tusha olmasdi — holbuki aynan ular uchun
+ * anagramma eng mos o'yin.
+ *
+ * `GRID_WORD_MAX` — PANJARA sababi: 12x12 panjarada 11-12 harfli so'z
+ * faqat to'liq qator, ustun yoki diagonalga sig'adi, ya'ni ko'z bilan
+ * darhol ko'rinadi va qolgan so'zlarga joy qoldirmaydi.
+ *
+ * `TILE_WORD_MAX` — PLITKA sababi: plitkalar qatorga sig'ishi kerak.
+ * 16 harf smart doskada ham, A4 varaqda ham bir-ikki qatorda chiqadi;
+ * bundan uzun atama esa bola uchun topishga emas, sanashga aylanadi.
+ */
+export const GRID_WORD_MAX = 10;
+export const TILE_WORD_MAX = 16;
 
 /**
  * Tashqi so'zni panjara harflariga o'giradi, yaroqsiz bo'lsa `null`.
@@ -49,8 +69,14 @@ export const MAX_WORD_LENGTH = 10;
  * sanashda chalkashardi. Varaqdagi so'zlar ro'yxatida ham AYNAN SHU
  * normallashgan shakl ko'rsatiladi — aks holda bola ro'yxatdagi `O'ZBEK` ni
  * panjarada izlab topolmasdi.
+ *
+ * `maxLength` MAJBURIY PARAMETR, default'i YO'Q — har chaqiruvchi qaysi
+ * o'yin uchun normallashtirayotganini OSHKOR aytishi kerak
+ * (`GRID_WORD_MAX` yoki `TILE_WORD_MAX`). Default qo'yilsa, yangi
+ * chaqiruvchi uni e'tiborsiz qoldirib panjara shiftini anagrammaga
+ * qo'llab yuborardi — aynan shu xato 15-sessiyada bo'lgan.
  */
-export function normalizeWord(raw: string): string | null {
+export function normalizeWord(raw: string, maxLength: number): string | null {
   const upper = raw.trim().toUpperCase();
   let out = "";
 
@@ -62,7 +88,7 @@ export function normalizeWord(raw: string): string | null {
     out += char;
   }
 
-  if (out.length < MIN_WORD_LENGTH || out.length > MAX_WORD_LENGTH) return null;
+  if (out.length < MIN_WORD_LENGTH || out.length > maxLength) return null;
 
   // KAMIDA IKKI XIL HARF: bir xil harfdan iborat so'zni (`AAA`) aralashtirib
   // bo'lmaydi, ya'ni anagramma "natija asl so'zga teng emas" shartini

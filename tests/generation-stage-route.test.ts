@@ -1117,7 +1117,7 @@ describe("GAME turi — darvoza va kredit", () => {
     expect(tail).toContain("So'z soni: 14");
     expect(tail).not.toContain("aynan shuncha");
     // Uzunlik SHIFTI — sxema bilan bir xil son.
-    expect(tail).toContain("10 harfdan UZUN BO'LMASIN");
+    expect(tail).toContain("3-10 harf");
     expect(tail).toContain("Afzali 4-8 harf");
     // Keshlanadigan qo'llanmada ham bor (umumiy qoida sifatida).
     expect(request.system[2]?.text).toContain("4-8 HARFDAN");
